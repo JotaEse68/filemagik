@@ -13,6 +13,7 @@ const overrides:Partial<Record<ToolSlug,Category>>={
  'crop-pdf':'pdf','annotate-pdf-text':'pdf',
  'audio-to-wav':'audio',
  'srt-to-vtt':'subtitles','vtt-to-srt':'subtitles',
+ 'create-gzip':'archives','extract-gzip':'archives',
  'inspect-file':'archives','rename-batch':'archives',
  'create-zip':'archives','extract-zip':'archives',
  'image-cleanup':'ocr','ocr-image':'ocr','ocr-pdf':'ocr',
