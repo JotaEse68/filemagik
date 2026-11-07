@@ -10,7 +10,7 @@ const code=ts.transpileModule(src,{compilerOptions:{target:ts.ScriptTarget.ES202
 const sandbox={};vm.createContext(sandbox);
 vm.runInContext(code+';globalThis.detect=getAvailableTools',sandbox);
 const detect=(...names)=>sandbox.detect(names.map(name=>({name})));
-test('jpg offers webp, png and image PDF',()=>assert.deepEqual([...detect('photo.jpg')],['jpg-to-webp','jpg-to-png','images-to-pdf']));
+test('jpg offers webp, png and image PDF',()=>assert.deepEqual([...detect('photo.jpg')],['jpg-to-webp','jpg-to-png','images-to-pdf','resize-image']));
 test('mixed images can become one PDF',()=>assert.deepEqual([...detect('a.png','b.jpg')],['images-to-pdf']));
 test('several PDFs can merge',()=>assert.deepEqual([...detect('a.pdf','b.pdf')],['merge-pdf']));
 test('single PDF can split or rotate',()=>assert.deepEqual([...detect('a.pdf')],['split-pdf','rotate-pdf','pdf-to-png','pdf-to-word-text']));
