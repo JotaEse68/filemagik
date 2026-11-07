@@ -77,6 +77,84 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Separa las páginas PDF en archivos individuales dentro de un ZIP.",
     "Separe páginas PDF em arquivos individuais num ZIP.",
     "Séparez les pages PDF dans des fichiers individuels au sein d’un ZIP."
+  ],
+  "ocr-image": [
+    "Extract editable text from a screenshot or photo using OCR in your browser.",
+    "Extrae texto editable de una captura o fotografía con OCR local.",
+    "Extraia texto editável de imagens usando OCR no navegador.",
+    "Extrayez du texte modifiable d’une image grâce à l’OCR dans le navigateur."
+  ],
+  "ocr-pdf": [
+    "Recognize text in scanned PDF pages and export TXT; PDF output is not searchable.",
+    "Reconoce texto de PDF escaneados y expórtalo a TXT, sin crear PDF buscable.",
+    "Reconheça texto em PDFs digitalizados e exporte para TXT.",
+    "Reconnaissez le texte de PDF numérisés et exportez-le au format TXT."
+  ],
+  "image-cleanup": [
+    "Remove small unwanted overlays from your own images or authorized screenshots.",
+    "Limpia marcas pequeñas en imágenes propias o capturas autorizadas.",
+    "Remova pequenas marcas de imagens e capturas autorizadas.",
+    "Retouchez les petites marques sur vos images et captures autorisées."
+  ],
+  "pdf-to-png": [
+    "Render PDF pages to PNG images and download a ZIP.",
+    "Convierte páginas de PDF en imágenes PNG y descárgalas en ZIP.",
+    "Converta páginas PDF em imagens PNG em um ZIP.",
+    "Convertissez les pages PDF en images PNG dans un ZIP."
+  ],
+  "pdf-to-word-text": [
+    "Extract editable text to DOCX; layout and images are not preserved.",
+    "Extrae texto editable a DOCX; no conserva el diseño ni las imágenes.",
+    "Extraia texto editável para DOCX, sem layout nem imagens.",
+    "Extrayez le texte modifiable en DOCX sans conserver la mise en page."
+  ],
+  "word-to-basic-pdf": [
+    "Convert DOCX plain text to a simple PDF; complex formatting is lost.",
+    "Convierte el texto de Word a un PDF básico; pierde maquetaciones complejas.",
+    "Converta texto DOCX em PDF simples, sem preservar layouts.",
+    "Convertissez le texte Word en PDF simple, sans mise en page complexe."
+  ],
+  "reorder-pdf-pages": [
+    "Rearrange PDF pages by selecting a new page order.",
+    "Reordena páginas de PDF y guarda su nueva organización.",
+    "Reorganize páginas PDF e salve a nova ordem.",
+    "Réorganisez les pages de vos PDF et enregistrez le résultat."
+  ],
+  "split-pdf-by-count": [
+    "Split a PDF every 2, 5 or N pages into a ZIP.",
+    "Divide PDF en bloques de 2, 5 o N páginas dentro de un ZIP.",
+    "Divida o PDF em grupos de 2, 5 ou N páginas.",
+    "Découpez les PDF par lots de 2, 5 ou N pages."
+  ],
+  "extract-pdf-pages": [
+    "Extract selected page ranges into a new PDF.",
+    "Extrae páginas o rangos concretos en un PDF nuevo.",
+    "Extraia páginas ou intervalos específicos para outro PDF.",
+    "Extrayez des plages de pages vers un nouveau PDF."
+  ],
+  "delete-pdf-pages": [
+    "Remove selected PDF pages while leaving the original unchanged.",
+    "Elimina las páginas seleccionadas y conserva el archivo original.",
+    "Remova páginas selecionadas mantendo o original.",
+    "Supprimez les pages choisies sans altérer l’original."
+  ],
+  "watermark-pdf": [
+    "Add translucent text watermarks to your PDF pages.",
+    "Añade marcas de agua de texto transparentes a tus PDF.",
+    "Adicione marcas d’água translúcidas a documentos PDF.",
+    "Ajoutez des filigranes de texte translucides à vos PDF."
+  ],
+  "xlsx-to-csv": [
+    "Export the first Excel worksheet to CSV in the browser.",
+    "Exporta la primera hoja XLSX a CSV desde el navegador.",
+    "Exporte a primeira planilha XLSX como CSV.",
+    "Exportez la première feuille Excel en CSV."
+  ],
+  "csv-to-xlsx": [
+    "Make an editable Excel workbook from CSV rows.",
+    "Convierte CSV a un archivo XLSX editable.",
+    "Converta CSV em um arquivo XLSX editável.",
+    "Convertissez vos lignes CSV en classeur Excel modifiable."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
