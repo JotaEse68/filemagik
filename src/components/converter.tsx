@@ -15,14 +15,14 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [pages,setPages]=useState('1-2'),[groupSize,setGroupSize]=useState(2),[watermark,setWatermark]=useState('CONFIDENTIAL'),[opacity,setOpacity]=useState(25);
  const labels={"en":["Pages (e.g. 1,3,5-8)","Pages per file","Watermark text","Opacity","Visible signature","Lossy conversion: pages become images. Text, links and forms will no longer be searchable.","OCR language"],"es":["Páginas (ej. 1,3,5-8)","Páginas por archivo","Texto de marca","Opacidad","Firma visible","Compresión con pérdida: las páginas pasan a ser imágenes. Texto, enlaces y formularios dejan de ser buscables.","Idioma del OCR"],"pt":["Páginas (ex. 1,3,5-8)","Páginas por arquivo","Texto da marca","Opacidade","Assinatura visível","Compressão com perda: páginas viram imagens; textos, links e formulários deixam de ser pesquisáveis.","Idioma do OCR"],"fr":["Pages (ex. 1,3,5-8)","Pages par fichier","Texte du filigrane","Opacité","Signature visible","Compression avec perte : les pages deviennent des images et le texte, les liens et les formulaires ne seront plus recherchables.","Langue de l’OCR"]}[locale];
  useEffect(()=>()=>{if(result)URL.revokeObjectURL(result.url)},[result]);
- const choose=(incoming:File[])=>{if(busy)return;if(incoming.some(f=>f.size>25*1024*1024)){setError(d.fileTooBig);return;}setResult(null);setError('');setFiles(slug==='merge-pdf'||slug==='images-to-pdf'?incoming:incoming.slice(0,1))};
+ const choose=(incoming:File[])=>{if(busy)return;if(incoming.some(f=>f.size>25*1024*1024)){setError(d.fileTooBig);return;}setResult(null);setError('');setFiles(slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'?incoming:incoming.slice(0,1))};
  const run=async()=>{if(!files.length)return;setBusy(true);setError('');try{
  const output=await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature});setResult({name:output.name,url:URL.createObjectURL(output.blob)});
  }catch(e){setError(e instanceof Error?e.message:d.error)}finally{setBusy(false)}};
  const moveFile=(index:number,direction:number)=>setFiles(current=>{const target=index+direction;if(target<0||target>=current.length)return current;const next=[...current];[next[index],next[target]]=[next[target],next[index]];return next;});
  const reset=()=>{setResult(null);setFiles([]);setError('');if(input.current)input.current.value=''};
  return <section className="converter">
- <input ref={input} className="visually-hidden" type="file" multiple={slug==='merge-pdf'||slug==='images-to-pdf'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
+ <input ref={input} className="visually-hidden" type="file" multiple={slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
  <div className={`dropzone ${drag?'dragging':''}`} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);choose(Array.from(e.dataTransfer.files))}}>
  <div className="upload-icon"><FileUp size={36} strokeWidth={1.6}/></div>
  <h2>{result?<><Check size={25}/>{result.name}</>:files.length?files.map(f=>f.name).join(', '):d.dropTitle}</h2>
