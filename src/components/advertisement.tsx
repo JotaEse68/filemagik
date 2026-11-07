@@ -1,2 +1,3 @@
 import type {Dictionary} from '@/lib/i18n';
-export default function Advertisement({d}:{d:Dictionary}){return <aside className="ad-placeholder" aria-label={d.adsLabel}><span>{d.adsLabel}</span><p>FileMagik</p><small>Advertising placement</small></aside>}
+import AdSlot from '@/components/advertising/ad-slot';
+export default function Advertisement({d}:{d:Dictionary}){return <AdSlot slot="desktop" label={d.adsLabel}/>;}
