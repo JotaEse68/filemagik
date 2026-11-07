@@ -4,6 +4,8 @@ export const defaultLocale:Locale='en';
 export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.vercel.app').replace(/\/$/,'');
 export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
+ {slug:'crop-pdf',from:'PDF',to:'Cropped PDF',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'annotate-pdf-text',from:'PDF',to:'Annotated PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'srt-to-vtt',from:'SRT subtitles',to:'WebVTT',kind:'subtitle',accept:'.srt,text/plain'},
  {slug:'vtt-to-srt',from:'WebVTT subtitles',to:'SRT',kind:'subtitle',accept:'.vtt,text/vtt,text/plain'},
  {slug:'adjust-image',from:'Image',to:'Edited image',kind:'image',accept:'.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'},
