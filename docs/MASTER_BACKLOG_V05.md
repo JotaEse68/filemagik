@@ -2,6 +2,14 @@
 
 **Reglas:** Web gratis EN/ES/PT/FR, ruedas convergentes como entrada principal, navegadores Windows y móvil, desarrollo en rama sin despliegues de Vercel. No confundir código creado con función verificada. Solo se anuncia una conversión después de superar fixture real y control de memoria. Las dependencias de formato que requieren software de servidor o servicios externos se implementarán con motor compatible y límites, sin prometer precisión total.
 
+## Avance implementado en rama v0.5 (pendiente de publicar)
+- [x] PDF: reordenar miniaturas por arrastre en ordenador, conservando flechas para usuarios de teclado y dispositivos táctiles.
+- [x] Image Cleanup: comparar original/resultado y exportar en PNG, JPG y WebP.
+- [x] Imágenes: recorte simétrico de bordes, giro 0/90/180/270, ajuste de calidad y exportación sin EXIF habitual mediante canvas. No equivale a recorte visual libre ni a editor de capas.
+- [x] Imágenes por lotes: hasta 30 JPG/PNG/WebP a WebP en ZIP con controles de tamaño.
+- [x] Traducciones SEO EN/ES/PT/FR de las dos herramientas añadidas; 35 herramientas en catálogo.
+- [x] CI de GitHub completado correctamente: lint, typecheck, tests automatizados y build. Falta QA manual real en navegadores.
+
 ## Decisión cerrada
 - [x] Sustituir nombres técnicos por acciones claras y traducidas: dividir, unir, convertir, extraer, etc. Mantener la calidad de traducción en nuevos formatos.
 
