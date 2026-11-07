@@ -14,6 +14,8 @@ export const tools=[
  {slug:'pdf-to-png',from:'PDF',to:'PNG ZIP',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'pdf-to-word-text',from:'PDF',to:'Word text',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'word-to-basic-pdf',from:'Word text',to:'PDF',kind:'document',accept:'.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document'},
+ {slug:'sign-pdf-visual',from:'PDF',to:'Visual signature',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'compress-pdf-raster',from:'PDF',to:'Smaller PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'reorder-pdf-pages',from:'PDF',to:'Reordered PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'split-pdf-by-count',from:'PDF',to:'PDF parts',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'extract-pdf-pages',from:'PDF',to:'Selected pages',kind:'pdf',accept:'.pdf,application/pdf'},
