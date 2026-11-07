@@ -50,18 +50,18 @@ export default function PdfPreview({file,mode,onChange,locale}:{file:File;mode:M
   const next=selected.includes(number)?selected.filter(v=>v!==number):[...selected,number].sort((a,b)=>a-b);
   setSelected(next);onChange(next.join(','));
  }
- const labels=copy[locale];if(loading)return <p className="pdf-preview-message">{labels.loading}</p>;
- if(error)return <p className="pdf-preview-message">{error}</p>;
+ const labels=copy[locale];if(loading)return <p role="status" className="pdf-preview-message">{labels.loading}</p>;
+ if(error)return <p role="alert" className="pdf-preview-message">{error}</p>;
  return <div className="pdf-preview"><p>{mode==='reorder-pdf-pages'?labels.order:labels.select}</p>{total>40&&<p>{labels.tooMany}</p>}
  <div className="pdf-preview-grid">
  {order.map((number,index)=>{
   const page=pages.find(p=>p.number===number);
   if(!page)return null;
   return <div className="pdf-preview-item" key={number} draggable={mode==='reorder-pdf-pages'&&total===order.length} onDragStart={event=>{if(mode!=='reorder-pdf-pages'||total!==order.length)return;dragged.current=index;event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',String(index));}} onDragOver={event=>{if(mode==='reorder-pdf-pages'&&total===order.length)event.preventDefault();}} onDrop={event=>{event.preventDefault();dropOn(index);}} onDragEnd={()=>{dragged.current=null;}}>
-   <button type="button" aria-pressed={selected.includes(number)} className={selected.includes(number)?'pdf-thumb selected':'pdf-thumb'} onClick={()=>{if(mode!=='reorder-pdf-pages')toggle(number)}}>
+   <button type="button" aria-pressed={mode==="reorder-pdf-pages"?undefined:selected.includes(number)} aria-label={`PDF page ${number}`} className={selected.includes(number)?'pdf-thumb selected':'pdf-thumb'} onClick={()=>{if(mode!=='reorder-pdf-pages')toggle(number)}}>
     <img alt={`PDF page ${number}`} src={page.thumbnail}/><span>{number}</span>
    </button>
-   {mode==='reorder-pdf-pages'&&<div className="pdf-reorder-buttons"><button disabled={index===0} aria-label={`Move page ${number} left`} onClick={()=>reorder(index,-1)}><ArrowLeft size={15}/></button><button disabled={index===order.length-1} aria-label={`Move page ${number} right`} onClick={()=>reorder(index,1)}><ArrowRight size={15}/></button></div>}
+   {mode==='reorder-pdf-pages'&&<div className="pdf-reorder-buttons"><button disabled={index===0} aria-label={`Move page ${number} left`} type="button" onClick={()=>reorder(index,-1)}><ArrowLeft size={15}/></button><button disabled={index===order.length-1} aria-label={`Move page ${number} right`} type="button" onClick={()=>reorder(index,1)}><ArrowRight size={15}/></button></div>}
   </div>;
  })}
  </div>

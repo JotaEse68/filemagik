@@ -26,13 +26,14 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  }catch(e){setError(e instanceof Error?e.message:d.error)}finally{setBusy(false)}};
  const moveFile=(index:number,direction:number)=>setFiles(current=>{const target=index+direction;if(target<0||target>=current.length)return current;const next=[...current];[next[index],next[target]]=[next[target],next[index]];return next;});
  const reset=()=>{setResult(null);setFiles([]);setError('');if(input.current)input.current.value=''};
- return <section className="converter">
- <input ref={input} className="visually-hidden" type="file" multiple={slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'||slug==='rename-batch'||slug==='batch-images-to-webp'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
- <div className={`dropzone ${drag?'dragging':''}`} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);choose(Array.from(e.dataTransfer.files))}}>
+ const status=busy?d.processing:result?result.name+" · "+d.download:files.length?String(files.length)+" "+d.selected:"";
+ return <section className="converter" aria-busy={busy}>
+ <input ref={input} className="visually-hidden" type="file" aria-label={d.browse} multiple={slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'||slug==='rename-batch'||slug==='batch-images-to-webp'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
+ <div className={`dropzone ${drag?'dragging':''}`} role="group" aria-label={d.dropTitle} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);choose(Array.from(e.dataTransfer.files))}}>
  <div className="upload-icon"><FileUp size={36} strokeWidth={1.6}/></div>
  <h2>{result?<><Check size={25}/>{result.name}</>:files.length?files.map(f=>f.name).join(', '):d.dropTitle}</h2>
  <p>{files.length?`${files.length} ${d.selected.toLowerCase()}`:d.dropSub}</p><small className="upload-limit">{sizeLimitLabel(slug)}</small>
- {!files.length&&<button className="btn btn-primary" onClick={()=>input.current?.click()}>{d.browse}<ArrowRight size={17}/></button>}
+ {!files.length&&<button type="button" className="btn btn-primary" onClick={()=>input.current?.click()}>{d.browse}<ArrowRight size={17}/></button>}
  {files.length>1&&!result&&(slug==='merge-pdf'||slug==='images-to-pdf')&&<ol className="file-order-list">{files.map((file,index)=><li key={file.name+'-'+index}><span>{file.name}</span><div><button type="button" disabled={index===0||busy} onClick={()=>moveFile(index,-1)} aria-label={`Move ${file.name} up`}>↑</button><button type="button" disabled={index===files.length-1||busy} onClick={()=>moveFile(index,1)} aria-label={`Move ${file.name} down`}>↓</button></div></li>)}</ol>}
  {files.length>0&&!result&&['extract-pdf-pages','delete-pdf-pages','split-pdf-by-count','watermark-pdf','reorder-pdf-pages','sign-pdf-visual'].includes(slug)&&<div className="pdf-option-panel">
  {(slug==='extract-pdf-pages'||slug==='delete-pdf-pages'||slug==='reorder-pdf-pages')&&<label>{labels[0]}<input value={pages} onChange={e=>setPages(e.target.value)} placeholder="1,3,5-8"/></label>}
@@ -59,8 +60,9 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  <label>{({es:'Formato de salida',en:'Output format',pt:'Formato de saída',fr:'Format de sortie'} as const)[locale]}<select value={format} onChange={e=>setFormat(e.target.value as 'png'|'jpeg'|'webp')}><option value="webp">WebP</option><option value="png">PNG</option><option value="jpeg">JPG</option></select></label>
  <p className="image-export-hint">{({es:'La exportación elimina los metadatos habituales, incluido EXIF. El recorte se aplica por igual a los cuatro bordes.',en:'Export removes most metadata, including EXIF. Cropping applies to all four edges.',pt:'A exportação remove metadados, inclusive EXIF. O recorte afeta as quatro bordas.',fr:'L’export supprime les métadonnées, dont EXIF. Le rognage affecte les quatre bords.'} as const)[locale]}</p>
  </div>}
- {files.length>0&&!result&&<div className="actions">{(tool.kind==='image'||slug==='images-to-pdf'||slug==='compress-pdf-raster')&&<label className="quality">{d.imageQuality}: {quality}% <input type="range" min="50" max="100" value={quality} onChange={e=>setQuality(Number(e.target.value))}/></label>}<button className="btn btn-primary" disabled={busy} onClick={run}>{busy?<LoaderCircle className="spin" size={18}/>:<ArrowRight size={18}/>} {busy?d.processing:d.convert}</button><button className="btn btn-ghost" onClick={reset}>{d.reset}</button></div>}
- {result&&<div className="actions"><a className="btn btn-primary" href={result.url} download={result.name}><Download size={18}/>{d.download}</a><button className="btn btn-ghost" onClick={reset}><RotateCcw size={17}/>{d.reset}</button></div>}
+ {files.length>0&&!result&&<div className="actions">{(tool.kind==='image'||slug==='images-to-pdf'||slug==='compress-pdf-raster')&&<label className="quality">{d.imageQuality}: {quality}% <input type="range" min="50" max="100" value={quality} onChange={e=>setQuality(Number(e.target.value))}/></label>}<button type="button" className="btn btn-primary" disabled={busy} onClick={run}>{busy?<LoaderCircle className="spin" size={18}/>:<ArrowRight size={18}/>} {busy?d.processing:d.convert}</button><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}>{d.reset}</button></div>}
+ {result&&<div className="actions"><a className="btn btn-primary" href={result.url} download={result.name}><Download size={18}/>{d.download}</a><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}><RotateCcw size={17}/>{d.reset}</button></div>}
+ <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{status}</p>
  {error&&<p role="alert" className="error">{error}</p>}
  </div></section>;
 }

@@ -20,7 +20,7 @@ export default function ToolExplorer({locale,initialCategory='all'}:{locale:Loca
    <label htmlFor="tool-search" className="tool-search">
     <Search size={18} aria-hidden="true"/>
     <input id="tool-search" type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder={language.search}/>
-    {query&&<button type="button" aria-label="Clear search" onClick={()=>setQuery('')}><X size={17}/></button>}
+    {query&&<button type="button" aria-label={locale==="es"?"Limpiar búsqueda":locale==="pt"?"Limpar pesquisa":locale==="fr"?"Effacer la recherche":"Clear search"} onClick={()=>setQuery('')}><X size={17}/></button>}
    </label>
    <span className="tool-result-count" aria-live="polite">{list.length} / {categoryCounts.all}</span>
   </div>
