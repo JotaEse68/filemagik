@@ -15,7 +15,7 @@ const copies={
 export default function ImageCleanup({locale}:{locale:Locale}){
  const copy=copies[locale],input=useRef<HTMLInputElement>(null),canvas=useRef<HTMLCanvasElement>(null);
  const original=useRef<ImageData|null>(null),history=useRef<ImageData[]>([]);
- const start=useRef<Point|null>(null),preview=useRef<ImageData|null>(null);
+ const start=useRef<Point|null>(null),preview=useRef<ImageData|null>(null),base=useRef<ImageData|null>(null);
  const [selection,setSelection]=useState<Area|null>(null),[loaded,setLoaded]=useState(false),[error,setError]=useState('');
  const [historySize,setHistorySize]=useState(0);
  const [name,setName]=useState('cleaned-image.png');
@@ -40,22 +40,22 @@ export default function ImageCleanup({locale}:{locale:Locale}){
    history.current=[];setHistorySize(0);setSelection(null);setLoaded(true);setName(file.name.replace(/\.[^.]+$/,'')+'-cleaned.png');
   }catch(e){setError(e instanceof Error?e.message:copy.error);}finally{bitmap?.close();}
  }
- function begin(e:React.PointerEvent<HTMLCanvasElement>){if(!loaded)return;const el=canvas.current!;el.setPointerCapture(e.pointerId);start.current=coords(e);preview.current=el.getContext('2d',{willReadFrequently:true})!.getImageData(0,0,el.width,el.height);setSelection(null);}
+ function begin(e:React.PointerEvent<HTMLCanvasElement>){if(!loaded)return;const el=canvas.current!;el.setPointerCapture(e.pointerId);const ctx=el.getContext('2d',{willReadFrequently:true})!;if(base.current)ctx.putImageData(base.current,0,0);start.current=coords(e);preview.current=ctx.getImageData(0,0,el.width,el.height);base.current=preview.current;setSelection(null);}
  function move(e:React.PointerEvent<HTMLCanvasElement>){if(!start.current||!preview.current)return;const point=coords(e),el=canvas.current!;const rect=normalizeArea(start.current,point,el.width,el.height);drawSelection(rect,preview.current);}
  function finish(e:React.PointerEvent<HTMLCanvasElement>){if(!start.current||!preview.current)return;const point=coords(e),el=canvas.current!;const rect=normalizeArea(start.current,point,el.width,el.height);drawSelection(rect,preview.current);setSelection(rect);start.current=null;preview.current=null;}
  function apply(){
   const el=canvas.current,ctx=el?.getContext('2d',{willReadFrequently:true});
   if(!ctx||!el||!selection)return;
   try{
-   const current=ctx.getImageData(0,0,el.width,el.height);
+   const current=base.current??ctx.getImageData(0,0,el.width,el.height);
    const result=healRectangle(current,selection);
    history.current=[...history.current.slice(-9),current];setHistorySize(history.current.length);
-   ctx.putImageData(result,0,0);setSelection(null);setError('');
+   ctx.putImageData(result,0,0);base.current=null;setSelection(null);setError('');
   }catch(e){setError(e instanceof Error?e.message:copy.error);}
  }
- function undo(){const previous=history.current.pop();if(previous){canvas.current?.getContext('2d')?.putImageData(previous,0,0);setHistorySize(history.current.length);setSelection(null);}}
- function reset(){const initial=original.current;if(initial){canvas.current?.getContext('2d')?.putImageData(initial,0,0);history.current=[];setHistorySize(0);setSelection(null);}}
- function download(){const el=canvas.current;if(!el)return;const url=el.toDataURL('image/png');const anchor=document.createElement('a');anchor.href=url;anchor.download=name;anchor.click();}
+ function undo(){const previous=history.current.pop();if(previous){canvas.current?.getContext('2d')?.putImageData(previous,0,0);setHistorySize(history.current.length);base.current=null;setSelection(null);}}
+ function reset(){const initial=original.current;if(initial){canvas.current?.getContext('2d')?.putImageData(initial,0,0);history.current=[];setHistorySize(0);base.current=null;setSelection(null);}}
+ function download(){const el=canvas.current;if(!el)return;if(base.current)el.getContext('2d')?.putImageData(base.current,0,0);const url=el.toDataURL('image/png');const anchor=document.createElement('a');anchor.href=url;anchor.download=name;anchor.click();}
  useEffect(()=>()=>{original.current=null;history.current=[]},[]);
  return <section className="image-cleanup">
   <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="visually-hidden" onChange={e=>{const f=e.target.files?.[0];if(f)void openFile(f);}}/>
