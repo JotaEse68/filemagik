@@ -1,13 +1,21 @@
 import type {OutputFile} from './convert';
 import {parsePageSelection,partitionPages,remainingPages,parsePageOrder} from './pdf-pages';
-export type PdfAction='split-pdf-by-count'|'extract-pdf-pages'|'delete-pdf-pages'|'watermark-pdf'|'reorder-pdf-pages';
-export type PdfOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number};
+export type PdfAction='split-pdf-by-count'|'extract-pdf-pages'|'delete-pdf-pages'|'watermark-pdf'|'reorder-pdf-pages'|'sign-pdf-visual';
+export type PdfOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;signature?:string};
 function pdfBlob(bytes:Uint8Array<ArrayBufferLike>):Blob{return new Blob([new Uint8Array(bytes)],{type:'application/pdf'});}
 export async function pdfAction(action:PdfAction,source:File,options:PdfOptions={}):Promise<OutputFile>{
  const {PDFDocument,degrees,rgb,StandardFonts}=await import('pdf-lib');
  const pdf=await PDFDocument.load(await source.arrayBuffer());
  const total=pdf.getPageCount();if(total<1||total>500)throw new Error('PDF must contain between 1 and 500 pages');
  const base=source.name.replace(/\.pdf$/i,'');
+ if(action==='sign-pdf-visual'){
+  const text=(options.signature??'').trim();if(!text||text.length>90)throw new Error('Enter a signature name (1–90 characters)');
+  const page=pdf.getPage(total-1),font=await pdf.embedFont(StandardFonts.Helvetica),size=14;
+  const safe=text.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,'?');
+  const label='Signed visually by: '+safe;
+  page.drawText(label,{x:36,y:55,size,font,color:rgb(.12,.19,.37)});
+  return {name:base+'-visually-signed.pdf',blob:pdfBlob(await pdf.save())};
+ }
  if(action==='watermark-pdf'){
   const text=(options.watermark??'CONFIDENTIAL').trim();
   if(!text||text.length>80)throw new Error('Watermark must have 1–80 characters');
