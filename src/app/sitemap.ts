@@ -1,2 +1,2 @@
 import type {MetadataRoute} from 'next';import {siteUrl,locales,tools} from '@/config/site';
-export default function sitemap():MetadataRoute.Sitemap{return locales.flatMap(locale=>[{url:`${siteUrl}/${locale}`,changeFrequency:'weekly' as const,priority:1},...tools.map(t=>({url:`${siteUrl}/${locale}/${t.slug}`,changeFrequency:'monthly' as const,priority:.8}))])}
+export default function sitemap():MetadataRoute.Sitemap{return locales.flatMap(locale=>[{url:`${siteUrl}/${locale}`,changeFrequency:'weekly' as const,priority:1},{url:`${siteUrl}/${locale}/tools`,changeFrequency:'weekly' as const,priority:.9},...tools.map(t=>({url:`${siteUrl}/${locale}/${t.slug}`,changeFrequency:'monthly' as const,priority:.8}))])}

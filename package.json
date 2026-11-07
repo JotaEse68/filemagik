@@ -18,7 +18,13 @@
     "lucide-react": "^0.468.0",
     "pdf-lib": "^1.17.1",
     "mammoth": "^1.10.0",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "pdfjs-dist": "^6.5.438",
+    "docx": "^9.15.2",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.119.0",
+    "tesseract.js": "7.0.0",
+    "exceljs": "4.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
