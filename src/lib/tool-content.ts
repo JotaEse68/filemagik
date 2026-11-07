@@ -251,6 +251,24 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Descomprime archivos GZIP localmente con límites de tamaño para proteger el navegador.",
     "Descompacte arquivos GZIP localmente com limites de tamanho para proteger o navegador.",
     "Décompressez un fichier GZIP localement avec une limite de taille pour protéger le navigateur."
+  ],
+  "inspect-pdf-form": [
+    "Find interactive AcroForm fields in a PDF and download their names, types and values as JSON.",
+    "Identifica campos de formulario PDF AcroForm y descarga sus nombres, tipos y valores en JSON.",
+    "Identifique campos AcroForm no PDF e baixe nomes, tipos e valores em JSON.",
+    "Identifiez les champs AcroForm d’un PDF et exportez leurs noms, types et valeurs en JSON."
+  ],
+  "fill-pdf-form": [
+    "Fill text, checkbox, dropdown and choice fields in an interactive PDF using JSON values.",
+    "Rellena campos de texto, casillas y opciones de formularios PDF interactivos mediante valores JSON.",
+    "Preencha campos de texto, caixas e opções de PDFs interativos usando valores JSON.",
+    "Remplissez les champs texte, cases et choix d’un PDF interactif à partir de valeurs JSON."
+  ],
+  "flatten-pdf-form": [
+    "Make filled interactive PDF form fields permanent, when the document is not digitally signed.",
+    "Fija los campos de un formulario PDF para que ya no puedan editarse; no es apto para documentos firmados digitalmente.",
+    "Fixe os campos de um formulário PDF para impedir a edição; não use em documentos assinados digitalmente.",
+    "Figez les champs d’un formulaire PDF pour empêcher leur modification ; non adapté aux PDF signés numériquement."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
