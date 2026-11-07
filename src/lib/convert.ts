@@ -5,6 +5,9 @@ export type OutputFile={name:string;blob:Blob};
 export type ConversionOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  validateFiles(slug,files);
+ if(slug==='batch-images-to-webp'){
+  const {imagesToWebpZip}=await import('./image-batch');return imagesToWebpZip(files,quality);
+ }
  if(['split-pdf-by-count','extract-pdf-pages','delete-pdf-pages','watermark-pdf','reorder-pdf-pages','sign-pdf-visual'].includes(slug)){
   const {pdfAction}=await import('./pdf-operations');return pdfAction(slug as import('./pdf-operations').PdfAction,files[0],options);
  }
