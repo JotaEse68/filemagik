@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';import test from 'node:test';
+import {readFileSync} from 'node:fs';import ts from 'typescript';import vm from 'node:vm';
+const raw=readFileSync('src/lib/csv.ts','utf8');
+const js=ts.transpileModule(raw.replaceAll('export function','function'),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+const sandbox={};vm.createContext(sandbox);vm.runInContext(js+';globalThis.api={parseCsv,csvToJson,jsonToCsv}',sandbox);
+const {parseCsv,csvToJson,jsonToCsv}=sandbox.api;
+test('quoted commas and newlines',()=>assert.equal(parseCsv('name,notes\n"Jota, S","hello\nworld"').length,2));
+test('csv to json retains values as text',()=>assert.equal(JSON.parse(csvToJson('id,name\n001,Ana'))[0].id,'001'));
+test('json to csv escapes quotes',()=>assert.match(jsonToCsv('[{"x":"a,b","y":"a\\"b"}]'),/"a,b"/));
+test('unclosed quote rejected',()=>assert.throws(()=>parseCsv('"foo'),/unmatched/));
