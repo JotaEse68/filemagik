@@ -1,12 +1,10 @@
 import {csvToJson,jsonToCsv} from './csv';
 import type {ToolSlug} from '@/config/site';
+import {validateFiles} from './file-limits';
 export type OutputFile={name:string;blob:Blob};
 export type ConversionOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
- if(!files.length)throw new Error('Select a file');
- if(slug!=='create-zip'&&slug!=='extract-zip'&&files.some(f=>f.size>25*1024*1024))throw new Error('File exceeds 25 MB');
- if(slug!=='create-zip'&&slug!=='extract-zip'&&files.reduce((total,file)=>total+file.size,0)>100*1024*1024)throw new Error('Total input exceeds 100 MB');
- if(slug==='merge-pdf'&&files.length>20)throw new Error('Maximum 20 PDF files');
+ validateFiles(slug,files);
  if(['split-pdf-by-count','extract-pdf-pages','delete-pdf-pages','watermark-pdf','reorder-pdf-pages','sign-pdf-visual'].includes(slug)){
   const {pdfAction}=await import('./pdf-operations');return pdfAction(slug as import('./pdf-operations').PdfAction,files[0],options);
  }
