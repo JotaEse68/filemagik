@@ -1,11 +1,11 @@
 import type {Metadata} from 'next';
 import {notFound} from 'next/navigation';
-import {isLocale,siteUrl} from '@/config/site';
+import {isLocale,siteUrl,locales} from '@/config/site';
 import {categoryIds,categoryLabels,type ToolCategory} from '@/config/tool-navigation';
 import ToolExplorer from '@/components/tool-explorer';
 export async function generateMetadata({params}:{params:Promise<{locale:string}>}):Promise<Metadata>{
  const {locale}=await params;if(!isLocale(locale))return {};
- return {title:`${categoryLabels[locale].all} | FileMagik`,description:`${categoryLabels[locale].all} — FileMagik`,alternates:{canonical:`${siteUrl}/${locale}/tools`}};
+ return {title:`${categoryLabels[locale].all} | FileMagik`,description:`${categoryLabels[locale].all} — FileMagik`,alternates:{canonical:`${siteUrl}/${locale}/tools`,languages:Object.fromEntries([...locales.map(l=>[l,`${siteUrl}/${l}/tools`]),['x-default',`${siteUrl}/en/tools`]])}};
 }
 export default async function ToolsPage({params,searchParams}:{params:Promise<{locale:string}>;searchParams:Promise<{category?:string}>}){
  const {locale}=await params;if(!isLocale(locale))notFound();
