@@ -12,6 +12,7 @@ export const tools=[
  {slug:'pdf-to-png',from:'PDF',to:'PNG ZIP',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'pdf-to-word-text',from:'PDF',to:'Word text',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'word-to-basic-pdf',from:'Word text',to:'PDF',kind:'document',accept:'.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document'},
+ {slug:'reorder-pdf-pages',from:'PDF',to:'Reordered PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'split-pdf-by-count',from:'PDF',to:'PDF parts',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'extract-pdf-pages',from:'PDF',to:'Selected pages',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'delete-pdf-pages',from:'PDF',to:'Clean PDF',kind:'pdf',accept:'.pdf,application/pdf'},
