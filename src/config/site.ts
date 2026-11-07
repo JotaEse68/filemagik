@@ -23,6 +23,8 @@ export const tools=[
  {slug:'png-to-jpg',from:'PNG',to:'JPG',kind:'image',accept:'.png,image/png'},
  {slug:'png-to-webp',from:'PNG',to:'WebP',kind:'image',accept:'.png,image/png'},
  {slug:'webp-to-png',from:'WebP',to:'PNG',kind:'image',accept:'.webp,image/webp'},
+ {slug:'xlsx-to-csv',from:'Excel XLSX',to:'CSV',kind:'data',accept:'.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},
+ {slug:'csv-to-xlsx',from:'CSV',to:'Excel XLSX',kind:'data',accept:'.csv,text/csv'},
  {slug:'csv-to-json',from:'CSV',to:'JSON',kind:'data',accept:'.csv,text/csv'},
  {slug:'json-to-csv',from:'JSON',to:'CSV',kind:'data',accept:'.json,application/json'},
  {slug:'word-to-text',from:'Word',to:'TXT',kind:'document',accept:'.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document'},
