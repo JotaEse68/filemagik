@@ -10,6 +10,7 @@ export const categoryLabels:Record<Locale,Record<ToolCategory,string>>={
  fr:{all:'Tous les outils',pdf:'PDF Studio',images:'Images',office:'Documents et Office',data:'Excel et données',ocr:'OCR et nettoyage',archives:'ZIP et archives',subtitles:'Sous-titres',audio:'Audio'}
 };
 const overrides:Partial<Record<ToolSlug,Category>>={
+ 'inspect-pdf-form':'pdf','fill-pdf-form':'pdf','flatten-pdf-form':'pdf',
  'crop-pdf':'pdf','annotate-pdf-text':'pdf',
  'audio-to-wav':'audio',
  'srt-to-vtt':'subtitles','vtt-to-srt':'subtitles',

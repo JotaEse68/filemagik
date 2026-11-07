@@ -106,3 +106,24 @@ test('image conversion reaches a downloadable WebP',async({page})=>{
  await page.getByRole('button',{name:/convertir ahora/i}).click();
  await expect(page.locator('a[download]'),(await page.locator('[role=alert]').allTextContents()).join('; ')).toHaveAttribute('download',/\.webp$/);
 });
+
+
+test('PDF form inspector and filler process real AcroForm fields',async({page})=>{
+ const pdf=await PDFDocument.create();
+ pdf.addPage([400,500]);
+ const form=pdf.getForm();
+ const name=form.createTextField('FullName');
+ name.addToPage(pdf.getPage(0),{x:30,y:370,width:230,height:28});
+ const approved=form.createCheckBox('Approved');
+ approved.addToPage(pdf.getPage(0),{x:30,y:320,width:20,height:20});
+ const input=Buffer.from(await pdf.save());
+ await page.goto('/es/inspect-pdf-form');
+ await page.locator('input[type=file]').setInputFiles({name:'form.pdf',mimeType:'application/pdf',buffer:input});
+ await page.getByRole('button',{name:/convertir ahora/i}).click();
+ await expect(page.locator('a[download]')).toHaveAttribute('download',/fields\.json$/);
+ await page.goto('/es/fill-pdf-form');
+ await page.locator('input[type=file]').setInputFiles({name:'form.pdf',mimeType:'application/pdf',buffer:input});
+ await page.locator('textarea').fill('{"FullName":"Jota","Approved":true}');
+ await page.getByRole('button',{name:/convertir ahora/i}).click();
+ await expect(page.locator('a[download]')).toHaveAttribute('download',/completed\.pdf$/);
+});
