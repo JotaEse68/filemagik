@@ -179,6 +179,24 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Extrae archivos de un ZIP de forma segura y descárgalos juntos.",
     "Extraia arquivos ZIP de forma segura e faça download num novo pacote.",
     "Extrayez les fichiers d'une archive ZIP et récupérez-les en téléchargement."
+  ],
+  "inspect-file": [
+    "Inspect file type, size, modification date and SHA-256 checksum locally.",
+    "Consulta tipo, tamaño, fecha y huella SHA-256 de un archivo sin subirlo.",
+    "Consulte tipo, tamanho, data e hash SHA-256 de um arquivo localmente.",
+    "Consultez le type, la taille, la date et le SHA-256 d'un fichier localement."
+  ],
+  "rename-batch": [
+    "Rename up to 100 files with a consistent prefix and download as ZIP.",
+    "Renombra hasta 100 archivos con un prefijo y descárgalos juntos en ZIP.",
+    "Renomeie até 100 arquivos com prefixo e baixe como ZIP.",
+    "Renommez jusqu’à 100 fichiers avec un préfixe, puis téléchargez le ZIP."
+  ],
+  "resize-image": [
+    "Resize an image to a custom pixel width and download PNG.",
+    "Cambia el ancho de una imagen a los píxeles que elijas y descarga PNG.",
+    "Redimensione a largura de uma imagem em pixels e baixe PNG.",
+    "Redimensionnez une image à la largeur souhaitée en pixels, puis téléchargez PNG."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
