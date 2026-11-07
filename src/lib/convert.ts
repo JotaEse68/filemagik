@@ -5,6 +5,9 @@ export type OutputFile={name:string;blob:Blob};
 export type ConversionOptions={formValues?:string;subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  validateFiles(slug,files);
+ if(slug==='image-to-bmp'){
+  const {convertImageToBmp}=await import('./bmp-encode');return convertImageToBmp(files[0]);
+ }
  if(slug==='inspect-pdf-form'||slug==='fill-pdf-form'||slug==='flatten-pdf-form'){
   const {handlePdfForm}=await import('./pdf-form-tools');return handlePdfForm(files[0],slug==='inspect-pdf-form'?'list':slug==='fill-pdf-form'?'fill':'flatten',options.formValues);
  }
