@@ -221,6 +221,18 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Convierte subtítulos WebVTT a SRT con numeración para reproductores habituales.",
     "Converta legendas WebVTT em SRT numerado para reprodutores de vídeo.",
     "Convertissez des sous-titres WebVTT en SRT numéroté pour les lecteurs vidéo."
+  ],
+  "crop-pdf": [
+    "Crop the visible margins of a PDF without rasterizing the pages; hidden content is not erased.",
+    "Recorta los márgenes visibles del PDF sin rasterizar las páginas; el contenido oculto no se borra.",
+    "Recorte as margens visíveis do PDF sem rasterização; o conteúdo oculto não é apagado.",
+    "Rognez les marges visibles du PDF sans rasteriser les pages; le contenu masqué n’est pas supprimé."
+  ],
+  "annotate-pdf-text": [
+    "Add a visible text note to the bottom of all PDF pages without converting them to images.",
+    "Añade una anotación de texto visible al pie de todas las páginas PDF sin convertirlas en imágenes.",
+    "Adicione uma nota de texto visível ao rodapé de todas as páginas do PDF sem as rasterizar.",
+    "Ajoutez une note visible au bas de toutes les pages PDF sans les convertir en images."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
