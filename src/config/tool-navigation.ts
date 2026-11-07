@@ -1,15 +1,16 @@
 import {tools,type ToolSlug,type Locale} from './site';
 
-export const categoryIds=['all','pdf','images','office','data','ocr','archives'] as const;
+export const categoryIds=['all','pdf','images','office','data','ocr','archives','subtitles'] as const;
 export type ToolCategory=typeof categoryIds[number];
 type Category=Exclude<ToolCategory,'all'>;
 export const categoryLabels:Record<Locale,Record<ToolCategory,string>>={
- en:{all:'All tools',pdf:'PDF Studio',images:'Images',office:'Office & documents',data:'Excel & data',ocr:'OCR & cleanup',archives:'ZIP & archives'},
- es:{all:'Todas',pdf:'PDF Studio',images:'Imágenes',office:'Documentos y Office',data:'Excel y datos',ocr:'OCR y limpieza',archives:'ZIP y archivos'},
- pt:{all:'Todas',pdf:'PDF Studio',images:'Imagens',office:'Documentos e Office',data:'Excel e dados',ocr:'OCR e limpeza',archives:'ZIP e arquivos'},
- fr:{all:'Tous les outils',pdf:'PDF Studio',images:'Images',office:'Documents et Office',data:'Excel et données',ocr:'OCR et nettoyage',archives:'ZIP et archives'}
+ en:{all:'All tools',pdf:'PDF Studio',images:'Images',office:'Office & documents',data:'Excel & data',ocr:'OCR & cleanup',archives:'ZIP & archives',subtitles:'Subtitles'},
+ es:{all:'Todas',pdf:'PDF Studio',images:'Imágenes',office:'Documentos y Office',data:'Excel y datos',ocr:'OCR y limpieza',archives:'ZIP y archivos',subtitles:'Subtítulos'},
+ pt:{all:'Todas',pdf:'PDF Studio',images:'Imagens',office:'Documentos e Office',data:'Excel e dados',ocr:'OCR e limpeza',archives:'ZIP e arquivos',subtitles:'Legendas'},
+ fr:{all:'Tous les outils',pdf:'PDF Studio',images:'Images',office:'Documents et Office',data:'Excel et données',ocr:'OCR et nettoyage',archives:'ZIP et archives',subtitles:'Sous-titres'}
 };
 const overrides:Partial<Record<ToolSlug,Category>>={
+ 'srt-to-vtt':'subtitles','vtt-to-srt':'subtitles',
  'inspect-file':'archives','rename-batch':'archives',
  'create-zip':'archives','extract-zip':'archives',
  'image-cleanup':'ocr','ocr-image':'ocr','ocr-pdf':'ocr',
