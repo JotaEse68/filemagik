@@ -11,7 +11,7 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88):Promi
   return {name:`${name}.${ext}`,blob:new Blob([result],{type:ext==='json'?'application/json':'text/csv;charset=utf-8'})};
  }
  if(slug==='word-to-text'){
-  const mammoth=await import('mammoth/mammoth.browser');
+  const mammoth=await import('mammoth');
   const result=await mammoth.extractRawText({arrayBuffer:await files[0].arrayBuffer()});
   return {name:`${name}.txt`,blob:new Blob([result.value],{type:'text/plain;charset=utf-8'})};
  }
