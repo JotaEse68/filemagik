@@ -4,6 +4,7 @@ export const defaultLocale:Locale='en';
 export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.example').replace(/\/$/,'');
 export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
+ {slug:'adjust-image',from:'Image',to:'Edited image',kind:'image',accept:'.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'},
  {slug:'batch-images-to-webp',from:'Images',to:'WebP ZIP',kind:'image',accept:'.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'},
  {slug:'inspect-file',from:'File',to:'Information',kind:'utility',accept:'*/*'},
  {slug:'rename-batch',from:'Files',to:'Renamed ZIP',kind:'utility',accept:'*/*'},
