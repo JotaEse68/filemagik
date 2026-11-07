@@ -5,6 +5,9 @@ export type OutputFile={name:string;blob:Blob};
 export type ConversionOptions={subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  validateFiles(slug,files);
+ if(slug==='create-gzip'||slug==='extract-gzip'){
+  const {gzipFile}=await import('./gzip-tools');return gzipFile(files[0],slug==='create-gzip'?'compress':'decompress');
+ }
  if(slug==='audio-to-wav'){
   const {audioToWav}=await import('./audio-tools');return audioToWav(files[0],{startSeconds:options.audioStartSeconds,endSeconds:options.audioEndSeconds});
  }
