@@ -20,6 +20,7 @@ const overrides:Partial<Record<ToolSlug,Category>>={
  'image-cleanup':'ocr','ocr-image':'ocr','ocr-pdf':'ocr',
  'word-to-basic-pdf':'office','word-to-text':'office','pdf-to-word-text':'office',
  'xlsx-to-csv':'data','csv-to-xlsx':'data','csv-to-json':'data','json-to-csv':'data',
+ 'image-to-bmp':'images',
  'batch-images-to-webp':'images','adjust-image':'images',
  'images-to-pdf':'images','jpg-to-webp':'images','jpg-to-png':'images','webp-to-jpg':'images',
  'png-to-jpg':'images','png-to-webp':'images','webp-to-png':'images'
