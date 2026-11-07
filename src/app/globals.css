@@ -83,3 +83,6 @@ html{scroll-padding-top:90px}body{min-width:320px}.header-inner{position:relativ
 @media(max-width:430px){
  .radial-sector{width:calc(var(--diameter) * .205);height:calc(var(--diameter) * .17);min-height:44px;font-size:9px}
 }
+
+/* Keep the two circular menus visually separate on touch screens. */
+@media(max-width:800px){.radial-wheels{gap:42px}.radial-connection{min-height:26px}}
