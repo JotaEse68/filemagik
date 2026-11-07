@@ -1,0 +1,18 @@
+import type {Metadata} from 'next';
+import {notFound} from 'next/navigation';
+import {isLocale,siteUrl} from '@/config/site';
+import {categoryIds,categoryLabels,type ToolCategory} from '@/config/tool-navigation';
+import ToolExplorer from '@/components/tool-explorer';
+export async function generateMetadata({params}:{params:Promise<{locale:string}>}):Promise<Metadata>{
+ const {locale}=await params;if(!isLocale(locale))return {};
+ return {title:`${categoryLabels[locale].all} | FileMagik`,description:`${categoryLabels[locale].all} — FileMagik`,alternates:{canonical:`${siteUrl}/${locale}/tools`}};
+}
+export default async function ToolsPage({params,searchParams}:{params:Promise<{locale:string}>;searchParams:Promise<{category?:string}>}){
+ const {locale}=await params;if(!isLocale(locale))notFound();
+ const {category}=await searchParams;
+ const selected:ToolCategory=categoryIds.includes(category as ToolCategory)?category as ToolCategory:'all';
+ return <section className="section tools-directory"><div className="container">
+ <div className="section-heading"><div><span className="eyebrow-line">FILEMAGIK STUDIO</span><h1>{categoryLabels[locale].all}</h1></div></div>
+ <ToolExplorer locale={locale} initialCategory={selected}/>
+ </div></section>;
+}
