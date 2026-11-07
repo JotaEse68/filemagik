@@ -4,7 +4,7 @@ export type Dictionary={
  dropTitle:string;dropSub:string;browse:string;privacy:string;fast:string;free:string;popular:string;howTitle:string;
  howSteps:[string,string,string];featuresTitle:string;features:[string,string,string];footer:string;
  convert:string;processing:string;download:string;reset:string;error:string;multiple:string;selected:string;
- seoTools:string;related:string;toolDesc:(from:string,to:string)=>string;localNote:string;adsLabel:string;allTools:string;
+ seoTools:string;related:string;localNote:string;adsLabel:string;allTools:string;
  progress:string;quality:string;imageQuality:string;fileTooBig:string;
 };
 const dictionaries:Record<Locale,Dictionary>={
@@ -16,7 +16,7 @@ const dictionaries:Record<Locale,Dictionary>={
  featuresTitle:'Made for real work',features:['Files processed in your browser where possible','Clean results, no surprise watermarks','Four languages. One simple experience'],
  footer:'Made with care by Desarrollo By Jota!',convert:'Convert now',processing:'Processing…',download:'Download',reset:'New conversion',error:'Could not process your file.',
  multiple:'Select multiple PDFs to merge',selected:'Selected files',seoTools:'All conversion tools',related:'Other useful tools',
- toolDesc:(a,b)=>`Convert ${a} to ${b} online. Free, fast, and designed for privacy.`,localNote:'These files are processed locally in your browser.',
+ localNote:'These files are processed locally in your browser.',
  adsLabel:'Advertisement',allTools:'Explore tools',progress:'Working on your file',quality:'Quality',imageQuality:'Image quality',fileTooBig:'File too large (maximum 25 MB per file).'
  },
  es:{
@@ -27,7 +27,7 @@ const dictionaries:Record<Locale,Dictionary>={
  featuresTitle:'Diseñado para el trabajo real',features:['Archivos procesados en tu navegador siempre que sea posible','Resultados limpios y sin marcas de agua sorpresa','Cuatro idiomas. Una experiencia sencilla'],
  footer:'Desarrollado por Desarrollo By Jota!',convert:'Convertir ahora',processing:'Procesando…',download:'Descargar',reset:'Nueva conversión',error:'No se pudo procesar el archivo.',
  multiple:'Selecciona varios PDF para unir',selected:'Archivos seleccionados',seoTools:'Todas las herramientas',related:'Otras herramientas útiles',
- toolDesc:(a,b)=>`Convierte ${a} a ${b} online, gratis, rápido y con privacidad.`,localNote:'Estos archivos se procesan localmente en tu navegador.',
+ localNote:'Estos archivos se procesan localmente en tu navegador.',
  adsLabel:'Publicidad',allTools:'Ver herramientas',progress:'Procesando tu archivo',quality:'Calidad',imageQuality:'Calidad de imagen',fileTooBig:'Archivo demasiado grande (máximo 25 MB por archivo).'
  },
  pt:{
@@ -38,7 +38,7 @@ const dictionaries:Record<Locale,Dictionary>={
  featuresTitle:'Feito para o trabalho real',features:['Arquivos processados no navegador sempre que possível','Resultados limpos, sem marcas d’água surpresa','Quatro idiomas. Uma experiência simples'],
  footer:'Desenvolvido por Desarrollo By Jota!',convert:'Converter agora',processing:'Processando…',download:'Baixar',reset:'Nova conversão',error:'Não foi possível processar o arquivo.',
  multiple:'Selecione vários PDFs para juntar',selected:'Arquivos selecionados',seoTools:'Todas as ferramentas',related:'Outras ferramentas úteis',
- toolDesc:(a,b)=>`Converta ${a} para ${b} online, grátis, rápido e com privacidade.`,localNote:'Esses arquivos são processados localmente no navegador.',
+ localNote:'Esses arquivos são processados localmente no navegador.',
  adsLabel:'Publicidade',allTools:'Ver ferramentas',progress:'Processando seu arquivo',quality:'Qualidade',imageQuality:'Qualidade da imagem',fileTooBig:'Arquivo muito grande (máximo de 25 MB por arquivo).'
  },
  fr:{
@@ -49,8 +49,9 @@ const dictionaries:Record<Locale,Dictionary>={
  featuresTitle:'Pensé pour le travail réel',features:['Fichiers traités dans le navigateur lorsque c’est possible','Des résultats propres, sans filigrane surprise','Quatre langues. Une expérience simple'],
  footer:'Développé par Desarrollo By Jota!',convert:'Convertir',processing:'Traitement…',download:'Télécharger',reset:'Nouvelle conversion',error:'Impossible de traiter votre fichier.',
  multiple:'Sélectionnez plusieurs PDF à fusionner',selected:'Fichiers sélectionnés',seoTools:'Tous les outils',related:'Autres outils utiles',
- toolDesc:(a,b)=>`Convertissez ${a} en ${b} en ligne, gratuitement, rapidement et en toute confidentialité.`,localNote:'Ces fichiers sont traités localement dans votre navigateur.',
+ localNote:'Ces fichiers sont traités localement dans votre navigateur.',
  adsLabel:'Publicité',allTools:'Voir les outils',progress:'Traitement du fichier',quality:'Qualité',imageQuality:'Qualité de l’image',fileTooBig:'Fichier trop volumineux (25 Mo maximum par fichier).'
  }
 };
 export const getDictionary=(locale:Locale)=>dictionaries[locale];
+export function toolDescription(locale:Locale,from:string,to:string):string { const d={en:`Convert ${from} to ${to} online. Free, fast, and designed for privacy.`,es:`Convierte ${from} a ${to} online, gratis, rápido y con privacidad.`,pt:`Converta ${from} para ${to} online, grátis, rápido e com privacidade.`,fr:`Convertissez ${from} en ${to} en ligne, gratuitement, rapidement et en toute confidentialité.`};return d[locale];}
