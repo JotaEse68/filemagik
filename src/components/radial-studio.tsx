@@ -49,7 +49,7 @@ export default function RadialStudio({locale}:{locale:Locale}){
       const Icon=icons[category],angle=index*60-90;
       return <button type="button" className={`radial-sector ${selected===category?'is-active':''}`} key={category} style={{'--angle':`${angle}deg`} as CSSProperties} aria-pressed={selected===category} onClick={()=>{setSelected(category);setHovered(null);}}><Icon size={26}/><span>{t[category]}</span></button>
      })}
-     <div className="wheel-center"><Files size={22}/><span>{t[selected]}</span></div>
+     <div className="wheel-center" aria-live="polite"><Files size={22}/><span>{t[selected]}</span></div>
     </div>
    </div>
    <div className="radial-connection"><span/><ArrowUpRight size={28}/><span/></div>
