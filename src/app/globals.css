@@ -68,3 +68,7 @@ html{scroll-padding-top:90px}body{min-width:320px}.header-inner{position:relativ
 .pdf-option-panel input,.pdf-option-panel select{min-height:44px}
 @media(max-width:720px){.tool-explorer-heading{align-items:stretch}.tool-search{min-height:48px}.category-tab{min-height:44px}.radial-wheel{max-width:100%}.pdf-preview-item{min-width:100px}.pdf-reorder-buttons button{min-width:44px}.image-cleanup-toolbar button{min-height:44px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Skip link remains hidden until keyboard focus */
+.skip-link{position:absolute;top:8px;left:8px;z-index:9999;transform:translateY(-160%);background:#fff;color:#101528;border:3px solid #3237c0;border-radius:10px;padding:12px 18px;font-weight:800;text-decoration:none}
+.skip-link:focus{transform:translateY(0)}
