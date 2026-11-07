@@ -4,10 +4,10 @@ import {Archive,Download,FileArchive,FileUp,Loader2} from 'lucide-react';
 import type {Locale} from '@/config/site';
 type ZipEntry={name:string;size:number;entry:import('jszip').JSZipObject};
 const labels={
- en:{title:'Open a ZIP archive',intro:'Browse and download individual files from your ZIP. Nothing is uploaded.',choose:'Choose ZIP',empty:'Select a ZIP to view its contents.',download:'Download',files:'files',limit:'For safety: 50 MB ZIP, 100 files, 30 MB per extracted file.'},
- es:{title:'Abrir un archivo ZIP',intro:'Consulta y descarga archivos individuales del ZIP, sin subirlos.',choose:'Elegir ZIP',empty:'Selecciona un ZIP para ver su contenido.',download:'Descargar',files:'archivos',limit:'Límites de seguridad: ZIP de 50 MB, 100 archivos, 30 MB por archivo.'},
- pt:{title:'Abrir arquivo ZIP',intro:'Veja e baixe os arquivos do ZIP sem envio ao servidor.',choose:'Escolher ZIP',empty:'Selecione um ZIP para ver o conteúdo.',download:'Baixar',files:'arquivos',limit:'Limites: ZIP de 50 MB, 100 arquivos, 30 MB por arquivo.'},
- fr:{title:'Ouvrir une archive ZIP',intro:'Parcourez et téléchargez les fichiers du ZIP sans transfert.',choose:'Choisir un ZIP',empty:'Choisissez un ZIP pour voir son contenu.',download:'Télécharger',files:'fichiers',limit:'Limites : ZIP de 50 Mo, 100 fichiers, 30 Mo par fichier.'}
+ en:{title:'Open a ZIP archive',intro:'Browse and download individual files from your ZIP. Nothing is uploaded.',choose:'Choose ZIP',empty:'Select a ZIP to view its contents.',download:'Download',files:'files',limit:'For safety: 120 MB ZIP, 100 files, 30 MB per extracted file.'},
+ es:{title:'Abrir un archivo ZIP',intro:'Consulta y descarga archivos individuales del ZIP, sin subirlos.',choose:'Elegir ZIP',empty:'Selecciona un ZIP para ver su contenido.',download:'Descargar',files:'archivos',limit:'Límites de seguridad: ZIP de 120 MB, 100 archivos, 30 MB por archivo.'},
+ pt:{title:'Abrir arquivo ZIP',intro:'Veja e baixe os arquivos do ZIP sem envio ao servidor.',choose:'Escolher ZIP',empty:'Selecione um ZIP para ver o conteúdo.',download:'Baixar',files:'arquivos',limit:'Limites: ZIP de 120 MB, 100 arquivos, 30 MB por arquivo.'},
+ fr:{title:'Ouvrir une archive ZIP',intro:'Parcourez et téléchargez les fichiers du ZIP sans transfert.',choose:'Choisir un ZIP',empty:'Choisissez un ZIP pour voir son contenu.',download:'Télécharger',files:'fichiers',limit:'Limites : ZIP de 120 Mo, 100 fichiers, 30 Mo par fichier.'}
 } as const;
 const MAX_FILE=30*1024*1024;
 export default function ZipExplorer({locale}:{locale:Locale}){
@@ -16,7 +16,7 @@ export default function ZipExplorer({locale}:{locale:Locale}){
  async function open(file:File){
   setError('');setEntries([]);setLoading(true);setName(file.name);
   try{
-   if(file.size>50*1024*1024)throw new Error(t.limit);
+   if(file.size>120*1024*1024)throw new Error(t.limit);
    const {default:JSZip}=await import('jszip');const zip=await JSZip.loadAsync(await file.arrayBuffer());
    const items=Object.values(zip.files).filter(v=>!v.dir);
    if(items.length>100)throw new Error(t.limit);
