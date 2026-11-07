@@ -1,0 +1,4 @@
+import Link from 'next/link';
+import type {Locale} from '@/config/site';
+import type {Dictionary} from '@/lib/i18n';
+export default function Footer({locale,d}:{locale:Locale;d:Dictionary}){return <footer className="footer"><div className="container footer-inner"><span>© {new Date().getFullYear()} <a href="https://quintessencedigital.net/" target="_blank" rel="noopener noreferrer">Quintessence Consulting Group</a> · <a href="https://jsantos.pro/" target="_blank" rel="noopener noreferrer">Desarrollo By Jota!</a></span><div className="footer-links"><Link href={`/${locale}#tools`}>{d.navTools}</Link><Link href={`/${locale}#how`}>{d.navHow}</Link></div></div></footer>}
