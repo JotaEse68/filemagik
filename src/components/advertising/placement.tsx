@@ -70,11 +70,14 @@ export default function AdPlacement({placement}:{placement:AdPlacement}){
   {placement==='mobile'&&<button type="button" className="fm-ad-close" aria-label="Cerrar publicidad" onClick={()=>setDismissed(true)}>×</button>}
   {googleReady?<AdsenseSlot clientId={config.google.publisherId} slotId={config.google.slots[placement]} label="Publicidad"/>:
    externalReady?<iframe title={config.external.name||'Publicidad externa'} src={config.external.frameUrls[placement]} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="strict-origin" loading="lazy" className="fm-ad-external"/>:
-   banner?<a className="fm-ad-link" href={banner.href} target="_blank" rel="sponsored nofollow noopener noreferrer">
-    {/* External URLs are validated in the public settings API. */}
-    {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img src={banner.src} alt={banner.alt} loading={placement==='top'||placement==='mobile'?'eager':'lazy'} decoding="async"/>
-   </a>:
+   banner?<div className="fm-ad-link">
+    {banner.href?<a href={banner.href} target="_blank" rel="sponsored nofollow noopener noreferrer">
+     {/* eslint-disable-next-line @next/next/no-img-element */}
+     <img src={banner.src} alt={banner.alt} loading={placement==='top'||placement==='mobile'?'eager':'lazy'} decoding="async"/>
+    </a>:
+     /* eslint-disable-next-line @next/next/no-img-element */
+     <img src={banner.src} alt={banner.alt} loading="lazy" decoding="async"/>}
+   </div>:
    <a className="fm-ad-fallback" href={fallback.href} target="_blank" rel="sponsored nofollow noopener noreferrer">
     <span className="fm-ad-fallback-brand">{fallback.brand}</span>
     <span>{fallback.headline}</span><strong>Conocer más ↗</strong>
