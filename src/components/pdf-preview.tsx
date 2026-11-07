@@ -35,7 +35,7 @@ export default function PdfPreview({file,mode,onChange,locale}:{file:File;mode:M
    }
    if(!canceled){setPages(thumbs);setOrder(thumbs.map(p=>p.number));if(mode==='reorder-pdf-pages'&&count<=40)onChange(thumbs.map(p=>p.number).join(','));setLoading(false);}
   }catch(e){if(!canceled){setError(e instanceof Error?e.message:'PDF preview unavailable');setLoading(false);}}
-  finally{if(pdf)await pdf.destroy();}
+  finally{if(pdf)await (pdf as import('pdfjs-dist').PDFDocumentProxy).destroy();}
  }
  void load();return ()=>{canceled=true};
  },[file]);
