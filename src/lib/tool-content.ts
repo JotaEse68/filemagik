@@ -269,6 +269,12 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Fija los campos de un formulario PDF para que ya no puedan editarse; no es apto para documentos firmados digitalmente.",
     "Fixe os campos de um formulário PDF para impedir a edição; não use em documentos assinados digitalmente.",
     "Figez les champs d’un formulaire PDF pour empêcher leur modification ; non adapté aux PDF signés numériquement."
+  ],
+  "image-to-bmp": [
+    "Convert JPG, PNG or WebP into a real uncompressed 24-bit Windows BMP. Transparency becomes white.",
+    "Convierte JPG, PNG o WebP en un BMP real de 24 bits para Windows. La transparencia pasa a blanco.",
+    "Converta JPG, PNG ou WebP em BMP real de 24 bits para Windows. A transparência fica branca.",
+    "Convertissez JPG, PNG ou WebP en BMP Windows 24 bits non compressé. La transparence devient blanche."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};

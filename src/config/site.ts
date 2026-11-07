@@ -4,6 +4,7 @@ export const defaultLocale:Locale='en';
 export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.vercel.app').replace(/\/$/,'');
 export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
+ {slug:'image-to-bmp',from:'Image',to:'BMP',kind:'image',accept:'.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'},
  {slug:'inspect-pdf-form',from:'PDF form',to:'Field list JSON',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'fill-pdf-form',from:'PDF form',to:'Completed PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'flatten-pdf-form',from:'PDF form',to:'Fixed PDF',kind:'pdf',accept:'.pdf,application/pdf'},
