@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {ArrowRight,Check,Download,FileUp,LockKeyhole,LoaderCircle,RotateCcw} from 'lucide-react';
 import {getAvailableTools} from '@/lib/detect-tools';
 import {convertFiles} from '@/lib/convert';
+import {validateFiles} from '@/lib/file-limits';
 import {getTool,type Locale,type ToolSlug} from '@/config/site';
 import type {Dictionary} from '@/lib/i18n';
 
@@ -23,13 +24,13 @@ export default function SmartDropzone({locale,d}:{locale:Locale;d:Dictionary}){
  const options=getAvailableTools(files);
  const t=translations[locale];
  useEffect(()=>()=>{if(result)URL.revokeObjectURL(result.url);},[result]);
- function choose(list:File[]){if(busy)return;setError('');setResult(null);setFiles(list.slice(0,30));}
+ function choose(list:File[]){if(busy)return;const selection=list.slice(0,30);if(selection.some(f=>f.size>100*1024*1024)||selection.reduce((sum,f)=>sum+f.size,0)>200*1024*1024){setError('Maximum 100 MB per file and 200 MB total in automatic mode.');return;}setError('');setResult(null);setFiles(selection);}
  function reset(){setFiles([]);setResult(null);setError('');if(picker.current)picker.current.value='';}
  async function run(slug:ToolSlug){
   if(busy)return;
   setBusy(true);setError('');
   try{
-   const converted=await convertFiles(slug,files,quality/100);
+   validateFiles(slug,files);const converted=await convertFiles(slug,files,quality/100);
    setResult({name:converted.name,url:URL.createObjectURL(converted.blob)});
   }catch(e){setError(e instanceof Error?e.message:d.error)}
   finally{setBusy(false)}
