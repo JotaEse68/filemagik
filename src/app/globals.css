@@ -57,3 +57,14 @@ html{scroll-padding-top:90px}body{min-width:320px}.header-inner{position:relativ
 
 /* The circular quick studio remains the primary entry point. */
 .magik-hero-focus{padding:40px 0 18px;text-align:center}.magik-hero-focus .magik-hero-copy{max-width:850px;margin:0 auto}.magik-hero-focus .magik-hero-copy h1{font-size:clamp(35px,5vw,70px)}.magik-hero-focus .magik-hero-copy p{margin:12px auto}.magik-hero-focus .benefits{justify-content:center}.radial-section{padding-top:12px}.smart-upload-after{background:#0b1225;padding:38px 0}.smart-upload-after-layout{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:38px;align-items:center}.smart-upload-after-layout h2{font-size:clamp(25px,3vw,38px);margin:12px 0}.smart-upload-after-layout p{color:#aebdd8}.smart-upload-after .magik-uploader{max-width:100%}.smart-upload-after .smart-dropzone{min-height:160px}.upload-limit{display:block;color:#a6bde3;opacity:.87;font-size:11px;margin-top:9px}.tool-layout-clean{display:block;max-width:920px;margin-left:auto;margin-right:auto}.tool-layout-clean .tool-main{width:100%}.ad-placement{width:min(1100px,calc(100% - 40px));margin:20px auto 35px;min-height:0}.ad-placement-incontent{width:min(850px,calc(100% - 40px));margin:0 auto 35px}.google-ad-slot{width:100%;min-width:0}.google-ad-slot .adsbygoogle{min-height:90px}@media(max-width:800px){.magik-hero-focus{padding:25px 0 10px}.smart-upload-after-layout{grid-template-columns:1fr;gap:16px}.smart-upload-after{padding:24px 0}.magik-hero-focus .magik-hero-copy h1{letter-spacing:-1.6px}.radial-section{padding-top:5px}}
+
+/* UX closure: accessible controls without changing the radial visual identity */
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #a8ecff!important;outline-offset:3px!important;box-shadow:0 0 0 5px #16467988}
+:where(button,a,input,select,textarea){touch-action:manipulation}
+.radial-sector,.mobile-nav-toggle,.category-tab,.radial-shortcuts a,.pdf-reorder-buttons button,.smart-action,.file-order-list button,.tool-search button{min-height:44px}
+.radial-sector-link:focus-visible,.radial-sector:focus-visible{outline:3px solid #e5f8ff!important;outline-offset:1px!important}
+.pdf-preview-item[draggable=true]{cursor:grab}.pdf-preview-item[draggable=true]:active{cursor:grabbing}
+.pdf-preview-message,.upload-limit,.tool-result-count{line-height:1.5}
+.pdf-option-panel input,.pdf-option-panel select{min-height:44px}
+@media(max-width:720px){.tool-explorer-heading{align-items:stretch}.tool-search{min-height:48px}.category-tab{min-height:44px}.radial-wheel{max-width:100%}.pdf-preview-item{min-width:100px}.pdf-reorder-buttons button{min-width:44px}.image-cleanup-toolbar button{min-height:44px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
