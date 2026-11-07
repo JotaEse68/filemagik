@@ -91,11 +91,10 @@ test('secondary smart uploader suggests actions for supported PDF',async({page})
  await expect(smart.locator('.smart-actions')).toContainText('PDF');
 });
 
-test('language switch preserves the current converter route',async({page})=>{
+test('language switch preserves the current converter route',async({page,isMobile})=>{
  await page.goto('/es/merge-pdf');
- const switcher=page.locator('a[href="/en/merge-pdf"]');
- await expect(switcher).toHaveCount(1);
- await switcher.click();
+ if(isMobile){await page.locator('.lang-picker-mobile select').selectOption('en');}
+ else {const switcher=page.locator('a[href="/en/merge-pdf"]');await expect(switcher).toHaveCount(1);await switcher.click();}
  await expect(page).toHaveURL(/\/en\/merge-pdf$/);
  await expect(page.locator('html')).toHaveAttribute('lang','en');
 });
