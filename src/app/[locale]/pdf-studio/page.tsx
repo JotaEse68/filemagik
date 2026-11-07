@@ -36,6 +36,6 @@ const content={
  ]}
 } as const;
 const icons=[Scissors,Layers,FileDown,Merge,CopyMinus,RotateCcw,RotateCcw,Stamp,Minimize2,Images,FileType];
-export default function PdfStudioPage({params}:{params:Promise<{locale:Locale}>}){
- return params.then(({locale})=>{const t=content[locale]??content.en;return <main className="pdf-hub"><div className="container"><div className="pdf-hub-hero"><span className="radial-kicker">{t.kicker}</span><h1>{t.title}</h1><p>{t.subtitle}</p></div><div className="pdf-hub-grid">{t.items.map(([slug,title,description],i)=>{const Icon=icons[i];return <Link href={`/${locale}/${slug}`} className="pdf-hub-item" key={slug}><span className="pdf-hub-icon"><Icon size={25}/></span><span className="pdf-hub-description"><strong>{title}</strong><small>{description}</small></span><ArrowRight size={19}/></Link>})}</div></div></main>});
+export default async function PdfStudioPage({params}:{params:Promise<{locale:Locale}>}){
+ const {locale}=await params;const t=content[locale]??content.en;return <main className="pdf-hub"><div className="container"><div className="pdf-hub-hero"><span className="radial-kicker">{t.kicker}</span><h1>{t.title}</h1><p>{t.subtitle}</p></div><div className="pdf-hub-grid">{t.items.map(([slug,title,description],i)=>{const Icon=icons[i];return <Link href={`/${locale}/${slug}`} className="pdf-hub-item" key={slug}><span className="pdf-hub-icon"><Icon size={25}/></span><span className="pdf-hub-description"><strong>{title}</strong><small>{description}</small></span><ArrowRight size={19}/></Link>})}</div></div></main>;
 }
