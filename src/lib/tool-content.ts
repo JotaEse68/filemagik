@@ -155,6 +155,18 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Convierte CSV a un archivo XLSX editable.",
     "Converta CSV em um arquivo XLSX editável.",
     "Convertissez vos lignes CSV en classeur Excel modifiable."
+  ],
+  "sign-pdf-visual": [
+    "Add a visible text signature to a PDF. This is not a cryptographic or certified digital signature.",
+    "Añade una firma de texto visible a un PDF. No es una firma digital certificada.",
+    "Adicione uma assinatura de texto visível. Não é assinatura digital certificada.",
+    "Ajoutez une signature visible. Ce n’est pas une signature numérique certifiée."
+  ],
+  "compress-pdf-raster": [
+    "Reduce PDF size by converting pages to compressed images. Text and links are lost.",
+    "Reduce el tamaño de PDF convirtiendo páginas en imágenes. Pierde texto seleccionable y enlaces.",
+    "Reduza PDFs convertendo páginas em imagens. O texto e links são perdidos.",
+    "Réduisez un PDF en convertissant les pages en images, sans texte sélectionnable."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
