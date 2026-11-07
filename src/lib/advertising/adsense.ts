@@ -10,7 +10,7 @@ export function adsenseReadiness(){
   enabled:process.env.NEXT_PUBLIC_ADSENSE_ENABLED==='true',
   cmpConfigured:process.env.NEXT_PUBLIC_ADSENSE_CMP_VERIFIED==='true',
   approved:process.env.NEXT_PUBLIC_ADSENSE_SITE_APPROVED==='true',
-  slotsConfigured:Boolean(process.env.NEXT_PUBLIC_ADSENSE_SLOT_DESKTOP&&/^\d+$/.test(process.env.NEXT_PUBLIC_ADSENSE_SLOT_DESKTOP)),
+  slotsConfigured:[process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME,process.env.NEXT_PUBLIC_ADSENSE_SLOT_INCONTENT,process.env.NEXT_PUBLIC_ADSENSE_SLOT_DESKTOP,process.env.NEXT_PUBLIC_ADSENSE_SLOT_MOBILE].some(v=>Boolean(v&&/^\d{5,20}$/.test(v))),
  };
 }
 export function canServeAdsense(){
