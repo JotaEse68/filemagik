@@ -1,11 +1,15 @@
 import {csvToJson,jsonToCsv} from './csv';
 import type {ToolSlug} from '@/config/site';
 export type OutputFile={name:string;blob:Blob};
-export async function convertFiles(slug:ToolSlug,files:File[],quality=.88):Promise<OutputFile>{
+export type ConversionOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number};
+export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  if(!files.length)throw new Error('Select a file');
  if(files.some(f=>f.size>25*1024*1024))throw new Error('File exceeds 25 MB');
  if(files.reduce((total,file)=>total+file.size,0)>100*1024*1024)throw new Error('Total input exceeds 100 MB');
  if(slug==='merge-pdf'&&files.length>20)throw new Error('Maximum 20 PDF files');
+ if(['split-pdf-by-count','extract-pdf-pages','delete-pdf-pages','watermark-pdf'].includes(slug)){
+  const {pdfAction}=await import('./pdf-operations');return pdfAction(slug as import('./pdf-operations').PdfAction,files[0],options);
+ }
  const name=files[0].name.replace(/\.[^.]+$/,'');
  if(slug==='csv-to-json'||slug==='json-to-csv'){
   const text=await files[0].text();const result=slug==='csv-to-json'?csvToJson(text):jsonToCsv(text);
