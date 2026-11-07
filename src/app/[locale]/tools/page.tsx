@@ -3,6 +3,7 @@ import {notFound} from 'next/navigation';
 import {isLocale,siteUrl,locales} from '@/config/site';
 import {categoryIds,categoryLabels,type ToolCategory} from '@/config/tool-navigation';
 import ToolExplorer from '@/components/tool-explorer';
+import AdPlacement from '@/components/advertising/placement';
 import {siteDescription,socialLocale} from '@/lib/seo';
 export async function generateMetadata({params}:{params:Promise<{locale:string}>}):Promise<Metadata>{
  const {locale}=await params;if(!isLocale(locale))return {};
@@ -12,8 +13,8 @@ export default async function ToolsPage({params,searchParams}:{params:Promise<{l
  const {locale}=await params;if(!isLocale(locale))notFound();
  const {category}=await searchParams;
  const selected:ToolCategory=categoryIds.includes(category as ToolCategory)?category as ToolCategory:'all';
- return <section className="section tools-directory"><div className="container">
+ return <><div className="fm-ad-page"><div className="fm-ad-main"><AdPlacement placement="top"/><section className="section tools-directory"><div className="container">
  <div className="section-heading"><div><span className="eyebrow-line">FILEMAGIK STUDIO</span><h1>{categoryLabels[locale].all}</h1></div></div>
  <ToolExplorer locale={locale} initialCategory={selected}/>
- </div></section>;
+ </div></section><AdPlacement placement="inline"/></div><AdPlacement placement="desktop"/></div><AdPlacement placement="mobile"/></>;
 }

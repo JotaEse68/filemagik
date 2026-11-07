@@ -127,3 +127,29 @@ test('PDF form inspector and filler process real AcroForm fields',async({page})=
  await page.getByRole('button',{name:/convertir ahora/i}).click();
  await expect(page.locator('a[download]')).toHaveAttribute('download',/completed\.pdf$/);
 });
+
+
+test('advertising spaces remain visible without an advertising network account',async({page,isMobile})=>{
+ await page.goto('/es');
+ await expect(page.locator('.fm-ad--top')).toBeVisible();
+ await expect(page.locator('.fm-ad--inline')).toBeVisible();
+ if(isMobile){
+  await expect(page.locator('.fm-ad--mobile')).toBeVisible();
+  await expect(page.locator('.fm-ad--mobile')).toContainText('Publicidad');
+  await page.getByRole('button',{name:'Cerrar publicidad'}).click();
+  await expect(page.locator('.fm-ad--mobile')).toHaveCount(0);
+ }else{
+  await expect(page.locator('.fm-ad--desktop')).toBeVisible();
+ }
+ await page.goto('/es/merge-pdf');
+ await expect(page.locator('.fm-ad--result')).toBeVisible();
+});
+
+test('public advertising API exposes five slots and safe own fallback',async({request})=>{
+ const res=await request.get('/api/advertising');
+ expect(res.ok()).toBeTruthy();
+ const config=await res.json();
+ expect(config.enabled).toBe(true);
+ expect(Object.keys(config.slots).sort()).toEqual(['desktop','inline','mobile','result','top']);
+ expect(config.slots.top.mode).toBe('own');
+});
