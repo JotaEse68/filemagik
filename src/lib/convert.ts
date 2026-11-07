@@ -19,6 +19,9 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,option
  if(slug==='ocr-image'||slug==='ocr-pdf'){
   const {runOcr}=await import('./ocr');return runOcr(files[0],slug,options.ocrLang??'eng');
  }
+ if(slug==='xlsx-to-csv'||slug==='csv-to-xlsx'){
+  const excel=await import('./excel');return slug==='xlsx-to-csv'?excel.xlsxToCsv(files[0]):excel.csvToXlsx(files[0]);
+ }
  const name=files[0].name.replace(/\.[^.]+$/,'');
  if(slug==='csv-to-json'||slug==='json-to-csv'){
   const text=await files[0].text();const result=slug==='csv-to-json'?csvToJson(text):jsonToCsv(text);
