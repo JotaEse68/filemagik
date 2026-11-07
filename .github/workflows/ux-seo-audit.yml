@@ -45,7 +45,7 @@ jobs:
       - name: Lighthouse mobile lab audit
         if: success()
         run: |
-          npx --yes lighthouse@12.8.2 http://127.0.0.1:3100/es --chrome-flags="--headless --no-sandbox" --preset=desktop --output=json --output-path=/tmp/lighthouse-filemagik.json --quiet
+          npx --yes lighthouse@12.8.2 http://127.0.0.1:3100/es --chrome-flags="--headless --no-sandbox" --output=json --output-path=/tmp/lighthouse-filemagik.json --quiet
           node -e "const x=require('/tmp/lighthouse-filemagik.json');const a=x.audits;console.log(JSON.stringify({performance:x.categories.performance.score,accessibility:x.categories.accessibility.score,seo:x.categories.seo.score,LCP:a['largest-contentful-paint'].displayValue,CLS:a['cumulative-layout-shift'].displayValue,TBT:a['total-blocking-time'].displayValue},null,2));"
       - name: Save Lighthouse diagnostics
         if: success()
