@@ -8,7 +8,7 @@ export default function Login(){
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if(!url||!key){setMessage('El panel necesita una base de datos FileMagik configurada.');setLoading(false);return;}
   const client=createBrowserClient(url,key);
-  const {error}=await client.auth.signInWithOtp({email,emailRedirectTo:`${window.location.origin}/auth/callback`});
+  const {error}=await client.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:`${window.location.origin}/auth/callback`}});
   setMessage(error?'No se pudo enviar el acceso. Revisa la configuración.':'Revisa tu correo para iniciar sesión.');
   setLoading(false);
  }
