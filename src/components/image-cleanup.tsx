@@ -29,7 +29,7 @@ export default function ImageCleanup({locale}:{locale:Locale}){
   if(area&&area.width>1&&area.height>1){ctx.strokeStyle='#8cf5ff';ctx.lineWidth=Math.max(1,el.width/600);ctx.setLineDash([8,5]);ctx.strokeRect(area.x,area.y,area.width,area.height);ctx.setLineDash([]);}
  },[]);
  async function openFile(file:File){
-  setError('');if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>25*1024*1024){setError(copy.error);return;}
+  setError('');if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>60*1024*1024){setError(copy.error);return;}
   let bitmap:ImageBitmap|null=null;
   try{
    bitmap=await createImageBitmap(file);
