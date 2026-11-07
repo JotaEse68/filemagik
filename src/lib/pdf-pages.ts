@@ -20,3 +20,11 @@ export function partitionPages(total:number,size:number):number[][]{
 export function remainingPages(total:number,removed:number[]):number[]{
  const omit=new Set(removed);return Array.from({length:total},(_,i)=>i).filter(p=>!omit.has(p));
 }
+
+export function parsePageOrder(input:string,total:number):number[]{
+ if(!Number.isSafeInteger(total)||total<1||total>500)throw new Error('Invalid page count');
+ const values=input.split(',').map(s=>Number(s.trim()));
+ if(values.length!==total||values.some(x=>!Number.isSafeInteger(x)||x<1||x>total)||new Set(values).size!==total)
+  throw new Error('Enter every page exactly once in the desired order');
+ return values.map(x=>x-1);
+}
