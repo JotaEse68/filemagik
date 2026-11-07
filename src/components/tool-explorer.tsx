@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import {useMemo,useState} from 'react';
+import {useEffect,useMemo,useState} from 'react';
 import {ArrowUpRight,FileText,FileSpreadsheet,Files,ImageIcon,ScanText,Search,X} from 'lucide-react';
 import type {Locale} from '@/config/site';
 import {categoryCounts,categoryIds,categoryLabels,searchTools,type ToolCategory} from '@/config/tool-navigation';
@@ -12,6 +12,7 @@ const text={
 } as const;
 export default function ToolExplorer({locale,initialCategory='all'}:{locale:Locale;initialCategory?:ToolCategory}){
  const [category,setCategory]=useState<ToolCategory>(initialCategory),[query,setQuery]=useState('');
+ useEffect(()=>setCategory(initialCategory),[initialCategory]);
  const list=useMemo(()=>searchTools(query,category),[query,category]);
  const language=text[locale],labels=categoryLabels[locale];
  return <div className="tool-explorer" aria-label={language.heading}>
