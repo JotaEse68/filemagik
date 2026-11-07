@@ -10,7 +10,7 @@ const navigation=fs.readFileSync('src/config/tool-navigation.ts','utf8');
 const categories=['all','pdf','images','office','data','ocr'];
 test('tool catalog has distinct routes',()=>assert.equal(new Set(slugs).size,slugs.length));
 test('every tool is assigned to exactly one category',()=>{
- const source=navigation.replace(/import \{[^\n]*\} from '\.\/site';/,'');
+ const source=navigation.replace(/import \{[^\n]*\} from '\.\/site';/,'const tools='+JSON.stringify(slugs.map(slug=>({slug,from:slug,to:slug})))+';');
  const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
  const sandbox={module:{exports:{}},exports:{},require:()=>({tools:slugs.map(slug=>({slug,from:slug,to:slug}))})};
  sandbox.exports=sandbox.module.exports;
