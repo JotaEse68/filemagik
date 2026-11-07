@@ -3,16 +3,16 @@
 Free, browser-first conversion and document tools, designed in the JOTA Signature + Glassmorphism system. Public UI available in English, Spanish, Portuguese and French.
 
 ## Current development branch
-`develop/file-tools-next` — **not deployed**. Vercel automatic deployments are suspended by project policy. Do not merge or trigger deployments until explicit owner approval.
+`feature/radial-studio-admin` — **not deployed**. Vercel automatic deployments are suspended by project policy. Do not merge or trigger deployments until explicit owner approval.
 
 ## Modules implemented in source
 - **PDF Studio:** join, split to one page per file, split into groups of N pages, extract/remove selected pages, reorder with thumbnail previews, rotate and add text watermarks.
 - **PDF formats:** JPG/PNG to PDF, PDF pages to PNG ZIP, extract PDF text to simple DOCX, convert DOCX text to basic PDF, rasterize for a potentially smaller PDF, and add clearly labeled visual signatures.
 - **Images:** JPG/PNG/WebP conversion and Image Cleanup (local rectangular retouching for small marks over simple backgrounds).
-- **SEO catalog:** 28 tools with localized descriptions across four languages.\n- **OCR:** text extraction from screenshots and scanned PDF in English, Spanish, Portuguese and French.
+- **SEO catalog:** 33 tools with localized descriptions across four languages.\n- **OCR:** text extraction from screenshots and scanned PDF in English, Spanish, Portuguese and French.
 - **Data:** CSV ↔ XLSX, CSV ↔ JSON.
 - **Interface:** context-aware dropzone, file order controls, responsive layout, localized help for every tool.
-- **SEO:** 26 tool routes × 4 languages, metadata, hreflang, canonical, sitemap and SoftwareApplication JSON-LD.
+- **SEO:** 33 tool routes × 4 languages, metadata, hreflang, canonical, sitemap and SoftwareApplication JSON-LD.
 - **Superadmin foundation:** Supabase email login, RLS bootstrap SQL, admin-gated ad configuration API, audit table.
 - **Owned ads:** optional desktop/mobile placements, disabled without valid saved settings. Google/AdSense intentionally NOT enabled.
 
@@ -32,3 +32,10 @@ Do **not** claim production readiness before browser conversion tests with actua
 
 ## Ownership
 © Quintessence Consulting Group. Development: [Desarrollo By Jota!](https://jsantos.pro/).
+## FileMagik v0.3 / UX radial
+- Dos ruedas interactivas tipo acción/contexto: seis categorías, seis acciones rápidas por categoría; interacción adaptada a móvil.
+- PDF Studio en `/{locale}/pdf-studio` con división individual, por bloques y por intervalos claramente diferenciadas.
+- Herramientas adicionales para usuarios Windows: ZIP, explorador de ZIP con descargas individuales, renombrado de lotes, redimensionado, inspección y SHA-256.
+- Superadmin ampliado: publicidad propia, estado de AdSense y auditoría; requiere **Supabase independiente** antes de utilizarlo.
+- Google AdSense está **preparado pero desactivado**: falta editor aprobado, CMP certificada y espacios reales. Ver `docs/ADSENSE_ACTIVATION.md`.
+- QA de la rama comprobado con `npm run check`; validación con archivos reales pendiente.
