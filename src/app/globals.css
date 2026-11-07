@@ -141,3 +141,6 @@ body.has-ad-dock{padding-bottom:88px}
 .fm-admin-actions button{padding:10px 15px;border-radius:10px;border:1px solid #8ca9d9;background:#254072;color:#fff;cursor:pointer}
 .fm-admin-actions button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:680px){.fm-ads-admin section{padding:14px}.fm-admin-rows{grid-template-columns:1fr}}
+
+.fm-ad-link>a{display:block;width:100%;height:100%}
+.fm-ad-external{display:block;width:100%;height:100%;border:0;background:#121a32}
