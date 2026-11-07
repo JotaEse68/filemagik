@@ -1,10 +1,19 @@
 import '../globals.css';
 import {notFound} from 'next/navigation';
-import {isLocale,locales} from '@/config/site';
+import type {Metadata} from 'next';
+import {isLocale,locales,siteUrl} from '@/config/site';
 import {getDictionary} from '@/lib/i18n';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 
+export const metadata:Metadata={
+ applicationName:'FileMagik',
+ metadataBase:new URL(siteUrl),
+ verification:{
+  google:process.env.NEXT_PUBLIC_GSC_VERIFICATION||undefined,
+  other:process.env.NEXT_PUBLIC_BING_VERIFICATION?{'msvalidate.01':process.env.NEXT_PUBLIC_BING_VERIFICATION}:{}
+ }
+};
 export function generateStaticParams(){return locales.map(locale=>({locale}));}
 const skipLabels={en:'Skip to main content',es:'Saltar al contenido',pt:'Ir para o conteúdo',fr:'Aller au contenu'} as const;
 export default async function LocaleLayout({children,params}:{children:React.ReactNode;params:Promise<{locale:string}>}){
