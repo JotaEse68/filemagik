@@ -10,6 +10,7 @@ export const categoryLabels:Record<Locale,Record<ToolCategory,string>>={
  fr:{all:'Tous les outils',pdf:'PDF Studio',images:'Images',office:'Documents et Office',data:'Excel et données',ocr:'OCR et nettoyage',archives:'ZIP et archives'}
 };
 const overrides:Partial<Record<ToolSlug,Category>>={
+ 'inspect-file':'archives','rename-batch':'archives',
  'create-zip':'archives','extract-zip':'archives',
  'image-cleanup':'ocr','ocr-image':'ocr','ocr-pdf':'ocr',
  'word-to-basic-pdf':'office','word-to-text':'office','pdf-to-word-text':'office',
