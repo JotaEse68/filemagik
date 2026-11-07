@@ -197,6 +197,60 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Cambia el ancho de una imagen a los píxeles que elijas y descarga PNG.",
     "Redimensione a largura de uma imagem em pixels e baixe PNG.",
     "Redimensionnez une image à la largeur souhaitée en pixels, puis téléchargez PNG."
+  ],
+  "batch-images-to-webp": [
+    "Convert up to 30 JPG, PNG or WebP pictures to WebP and download a ZIP, locally in your browser.",
+    "Convierte hasta 30 imágenes JPG, PNG o WebP a WebP y descárgalas juntas en un ZIP, desde tu navegador.",
+    "Converta até 30 imagens JPG, PNG ou WebP para WebP e baixe o ZIP no navegador.",
+    "Convertissez jusqu’à 30 images JPG, PNG ou WebP en WebP et téléchargez le ZIP dans votre navigateur."
+  ],
+  "adjust-image": [
+    "Crop borders, rotate, compress and export images to PNG, JPG or WebP without keeping EXIF metadata.",
+    "Recorta bordes, gira, comprime y exporta imágenes a PNG, JPG o WebP, eliminando los metadatos EXIF.",
+    "Recorte bordas, gire, compacte e exporte imagens PNG, JPG ou WebP sem metadados EXIF.",
+    "Rognez les bords, pivotez, compressez et exportez des images PNG, JPG ou WebP sans métadonnées EXIF."
+  ],
+  "srt-to-vtt": [
+    "Convert SRT subtitles into WebVTT with correctly formatted timestamps for web video.",
+    "Convierte subtítulos SRT a WebVTT con tiempos adaptados al vídeo web.",
+    "Converta legendas SRT em WebVTT com carimbos de tempo válidos para vídeo web.",
+    "Convertissez des sous-titres SRT en WebVTT avec des horodatages valides pour la vidéo web."
+  ],
+  "vtt-to-srt": [
+    "Convert WebVTT subtitles into SRT with numbered cues for common media players.",
+    "Convierte subtítulos WebVTT a SRT con numeración para reproductores habituales.",
+    "Converta legendas WebVTT em SRT numerado para reprodutores de vídeo.",
+    "Convertissez des sous-titres WebVTT en SRT numéroté pour les lecteurs vidéo."
+  ],
+  "crop-pdf": [
+    "Crop the visible margins of a PDF without rasterizing the pages; hidden content is not erased.",
+    "Recorta los márgenes visibles del PDF sin rasterizar las páginas; el contenido oculto no se borra.",
+    "Recorte as margens visíveis do PDF sem rasterização; o conteúdo oculto não é apagado.",
+    "Rognez les marges visibles du PDF sans rasteriser les pages; le contenu masqué n’est pas supprimé."
+  ],
+  "annotate-pdf-text": [
+    "Add a visible text note to the bottom of all PDF pages without converting them to images.",
+    "Añade una anotación de texto visible al pie de todas las páginas PDF sin convertirlas en imágenes.",
+    "Adicione uma nota de texto visível ao rodapé de todas as páginas do PDF sem as rasterizar.",
+    "Ajoutez une note visible au bas de toutes les pages PDF sans les convertir en images."
+  ],
+  "audio-to-wav": [
+    "Convert browser-supported audio to uncompressed WAV and optionally trim a segment; codec support varies.",
+    "Convierte audio compatible con tu navegador a WAV sin comprimir y recorta un fragmento si lo necesitas.",
+    "Converta áudio compatível com seu navegador para WAV sem compressão e recorte um trecho.",
+    "Convertissez l’audio pris en charge par votre navigateur en WAV non compressé, avec découpe facultative."
+  ],
+  "create-gzip": [
+    "Compress a file into GZIP directly in the browser, without uploading it to a server.",
+    "Comprime un archivo en GZIP directamente en tu navegador, sin subirlo a servidores.",
+    "Compacte um arquivo em GZIP diretamente no navegador sem enviar ao servidor.",
+    "Compressez un fichier en GZIP directement dans votre navigateur, sans transfert."
+  ],
+  "extract-gzip": [
+    "Decompress a GZIP file locally with strict output-size limits to protect your browser.",
+    "Descomprime archivos GZIP localmente con límites de tamaño para proteger el navegador.",
+    "Descompacte arquivos GZIP localmente com limites de tamanho para proteger o navegador.",
+    "Décompressez un fichier GZIP localement avec une limite de taille pour protéger le navigateur."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};

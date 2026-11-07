@@ -1,18 +1,19 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {ArrowLeft,ArrowRight} from 'lucide-react';
 import type {Locale} from '@/config/site';
 type Page={number:number;thumbnail:string};
 type Mode='reorder-pdf-pages'|'extract-pdf-pages'|'delete-pdf-pages';
 const copy={
- en:{loading:'Loading page previews…',tooMany:'Previewing first 40 pages',order:'Use arrows to reorder pages',select:'Select pages to process'},
- es:{loading:'Cargando vistas previas…',tooMany:'Vista previa de las primeras 40 páginas',order:'Utiliza las flechas para reordenar',select:'Selecciona las páginas que quieras procesar'},
- pt:{loading:'Carregando prévias…',tooMany:'Prévia das primeiras 40 páginas',order:'Use as setas para reorganizar',select:'Selecione as páginas para processar'},
- fr:{loading:'Chargement des aperçus…',tooMany:'Aperçu des 40 premières pages',order:'Utilisez les flèches pour réorganiser',select:'Sélectionnez les pages à traiter'}
+ en:{loading:'Loading page previews…',tooMany:'Only 40 pages are shown. For larger PDFs, enter the complete order in the field above.',order:'Drag pages or use the arrow buttons',select:'Select pages to process'},
+ es:{loading:'Cargando vistas previas…',tooMany:'Solo mostramos 40 páginas. Para un PDF mayor, escribe el orden completo en el campo de arriba.',order:'Arrastra las páginas o utiliza las flechas para reordenar',select:'Selecciona las páginas que quieras procesar'},
+ pt:{loading:'Carregando prévias…',tooMany:'Mostramos só 40 páginas. Para um PDF maior, escreva a ordem completa acima.',order:'Arraste páginas ou use as setas',select:'Selecione as páginas para processar'},
+ fr:{loading:'Chargement des aperçus…',tooMany:'Seulement 40 pages affichées. Pour un PDF plus grand, indiquez tout l’ordre ci-dessus.',order:'Glissez les pages ou utilisez les flèches',select:'Sélectionnez les pages à traiter'}
 } as const;
 export default function PdfPreview({file,mode,onChange,locale}:{file:File;mode:Mode;onChange:(value:string)=>void;locale:Locale}){
  const [pages,setPages]=useState<Page[]>([]),[order,setOrder]=useState<number[]>([]);
  const [selected,setSelected]=useState<number[]>([]),[loading,setLoading]=useState(true),[total,setTotal]=useState(0),[error,setError]=useState('');
+ const dragged=useRef<number|null>(null);
  useEffect(()=>{
  let canceled=false;let pdf:import('pdfjs-dist').PDFDocumentProxy|null=null;
  async function load(){
@@ -44,6 +45,7 @@ export default function PdfPreview({file,mode,onChange,locale}:{file:File;mode:M
   const next=[...order];[next[index],next[nextIndex]]=[next[nextIndex],next[index]];
   setOrder(next);if(total===order.length)onChange(next.join(','));
  }
+ function dropOn(target:number){const from=dragged.current;dragged.current=null;if(from===null||from===target||total!==order.length)return;const next=[...order];const [page]=next.splice(from,1);next.splice(target,0,page);setOrder(next);onChange(next.join(','));}
  function toggle(number:number){
   const next=selected.includes(number)?selected.filter(v=>v!==number):[...selected,number].sort((a,b)=>a-b);
   setSelected(next);onChange(next.join(','));
@@ -55,7 +57,7 @@ export default function PdfPreview({file,mode,onChange,locale}:{file:File;mode:M
  {order.map((number,index)=>{
   const page=pages.find(p=>p.number===number);
   if(!page)return null;
-  return <div className="pdf-preview-item" key={number}>
+  return <div className="pdf-preview-item" key={number} draggable={mode==='reorder-pdf-pages'&&total===order.length} onDragStart={event=>{if(mode!=='reorder-pdf-pages'||total!==order.length)return;dragged.current=index;event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',String(index));}} onDragOver={event=>{if(mode==='reorder-pdf-pages'&&total===order.length)event.preventDefault();}} onDrop={event=>{event.preventDefault();dropOn(index);}} onDragEnd={()=>{dragged.current=null;}}>
    <button type="button" aria-pressed={selected.includes(number)} className={selected.includes(number)?'pdf-thumb selected':'pdf-thumb'} onClick={()=>{if(mode!=='reorder-pdf-pages')toggle(number)}}>
     <img alt={`PDF page ${number}`} src={page.thumbnail}/><span>{number}</span>
    </button>

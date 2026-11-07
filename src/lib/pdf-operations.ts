@@ -1,13 +1,38 @@
 import type {OutputFile} from './convert';
 import {parsePageSelection,partitionPages,remainingPages,parsePageOrder} from './pdf-pages';
-export type PdfAction='split-pdf-by-count'|'extract-pdf-pages'|'delete-pdf-pages'|'watermark-pdf'|'reorder-pdf-pages'|'sign-pdf-visual';
-export type PdfOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;signature?:string};
+export type PdfAction='split-pdf-by-count'|'extract-pdf-pages'|'delete-pdf-pages'|'watermark-pdf'|'reorder-pdf-pages'|'sign-pdf-visual'|'crop-pdf'|'annotate-pdf-text';
+export type PdfOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;signature?:string;cropPercent?:number;annotationText?:string};
 function pdfBlob(bytes:Uint8Array<ArrayBufferLike>):Blob{return new Blob([new Uint8Array(bytes)],{type:'application/pdf'});}
 export async function pdfAction(action:PdfAction,source:File,options:PdfOptions={}):Promise<OutputFile>{
  const {PDFDocument,degrees,rgb,StandardFonts}=await import('pdf-lib');
  const pdf=await PDFDocument.load(await source.arrayBuffer());
  const total=pdf.getPageCount();if(total<1||total>500)throw new Error('PDF must contain between 1 and 500 pages');
  const base=source.name.replace(/\.pdf$/i,'');
+ if(action==='crop-pdf'){
+  const percent=options.cropPercent??5;
+  if(!Number.isFinite(percent)||percent<0||percent>30)throw new Error('Crop must be between 0 and 30 percent');
+  for(const page of pdf.getPages()){
+   const {x,y,width,height}=page.getCropBox(),left=width*percent/100,bottom=height*percent/100;
+   if(width-2*left<20||height-2*bottom<20)throw new Error('Page is too small for this crop');
+   page.setCropBox(x+left,y+bottom,width-2*left,height-2*bottom);
+  }
+  return {name:base+'-cropped.pdf',blob:pdfBlob(await pdf.save())};
+ }
+ if(action==='annotate-pdf-text'){
+  const text=(options.annotationText??'').trim();
+  if(!text||text.length>120)throw new Error('Annotation must have 1–120 characters');
+  const font=await pdf.embedFont(StandardFonts.Helvetica);
+  const printable=text.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,'?');
+  for(const page of pdf.getPages()){
+   const box=page.getCropBox(),x=box.x+22,y=box.y+22;
+   const maxWidth=box.width-44;
+   let size=12;while(size>6&&font.widthOfTextAtSize(printable,size)>maxWidth)size--;
+   if(font.widthOfTextAtSize(printable,size)>maxWidth)throw new Error('Annotation too long for the page');
+   page.drawRectangle({x:x-5,y:y-7,width:font.widthOfTextAtSize(printable,size)+10,height:size+14,color:rgb(1,1,.8),opacity:.82});
+   page.drawText(printable,{x,y,size,font,color:rgb(.1,.1,.2)});
+  }
+  return {name:base+'-annotated.pdf',blob:pdfBlob(await pdf.save())};
+ }
  if(action==='sign-pdf-visual'){
   const text=(options.signature??'').trim();if(!text||text.length>90)throw new Error('Enter a signature name (1–90 characters)');
   const page=pdf.getPage(total-1),font=await pdf.embedFont(StandardFonts.Helvetica),size=14;

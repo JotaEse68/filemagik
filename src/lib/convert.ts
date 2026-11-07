@@ -2,10 +2,25 @@ import {csvToJson,jsonToCsv} from './csv';
 import type {ToolSlug} from '@/config/site';
 import {validateFiles} from './file-limits';
 export type OutputFile={name:string;blob:Blob};
-export type ConversionOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
+export type ConversionOptions={subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  validateFiles(slug,files);
- if(['split-pdf-by-count','extract-pdf-pages','delete-pdf-pages','watermark-pdf','reorder-pdf-pages','sign-pdf-visual'].includes(slug)){
+ if(slug==='create-gzip'||slug==='extract-gzip'){
+  const {gzipFile}=await import('./gzip-tools');return gzipFile(files[0],slug==='create-gzip'?'compress':'decompress');
+ }
+ if(slug==='audio-to-wav'){
+  const {audioToWav}=await import('./audio-tools');return audioToWav(files[0],{startSeconds:options.audioStartSeconds,endSeconds:options.audioEndSeconds});
+ }
+ if(slug==='srt-to-vtt'||slug==='vtt-to-srt'){
+  const {convertSubtitles}=await import('./subtitles');return convertSubtitles(files[0],slug==='srt-to-vtt'?'vtt':'srt',options.subtitleOffsetMs??0);
+ }
+ if(slug==='adjust-image'){
+  const {adjustImage}=await import('./image-adjust');return adjustImage(files[0],options,quality);
+ }
+ if(slug==='batch-images-to-webp'){
+  const {imagesToWebpZip}=await import('./image-batch');return imagesToWebpZip(files,quality);
+ }
+ if(['split-pdf-by-count','extract-pdf-pages','delete-pdf-pages','watermark-pdf','reorder-pdf-pages','sign-pdf-visual','crop-pdf','annotate-pdf-text'].includes(slug)){
   const {pdfAction}=await import('./pdf-operations');return pdfAction(slug as import('./pdf-operations').PdfAction,files[0],options);
  }
  if(slug==='compress-pdf-raster'){

@@ -1,9 +1,18 @@
 export const locales=['en','es','pt','fr'] as const;
 export type Locale=typeof locales[number];
 export const defaultLocale:Locale='en';
-export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.example').replace(/\/$/,'');
+export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.vercel.app').replace(/\/$/,'');
 export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
+ {slug:'create-gzip',from:'File',to:'GZIP',kind:'archive',accept:'*/*'},
+ {slug:'extract-gzip',from:'GZIP',to:'File',kind:'archive',accept:'.gz,application/gzip'},
+ {slug:'audio-to-wav',from:'Audio',to:'WAV',kind:'audio',accept:'.mp3,.wav,.ogg,.m4a,.flac,audio/*'},
+ {slug:'crop-pdf',from:'PDF',to:'Cropped PDF',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'annotate-pdf-text',from:'PDF',to:'Annotated PDF',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'srt-to-vtt',from:'SRT subtitles',to:'WebVTT',kind:'subtitle',accept:'.srt,text/plain'},
+ {slug:'vtt-to-srt',from:'WebVTT subtitles',to:'SRT',kind:'subtitle',accept:'.vtt,text/vtt,text/plain'},
+ {slug:'adjust-image',from:'Image',to:'Edited image',kind:'image',accept:'.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'},
+ {slug:'batch-images-to-webp',from:'Images',to:'WebP ZIP',kind:'image',accept:'.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'},
  {slug:'inspect-file',from:'File',to:'Information',kind:'utility',accept:'*/*'},
  {slug:'rename-batch',from:'Files',to:'Renamed ZIP',kind:'utility',accept:'*/*'},
  {slug:'resize-image',from:'Image',to:'Resized PNG',kind:'image',accept:'.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'},
