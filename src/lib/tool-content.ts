@@ -203,6 +203,12 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Convierte hasta 30 imágenes JPG, PNG o WebP a WebP y descárgalas juntas en un ZIP, desde tu navegador.",
     "Converta até 30 imagens JPG, PNG ou WebP para WebP e baixe o ZIP no navegador.",
     "Convertissez jusqu’à 30 images JPG, PNG ou WebP en WebP et téléchargez le ZIP dans votre navigateur."
+  ],
+  "adjust-image": [
+    "Crop borders, rotate, compress and export images to PNG, JPG or WebP without keeping EXIF metadata.",
+    "Recorta bordes, gira, comprime y exporta imágenes a PNG, JPG o WebP, eliminando los metadatos EXIF.",
+    "Recorte bordas, gire, compacte e exporte imagens PNG, JPG ou WebP sem metadados EXIF.",
+    "Rognez les bords, pivotez, compressez et exportez des images PNG, JPG ou WebP sans métadonnées EXIF."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
