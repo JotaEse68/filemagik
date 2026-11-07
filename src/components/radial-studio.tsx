@@ -22,6 +22,14 @@ const words={
  pt:{title:'Escolha um formato',actions:'O que deseja fazer?',pdf:'PDF',images:'Imagens',office:'Documentos',data:'Excel e dados',ocr:'OCR',archives:'ZIP',intro:'Converta arquivos em dois cliques.',hint:'Escolha uma categoria e depois uma ação.',explore:'Ver ferramentas',featured:'Acessos rápidos',split:'Dividir PDF',merge:'Unir PDF',remove:'Limpar imagem'},
  fr:{title:'Choisissez un format',actions:'Que voulez-vous faire ?',pdf:'PDF',images:'Images',office:'Documents',data:'Excel et données',ocr:'OCR',archives:'ZIP',intro:'Transformez vos fichiers en deux clics.',hint:'Choisissez la catégorie, puis une action.',explore:'Voir les outils',featured:'Accès rapides',split:'Diviser PDF',merge:'Fusionner PDF',remove:'Nettoyer une image'}
 } as const;
+
+const actionNames:Record<Locale,Partial<Record<string,string>>>={
+ es:{'split-pdf-by-count':'DIVIDIR PDF','merge-pdf':'UNIR PDF','extract-pdf-pages':'EXTRAER','compress-pdf-raster':'COMPRIMIR','rotate-pdf':'GIRAR','pdf-to-word-text':'PDF → WORD TEXTO','image-cleanup':'LIMPIAR IMAGEN','word-to-basic-pdf':'WORD → PDF BÁSICO','create-zip':'CREAR ZIP','extract-zip':'ABRIR ZIP','ocr-pdf':'OCR PDF','ocr-image':'OCR IMAGEN','delete-pdf-pages':'QUITAR PÁGINAS'},
+ pt:{'split-pdf-by-count':'DIVIDIR PDF','merge-pdf':'JUNTAR PDF','extract-pdf-pages':'EXTRAIR','compress-pdf-raster':'COMPRIMIR','rotate-pdf':'GIRAR','pdf-to-word-text':'PDF → WORD TEXTO','image-cleanup':'LIMPAR IMAGEM','create-zip':'CRIAR ZIP','extract-zip':'ABRIR ZIP','word-to-basic-pdf':'WORD → PDF BÁSICO'},
+ fr:{'split-pdf-by-count':'DIVISER PDF','merge-pdf':'FUSIONNER PDF','extract-pdf-pages':'EXTRAIRE','compress-pdf-raster':'COMPRESSER','rotate-pdf':'PIVOTER','pdf-to-word-text':'PDF → WORD TEXTE','image-cleanup':'NETTOYER IMAGE','create-zip':'CRÉER ZIP','extract-zip':'OUVRIR ZIP','word-to-basic-pdf':'WORD → PDF SIMPLE'},
+ en:{'pdf-to-word-text':'PDF → WORD TEXT','word-to-basic-pdf':'WORD → BASIC PDF'}
+};
+
 const symbols={cut:Scissors,merge:Merge,layers:Layers2,shrink:Minimize2,rotate:RotateCw,file:FileDown,scan:Search} as const;
 
 export default function RadialStudio({locale}:{locale:Locale}){
@@ -47,8 +55,8 @@ export default function RadialStudio({locale}:{locale:Locale}){
    <div className="radial-column"><h3><span className="radial-step">02</span>{t.actions}</h3>
     <div className="radial-wheel radial-action-wheel" role="group" aria-label={t.actions}>
      <div className="wheel-disc"/>
-     {ring.map((action,index)=>{const Icon=symbols[action.icon as keyof typeof symbols]??Stamp;const angle=index*60-90;return <Link href={`/${locale}/${action.slug}`} key={action.slug} onMouseEnter={()=>setHovered(action.slug)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setHovered(action.slug)} className={`radial-sector radial-sector-link ${fallback.slug===action.slug?'is-active':''}`} style={{'--angle':`${angle}deg`} as React.CSSProperties}><Icon size={25}/><span>{action.label}</span></Link>})}
-     <Link href={`/${locale}/${fallback.slug}`} className="wheel-center wheel-action-center" aria-label={fallback.label}><ArrowUpRight size={19}/><span>{fallback.label}</span></Link>
+     {ring.map((action,index)=>{const Icon=symbols[action.icon as keyof typeof symbols]??Stamp;const angle=index*60-90;return <Link href={`/${locale}/${action.slug}`} key={action.slug} onMouseEnter={()=>setHovered(action.slug)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setHovered(action.slug)} className={`radial-sector radial-sector-link ${fallback.slug===action.slug?'is-active':''}`} style={{'--angle':`${angle}deg`} as React.CSSProperties}><Icon size={25}/><span>{actionNames[locale][action.slug]??action.label}</span></Link>})}
+     <Link href={`/${locale}/${fallback.slug}`} className="wheel-center wheel-action-center" aria-label={actionNames[locale][fallback.slug]??fallback.label}><ArrowUpRight size={19}/><span>{actionNames[locale][fallback.slug]??fallback.label}</span></Link>
     </div>
    </div>
   </div>
