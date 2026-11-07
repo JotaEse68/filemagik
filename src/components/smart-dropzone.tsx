@@ -1,6 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {ArrowRight,Check,Download,FileUp,LockKeyhole,LoaderCircle,RotateCcw} from 'lucide-react';
+import {ArrowRight,Check,Download,FileUp,LoaderCircle,RotateCcw} from 'lucide-react';
 import {getAvailableTools} from '@/lib/detect-tools';
 import {convertFiles} from '@/lib/convert';
 import {validateFiles} from '@/lib/file-limits';
@@ -50,6 +50,5 @@ export default function SmartDropzone({locale,d}:{locale:Locale;d:Dictionary}){
    </>}
    {error&&<p className="error" role="alert">{error}</p>}
   </div>
-  <p className="privacy-note"><LockKeyhole size={16}/>{d.localNote}</p>
  </section>
 }
