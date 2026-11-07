@@ -38,7 +38,7 @@ export default function SmartDropzone({locale,d}:{locale:Locale;d:Dictionary}){
   finally{setBusy(false)}
  }
  return <section className="converter">
-  <input ref={picker} type="file" multiple className="visually-hidden" accept=".jpg,.jpeg,.png,.webp,.pdf,.zip,.docx,.xlsx,.csv,.json,.srt,.vtt,.mp3,.wav,.ogg,.m4a,.flac" onChange={e=>choose([...e.currentTarget.files??[]])}/>
+  <input ref={picker} type="file" multiple className="visually-hidden" accept=".jpg,.jpeg,.png,.webp,.pdf,.zip,.docx,.xlsx,.csv,.json,.srt,.vtt,.mp3,.wav,.ogg,.m4a,.flac,.gz" onChange={e=>choose([...e.currentTarget.files??[]])}/>
   <div className={`dropzone smart-dropzone ${dragging?'dragging':''}`} onDragOver={e=>{e.preventDefault();setDragging(true)}} onDragLeave={()=>setDragging(false)} onDrop={e=>{e.preventDefault();setDragging(false);choose([...e.dataTransfer.files])}}>
    <div className="upload-icon"><FileUp size={34} strokeWidth={1.6}/></div>
    {files.length===0?<><h2>{d.dropTitle}</h2><p>{d.dropSub}</p><button className="btn btn-primary" onClick={()=>picker.current?.click()}>{d.browse}<ArrowRight size={18}/></button><small className="file-hint">{t.hint}</small></>:<>
