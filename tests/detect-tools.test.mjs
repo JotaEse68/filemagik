@@ -13,7 +13,7 @@ const detect=(...names)=>sandbox.detect(names.map(name=>({name})));
 test('jpg offers webp, png and image PDF',()=>assert.deepEqual([...detect('photo.jpg')],['jpg-to-webp','jpg-to-png','images-to-pdf','resize-image','adjust-image']));
 test('mixed images can become one PDF',()=>assert.deepEqual([...detect('a.png','b.jpg')],['images-to-pdf','batch-images-to-webp']));
 test('several PDFs can merge',()=>assert.deepEqual([...detect('a.pdf','b.pdf')],['merge-pdf']));
-test('single PDF can split or rotate',()=>assert.deepEqual([...detect('a.pdf')],['split-pdf','rotate-pdf','pdf-to-png','pdf-to-word-text','crop-pdf','annotate-pdf-text']));
+test('single PDF can split or rotate',()=>assert.deepEqual([...detect('a.pdf')],['split-pdf','rotate-pdf','pdf-to-png','pdf-to-word-text','crop-pdf','annotate-pdf-text','inspect-pdf-form','fill-pdf-form','flatten-pdf-form']));
 test('Excel XLSX offers CSV export',()=>assert.deepEqual([...detect('table.xlsx')],['xlsx-to-csv']));
 test('CSV offers JSON and Excel',()=>assert.deepEqual([...detect('table.csv')],['csv-to-json','csv-to-xlsx']));
 test('unsupported inputs return no actions',()=>assert.equal(detect('script.exe').length,0));
