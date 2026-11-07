@@ -4,6 +4,9 @@ export const defaultLocale:Locale='en';
 export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.example').replace(/\/$/,'');
 export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
+ {slug:'inspect-file',from:'File',to:'Information',kind:'utility',accept:'*/*'},
+ {slug:'rename-batch',from:'Files',to:'Renamed ZIP',kind:'utility',accept:'*/*'},
+ {slug:'resize-image',from:'Image',to:'Resized PNG',kind:'image',accept:'.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'},
  {slug:'create-zip',from:'Files',to:'ZIP',kind:'archive',accept:'*/*'},
  {slug:'extract-zip',from:'ZIP',to:'Extracted files',kind:'archive',accept:'.zip,application/zip'},
  {slug:'ocr-image',from:'Image',to:'Text OCR',kind:'image',accept:'.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'},
