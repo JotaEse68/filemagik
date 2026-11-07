@@ -3,7 +3,7 @@ import type {ToolSlug} from '@/config/site';
 const MIB=1024*1024;
 const heavy=new Set<ToolSlug>(['ocr-pdf','ocr-image','compress-pdf-raster','pdf-to-png','images-to-pdf','image-cleanup']);
 const imageBatch=new Set<ToolSlug>(['batch-images-to-webp']);
-const images=new Set<ToolSlug>(['jpg-to-png','jpg-to-webp','png-to-jpg','png-to-webp','webp-to-jpg','webp-to-png','resize-image']);
+const images=new Set<ToolSlug>(['jpg-to-png','jpg-to-webp','png-to-jpg','png-to-webp','webp-to-jpg','webp-to-png','resize-image','adjust-image']);
 const archives=new Set<ToolSlug>(['create-zip','extract-zip','rename-batch']);
 export type FileLimits={perFile:number;total:number;maxFiles:number};
 export function limitsFor(slug:ToolSlug):FileLimits{
