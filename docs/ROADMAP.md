@@ -56,3 +56,8 @@
 3. Activar superadmin en base independiente y gestionar anuncios propios.
 4. Documentación legal y SEO editorial por idioma.
 5. Un solo release validado después de autorización.
+
+## QA de integración adicional
+- [ ] Confirmar que las 28 rutas y sus metadatos se prerenderizan sin errores.
+- [ ] Comprobar selección y orden de páginas, firma visual, compresión raster, OCR y exportación Office con archivos representativos.
+- [ ] Revisar la seguridad y provisión de Supabase antes de permitir acceso al panel.
