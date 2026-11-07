@@ -4,7 +4,7 @@ export type AdMode='own'|'google'|'external'|'off';
 export type Banner={id?:string;slot:AdPlacement;src:string;href:string;alt:string;enabled?:boolean};
 export type SlotSetting={enabled:boolean;mode:AdMode;rotateSeconds:number};
 export type GoogleAds={publisherId:string;approved:boolean;slots:Record<AdPlacement,string>};
-export type ExternalNetwork={name:string;approved:boolean;frameUrls:Record<AdPlacement,string>};
+export type ExternalNetwork={name:string;approved:boolean;frameUrls:Record<AdPlacement,string>;vendorId:number|null};
 export type PublicAds={enabled:boolean;slots:Record<AdPlacement,SlotSetting>;banners:Banner[];google:GoogleAds;external:ExternalNetwork};
 const defaultSlot=(enabled:boolean):SlotSetting=>({enabled,mode:'own',rotateSeconds:60});
 export const defaultAds:PublicAds={
@@ -12,7 +12,7 @@ export const defaultAds:PublicAds={
  slots:{top:defaultSlot(true),desktop:defaultSlot(true),inline:defaultSlot(true),mobile:defaultSlot(true),result:defaultSlot(true)},
  banners:[],
  google:{publisherId:'',approved:false,slots:{top:'',desktop:'',inline:'',mobile:'',result:''}},
- external:{name:'',approved:false,frameUrls:{top:'',desktop:'',inline:'',mobile:'',result:''}}
+ external:{name:'',approved:false,frameUrls:{top:'',desktop:'',inline:'',mobile:'',result:''},vendorId:null}
 };
 function validPublicUrl(value:string){
  try{const parsed=new URL(value);return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&parsed.hostname!=='localhost'&&!parsed.hostname.endsWith('.local')&&!parsed.hostname.endsWith('.internal');}
@@ -60,5 +60,7 @@ export function parseAds(value:unknown):PublicAds{
  const rawFrames=ext.frameUrls&&typeof ext.frameUrls==='object'?ext.frameUrls as Record<string,unknown>:{};
  const frameUrls=Object.fromEntries(adPlacements.map(key=>{const url=typeof rawFrames[key]==='string'?rawFrames[key].trim():'';if(url&&!validPublicUrl(url))throw new Error('Invalid external advertising URL');return [key,url];})) as Record<AdPlacement,string>;
  const name=typeof ext.name==='string'?ext.name.trim():'';if(name.length>80)throw new Error('External network name too long');
- return {enabled:input.enabled,slots,banners,google:{publisherId:publisher,approved:rawGoogle.approved===true,slots:googleSlots},external:{name,approved:ext.approved===true,frameUrls}};
+ const vendorId=ext.vendorId===null||ext.vendorId===undefined?null:Number(ext.vendorId);
+ if(vendorId!==null&&(!Number.isInteger(vendorId)||vendorId<1||vendorId>10000))throw new Error('Invalid external TCF vendor ID');
+ return {enabled:input.enabled,slots,banners,google:{publisherId:publisher,approved:rawGoogle.approved===true,slots:googleSlots},external:{name,approved:ext.approved===true,frameUrls,vendorId}};
 }
