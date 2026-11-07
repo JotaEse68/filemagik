@@ -14,6 +14,7 @@ export function getAvailableTools(files:NamedFile[]):ToolSlug[]{
  case 'mp3':case 'wav':case 'ogg':case 'm4a':case 'flac':return ['audio-to-wav'];
  case 'srt':return ['srt-to-vtt'];
  case 'vtt':return ['vtt-to-srt'];
+ case 'gz':return ['extract-gzip'];
  case 'zip':return ['extract-zip'];
  case 'csv':return ['csv-to-json','csv-to-xlsx'];
  case 'xlsx':return ['xlsx-to-csv'];
