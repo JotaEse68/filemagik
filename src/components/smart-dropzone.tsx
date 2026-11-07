@@ -9,7 +9,7 @@ import {getTool,type Locale,type ToolSlug} from '@/config/site';
 import type {Dictionary} from '@/lib/i18n';
 
 const translations={
- en:{select:'Choose an action',unsupported:'This file type is not supported yet.',hint:'JPG, PNG, WebP, PDF, ZIP, DOCX, XLSX, CSV, JSON',filesLimit:'For this action:',tooLarge:'The file exceeds the browser limit for automatic processing. Use a dedicated tool.',choose:'Choose a supported file'},
+ en:{select:'Choose an action',unsupported:'This file type is not supported yet.',hint:'JPG, PNG, WebP, PDF, ZIP, DOCX, XLSX, CSV, JSON, SRT, VTT',filesLimit:'For this action:',tooLarge:'The file exceeds the browser limit for automatic processing. Use a dedicated tool.',choose:'Choose a supported file'},
  es:{select:'Elige qué quieres hacer',unsupported:'Este formato todavía no es compatible.',hint:'JPG, PNG, WebP, PDF, ZIP, DOCX, XLSX, CSV, JSON',filesLimit:'Límite de esta operación:',tooLarge:'El archivo supera el límite del procesamiento automático. Usa una herramienta específica.',choose:'Selecciona un archivo compatible'},
  pt:{select:'Escolha o que deseja fazer',unsupported:'Esse formato ainda não é compatível.',hint:'JPG, PNG, WebP, PDF, ZIP, DOCX, XLSX, CSV, JSON',filesLimit:'Limite da operação:',tooLarge:'O arquivo excede o limite do processamento automático. Use uma ferramenta específica.',choose:'Escolha um arquivo compatível'},
  fr:{select:'Choisissez une action',unsupported:'Ce format n’est pas encore pris en charge.',hint:'JPG, PNG, WebP, PDF, ZIP, DOCX, XLSX, CSV, JSON',filesLimit:'Limite de cette opération :',tooLarge:'Le fichier dépasse la limite du traitement automatique. Utilisez un outil dédié.',choose:'Choisissez un fichier compatible'}
@@ -38,7 +38,7 @@ export default function SmartDropzone({locale,d}:{locale:Locale;d:Dictionary}){
   finally{setBusy(false)}
  }
  return <section className="converter">
-  <input ref={picker} type="file" multiple className="visually-hidden" accept=".jpg,.jpeg,.png,.webp,.pdf,.zip,.docx,.xlsx,.csv,.json" onChange={e=>choose([...e.currentTarget.files??[]])}/>
+  <input ref={picker} type="file" multiple className="visually-hidden" accept=".jpg,.jpeg,.png,.webp,.pdf,.zip,.docx,.xlsx,.csv,.json,.srt,.vtt" onChange={e=>choose([...e.currentTarget.files??[]])}/>
   <div className={`dropzone smart-dropzone ${dragging?'dragging':''}`} onDragOver={e=>{e.preventDefault();setDragging(true)}} onDragLeave={()=>setDragging(false)} onDrop={e=>{e.preventDefault();setDragging(false);choose([...e.dataTransfer.files])}}>
    <div className="upload-icon"><FileUp size={34} strokeWidth={1.6}/></div>
    {files.length===0?<><h2>{d.dropTitle}</h2><p>{d.dropSub}</p><button className="btn btn-primary" onClick={()=>picker.current?.click()}>{d.browse}<ArrowRight size={18}/></button><small className="file-hint">{t.hint}</small></>:<>
