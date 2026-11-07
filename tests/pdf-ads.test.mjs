@@ -18,3 +18,11 @@ test('PDF reorder rejects duplicates',()=>assert.throws(()=>pages.parsePageOrder
 const ads=load('src/lib/advertising/config.ts','parseAds,defaultAds');
 test('ad settings reject scripts and http links',()=>assert.throws(()=>ads.parseAds({enabled:true,banners:[{slot:'desktop',src:'javascript:alert(1)',href:'http://example.com',alt:'Test banner'}]}),/banner/));
 test('ad settings normalize HTTPS creatives',()=>assert.equal(ads.parseAds({enabled:true,banners:[{slot:'desktop',src:'https://example.com/ad.png',href:'https://example.com',alt:' Test banner '}]}).banners[0].alt,'Test banner'));
+
+test('one active configuration per placement only',()=>assert.throws(()=>ads.parseAds({enabled:true,banners:[
+{slot:'home',src:'https://example.com/one.png',href:'https://example.com',alt:'Banner one'},
+{slot:'home',src:'https://example.com/two.png',href:'https://example.com',alt:'Banner two'}
+]}),/one active source/));
+test('original uploaded image paths are permitted without external domains',()=>assert.equal(ads.parseAds({enabled:true,banners:[{slot:'mobile',provider:'own',src:'/ads/original-banner.jpg',href:'https://example.com',alt:'Original banner'}]}).banners[0].src,'/ads/original-banner.jpg'));
+test('Google slots require real publisher and placement identifiers',()=>assert.throws(()=>ads.parseAds({enabled:true,banners:[{slot:'home',provider:'adsense',publisherId:'fake',adSlotId:'123',src:'',href:'',alt:'Publicidad'}]}),/publisher/));
+test('disabled individual slots keep their independent state',()=>assert.equal(ads.parseAds({enabled:true,banners:[{slot:'home',provider:'own',enabled:false,src:'/ads/banner.jpg',href:'https://example.com',alt:'Original banner'}]}).banners[0].enabled,false));
