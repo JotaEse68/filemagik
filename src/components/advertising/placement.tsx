@@ -16,6 +16,7 @@ export default function AdPlacement({placement}:{placement:AdPlacement}){
  const [index,setIndex]=useState(0);
  const [dismissed,setDismissed]=useState(false);
  const [tcfPresent,setTcfPresent]=useState(false);
+ const [externalConsent,setExternalConsent]=useState(false);
  useEffect(()=>{
   let active=true;
   const controller=new AbortController();
@@ -34,9 +35,21 @@ export default function AdPlacement({placement}:{placement:AdPlacement}){
   return()=>window.clearInterval(timer);
  },[enabled,slot.mode,slot.rotateSeconds,banners.length]);
  useEffect(()=>{
-  if(!enabled||slot.mode!=='google')return;
-  setTcfPresent(typeof (window as WindowWithTcf).__tcfapi==='function');
- },[enabled,slot.mode]);
+  if(!enabled||!['google','external'].includes(slot.mode))return;
+  const api=(window as WindowWithTcf).__tcfapi;
+  if(typeof api!=='function')return;
+  setTcfPresent(true);
+  if(slot.mode==='external'&&config.external.vendorId){
+   api('addEventListener',2,(raw,success)=>{
+    if(!success||!raw||typeof raw!=='object')return;
+    const d=raw as {tcString?:string;cmpStatus?:string;eventStatus?:string;purpose?:{consents?:Record<string,boolean>};vendor?:{consents?:Record<string,boolean>}};
+    const purpose=d.purpose?.consents??{},vendor=d.vendor?.consents??{};
+    setExternalConsent(Boolean(d.tcString&&d.cmpStatus==='loaded'
+      &&['tcloaded','useractioncomplete'].includes(d.eventStatus??'')
+      &&purpose['1']&&purpose['3']&&purpose['4']&&vendor[String(config.external.vendorId)]));
+   });
+  }
+ },[enabled,slot.mode,config.external.vendorId]);
  useEffect(()=>{
   if(placement!=='mobile'||!enabled||dismissed)return;
   document.body.classList.add('has-ad-dock');
@@ -48,11 +61,15 @@ export default function AdPlacement({placement}:{placement:AdPlacement}){
   &&/^ca-pub-\d{16}$/.test(config.google.publisherId)
   &&/^\d{5,20}$/.test(config.google.slots[placement]??'')
   &&process.env.NEXT_PUBLIC_ADSENSE_CMP_VERIFIED==='true'&&tcfPresent;
+ const externalReady=slot.mode==='external'&&config.external.approved&&externalConsent
+  &&process.env.NEXT_PUBLIC_AD_NETWORK_CMP_VERIFIED==='true'
+  &&Boolean(config.external.frameUrls[placement]);
  const fallback=fallbacks[placement];
  return <aside className={`fm-ad fm-ad--${placement}`} aria-label="Publicidad">
   <span className="fm-ad-label">Publicidad</span>
   {placement==='mobile'&&<button type="button" className="fm-ad-close" aria-label="Cerrar publicidad" onClick={()=>setDismissed(true)}>×</button>}
   {googleReady?<AdsenseSlot clientId={config.google.publisherId} slotId={config.google.slots[placement]} label="Publicidad"/>:
+   externalReady?<iframe title={config.external.name||'Publicidad externa'} src={config.external.frameUrls[placement]} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerPolicy="strict-origin" loading="lazy" className="fm-ad-external"/>:
    banner?<a className="fm-ad-link" href={banner.href} target="_blank" rel="sponsored nofollow noopener noreferrer">
     {/* External URLs are validated in the public settings API. */}
     {/* eslint-disable-next-line @next/next/no-img-element */}
