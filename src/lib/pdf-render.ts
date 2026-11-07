@@ -21,7 +21,7 @@ export async function pdfToPngZip(file:File):Promise<OutputFile>{
    canvas.width=0;canvas.height=0;page.cleanup();
   }
   return {name:file.name.replace(/\.pdf$/i,'')+'-images.zip',blob:await zip.generateAsync({type:'blob'})};
- }finally{await pdf.destroy();}
+ }finally{await pdf.cleanup();}
 }
 export async function pdfToWordText(file:File):Promise<OutputFile>{
  const pdfjs=await import('pdfjs-dist');
@@ -46,7 +46,7 @@ export async function pdfToWordText(file:File):Promise<OutputFile>{
   }
   const doc=new docx.Document({sections:[{children:paragraphs.length?paragraphs:[new docx.Paragraph('')]}]});
   return {name:file.name.replace(/\.pdf$/i,'')+'-text.docx',blob:await docx.Packer.toBlob(doc)};
- }finally{await pdf.destroy();}
+ }finally{await pdf.cleanup();}
 }
 export async function wordToBasicPdf(file:File):Promise<OutputFile>{
  const mammoth=await import('mammoth');
@@ -88,5 +88,5 @@ export async function pdfToRasterCompact(file:File,quality=.65):Promise<OutputFi
   const bytes=await result.save();
   if(bytes.length>=file.size)throw new Error('Raster version is not smaller; original PDF is better');
   return {name:file.name.replace(/\.pdf$/i,'')+'-raster-compact.pdf',blob:new Blob([new Uint8Array(bytes)],{type:'application/pdf'})};
- }finally{await source.destroy();}
+ }finally{await source.cleanup();}
 }
