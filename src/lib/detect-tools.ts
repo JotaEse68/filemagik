@@ -8,9 +8,10 @@ export function getAvailableTools(files:NamedFile[]):ToolSlug[]{
  if(files.length>1)return [];
  const ext=extensions[0];
  switch(ext){
- case 'jpg':case 'jpeg':return ['jpg-to-webp','jpg-to-png','images-to-pdf'];
- case 'png':return ['png-to-webp','png-to-jpg','images-to-pdf'];
- case 'webp':return ['webp-to-png','webp-to-jpg'];
+ case 'jpg':case 'jpeg':return ['jpg-to-webp','jpg-to-png','images-to-pdf','resize-image'];
+ case 'png':return ['png-to-webp','png-to-jpg','images-to-pdf','resize-image'];
+ case 'webp':return ['webp-to-png','webp-to-jpg','resize-image'];
+ case 'zip':return ['extract-zip'];
  case 'csv':return ['csv-to-json','csv-to-xlsx'];
  case 'xlsx':return ['xlsx-to-csv'];
  case 'json':return ['json-to-csv'];
