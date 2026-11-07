@@ -72,7 +72,7 @@ export default function AdsAdmin(){
      <div className="fm-admin-rows">
       <label className="fm-admin-toggle"><input type="checkbox" checked={setting.enabled} disabled={!loaded} onChange={e=>updateSlot(slot,{enabled:e.target.checked})}/> Espacio visible</label>
       <label>Qué mostrar<select disabled={!loaded} value={setting.mode} onChange={e=>updateSlot(slot,{mode:e.target.value as AdMode})}>
-       <option value="own">Banners propios enlazados</option><option value="google">Google AdSense</option><option value="off">Ocultar espacio</option>
+       <option value="own">Banners propios enlazados</option><option value="google">Google AdSense</option><option value="external">Otra red (iframe compatible)</option><option value="off">Ocultar espacio</option>
       </select></label>
       <label>Cambiar banner cada (segundos)<input type="number" min={30} max={300} disabled={!loaded} value={setting.rotateSeconds} onChange={e=>updateSlot(slot,{rotateSeconds:Number(e.target.value)})}/></label>
      </div>
@@ -92,6 +92,7 @@ export default function AdsAdmin(){
        <button type="button" disabled={!loaded||banners.length>=5} onClick={()=>newBanner(slot)}>+ Añadir banner ({banners.length}/5)</button>
       </div>
      </>}
+     {setting.mode==='external'&&<div><label>URL HTTPS del anuncio de la red<input type="url" value={config.external.frameUrls[slot]} placeholder="https://proveedor.example/anuncio" onChange={e=>setConfig(old=>({...old,external:{...old.external,frameUrls:{...old.external.frameUrls,[slot]:e.target.value}}}))}/></label><p>Solo integraciones HTTPS en iframe; sin JavaScript externo arbitrario.</p></div>}
      {setting.mode==='google'&&<div className="fm-admin-rows"><label>ID del bloque AdSense<input type="text" value={config.google.slots[slot]} placeholder="1234567890" onChange={e=>setConfig(old=>({...old,google:{...old.google,slots:{...old.google.slots,[slot]:e.target.value}}}))}/></label><p>No se cargará Google si faltan la aprobación del sitio y el consentimiento CMP/TCF.</p></div>}
     </div>;
    })}
@@ -103,6 +104,11 @@ export default function AdsAdmin(){
    <label>ID del editor (público)<input type="text" placeholder="ca-pub-0000000000000000" value={config.google.publisherId} onChange={e=>setConfig(old=>({...old,google:{...old.google,publisherId:e.target.value}}))}/></label>
    <label className="fm-admin-toggle"><input type="checkbox" checked={config.google.approved} onChange={e=>setConfig(old=>({...old,google:{...old.google,approved:e.target.checked}}))}/> Confirmo que Google aprobó el dominio</label>
    <p>La CMP certificada debe estar configurada y comprobada en producción. Si Google no está listo, se mantiene la autopromoción propia.</p>
+   <h3>Otras redes publicitarias</h3>
+   <label>Nombre del proveedor<input type="text" maxLength={80} value={config.external.name} onChange={e=>setConfig(old=>({...old,external:{...old.external,name:e.target.value}}))} placeholder="Nombre de la red"/></label>
+   <label>Identificador TCF del proveedor<input type="number" min={1} max={10000} value={config.external.vendorId??''} onChange={e=>setConfig(old=>({...old,external:{...old.external,vendorId:e.target.value?Number(e.target.value):null}}))}/></label>
+   <label className="fm-admin-toggle"><input type="checkbox" checked={config.external.approved} onChange={e=>setConfig(old=>({...old,external:{...old.external,approved:e.target.checked}}))}/> Integración externa verificada y autorizada</label>
+   <p>Sin integración externa validada ni consentimiento TCF del proveedor, se muestra el banner propio.</p>
   </section>
   <section>
    <div className="fm-admin-actions"><button type="button" disabled={!loaded||saving||Boolean(uploading)} onClick={()=>void save()}>{saving?'Guardando…':'Guardar configuración'}</button></div>
