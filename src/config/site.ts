@@ -4,6 +4,9 @@ export const defaultLocale:Locale='en';
 export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.vercel.app').replace(/\/$/,'');
 export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
+ {slug:'inspect-pdf-form',from:'PDF form',to:'Field list JSON',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'fill-pdf-form',from:'PDF form',to:'Completed PDF',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'flatten-pdf-form',from:'PDF form',to:'Fixed PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'create-gzip',from:'File',to:'GZIP',kind:'archive',accept:'*/*'},
  {slug:'extract-gzip',from:'GZIP',to:'File',kind:'archive',accept:'.gz,application/gzip'},
  {slug:'audio-to-wav',from:'Audio',to:'WAV',kind:'audio',accept:'.mp3,.wav,.ogg,.m4a,.flac,audio/*'},
