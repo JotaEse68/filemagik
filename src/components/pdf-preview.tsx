@@ -33,7 +33,7 @@ export default function PdfPreview({file,mode,onChange,locale}:{file:File;mode:M
     thumbs.push({number:i,thumbnail:canvas.toDataURL('image/jpeg',.65)});
     page.cleanup();
    }
-   if(!canceled){setPages(thumbs);setOrder(thumbs.map(p=>p.number));setLoading(false);}
+   if(!canceled){setPages(thumbs);setOrder(thumbs.map(p=>p.number));if(mode==='reorder-pdf-pages'&&count<=40)onChange(thumbs.map(p=>p.number).join(','));setLoading(false);}
   }catch(e){if(!canceled){setError(e instanceof Error?e.message:'PDF preview unavailable');setLoading(false);}}
   finally{if(pdf)await pdf.destroy();}
  }
