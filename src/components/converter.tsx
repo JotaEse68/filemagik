@@ -12,6 +12,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [result,setResult]=useState<{name:string;url:string}|null>(null);
  const [error,setError]=useState(''),[quality,setQuality]=useState(88);
  const [prefix,setPrefix]=useState('FileMagik'),[width,setWidth]=useState(1200);
+ const [cropPercent,setCropPercent]=useState(0),[rotation,setRotation]=useState<0|90|180|270>(0),[format,setFormat]=useState<'png'|'jpeg'|'webp'>('webp');
  const [signature,setSignature]=useState('');
  const [ocrLang,setOcrLang]=useState<'eng'|'spa'|'por'|'fra'>('eng');
  const [pages,setPages]=useState('1-2'),[groupSize,setGroupSize]=useState(2),[watermark,setWatermark]=useState('CONFIDENTIAL'),[opacity,setOpacity]=useState(25);
@@ -19,7 +20,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  useEffect(()=>()=>{if(result)URL.revokeObjectURL(result.url)},[result]);
  const choose=(incoming:File[])=>{if(busy)return;try{validateFiles(slug,incoming);setResult(null);setError('');setFiles(incoming)}catch(e){setError(e instanceof Error?e.message:d.error);}};
  const run=async()=>{if(!files.length)return;setBusy(true);setError('');try{
- const output=await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,prefix,width});setResult({name:output.name,url:URL.createObjectURL(output.blob)});
+ const output=await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,prefix,width,cropPercent,rotation,format});setResult({name:output.name,url:URL.createObjectURL(output.blob)});
  }catch(e){setError(e instanceof Error?e.message:d.error)}finally{setBusy(false)}};
  const moveFile=(index:number,direction:number)=>setFiles(current=>{const target=index+direction;if(target<0||target>=current.length)return current;const next=[...current];[next[index],next[target]]=[next[target],next[index]];return next;});
  const reset=()=>{setResult(null);setFiles([]);setError('');if(input.current)input.current.value=''};
@@ -42,6 +43,12 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  {files.length>0&&!result&&['ocr-pdf','ocr-image'].includes(slug)&&<div className="pdf-option-panel"><label>{labels[6]}<select value={ocrLang} onChange={e=>setOcrLang(e.target.value as 'eng'|'spa'|'por'|'fra')}><option value="eng">English</option><option value="spa">Español</option><option value="por">Português</option><option value="fra">Français</option></select></label></div>}
  {files.length>0&&!result&&slug==='rename-batch'&&<div className="pdf-option-panel"><label>File prefix / Prefijo<input value={prefix} onChange={e=>setPrefix(e.target.value)} maxLength={60}/></label></div>}
  {files.length>0&&!result&&slug==='resize-image'&&<div className="pdf-option-panel"><label>Output width / Ancho en píxeles<input type="number" min={64} max={4000} value={width} onChange={e=>setWidth(Number(e.target.value))}/></label></div>}
+ {files.length>0&&!result&&slug==='adjust-image'&&<div className="pdf-option-panel">
+ <label>{({es:'Recortar bordes (%)',en:'Crop edges (%)',pt:'Recortar bordas (%)',fr:'Rogner les bords (%)'} as const)[locale]}<input type="number" min={0} max={40} value={cropPercent} onChange={e=>setCropPercent(Number(e.target.value))}/></label>
+ <label>{({es:'Girar imagen',en:'Rotate image',pt:'Girar imagem',fr:'Pivoter l’image'} as const)[locale]}<select value={rotation} onChange={e=>setRotation(Number(e.target.value) as 0|90|180|270)}><option value={0}>0°</option><option value={90}>90°</option><option value={180}>180°</option><option value={270}>270°</option></select></label>
+ <label>{({es:'Formato de salida',en:'Output format',pt:'Formato de saída',fr:'Format de sortie'} as const)[locale]}<select value={format} onChange={e=>setFormat(e.target.value as 'png'|'jpeg'|'webp')}><option value="webp">WebP</option><option value="png">PNG</option><option value="jpeg">JPG</option></select></label>
+ <p className="image-export-hint">{({es:'La exportación elimina los metadatos habituales, incluido EXIF. El recorte se aplica por igual a los cuatro bordes.',en:'Export removes most metadata, including EXIF. Cropping applies to all four edges.',pt:'A exportação remove metadados, inclusive EXIF. O recorte afeta as quatro bordas.',fr:'L’export supprime les métadonnées, dont EXIF. Le rognage affecte les quatre bords.'} as const)[locale]}</p>
+ </div>}
  {files.length>0&&!result&&<div className="actions">{(tool.kind==='image'||slug==='images-to-pdf'||slug==='compress-pdf-raster')&&<label className="quality">{d.imageQuality}: {quality}% <input type="range" min="50" max="100" value={quality} onChange={e=>setQuality(Number(e.target.value))}/></label>}<button className="btn btn-primary" disabled={busy} onClick={run}>{busy?<LoaderCircle className="spin" size={18}/>:<ArrowRight size={18}/>} {busy?d.processing:d.convert}</button><button className="btn btn-ghost" onClick={reset}>{d.reset}</button></div>}
  {result&&<div className="actions"><a className="btn btn-primary" href={result.url} download={result.name}><Download size={18}/>{d.download}</a><button className="btn btn-ghost" onClick={reset}><RotateCcw size={17}/>{d.reset}</button></div>}
  {error&&<p role="alert" className="error">{error}</p>}
