@@ -7,7 +7,7 @@ import vm from 'node:vm';
 const site=fs.readFileSync('src/config/site.ts','utf8');
 const slugs=[...site.matchAll(/slug:'([^']+)'/g)].map(m=>m[1]);
 const navigation=fs.readFileSync('src/config/tool-navigation.ts','utf8');
-const categories=['all','pdf','images','office','data','ocr','archives'];
+const categories=['all','pdf','images','office','data','ocr','archives','subtitles'];
 test('tool catalog has distinct routes',()=>assert.equal(new Set(slugs).size,slugs.length));
 test('every tool is assigned to exactly one category',()=>{
  const source=navigation.replace(/import \{[^\n]*\} from '\.\/site';/,'const tools='+JSON.stringify(slugs.map(slug=>({slug,from:slug,to:slug})))+';');
