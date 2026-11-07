@@ -1,0 +1,57 @@
+name: UX and SEO browser audit
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SITE_URL: https://filemagik.vercel.app
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build production
+        run: npm run build
+      - name: Install Chromium for browser tests
+        run: npx playwright install --with-deps chromium
+      - name: Test Spanish conversion flow, all locales, mobile and WCAG
+        run: npm run test:e2e
+      - name: Upload browser screenshots and traces on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: filemagik-ux-seo-browser-results
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Start website for lab performance measurement
+        if: success()
+        run: |
+          npm run start -- -p 3100 > /tmp/filemagik-next.log 2>&1 &
+          for i in $(seq 1 40); do curl -fsS http://127.0.0.1:3100/es > /dev/null && exit 0; sleep 2; done
+          cat /tmp/filemagik-next.log
+          exit 1
+      - name: Lighthouse mobile lab audit
+        if: success()
+        run: |
+          npx --yes lighthouse@12.8.2 http://127.0.0.1:3100/es --chrome-flags="--headless --no-sandbox" --preset=desktop --output=json --output-path=/tmp/lighthouse-filemagik.json --quiet
+          node -e "const x=require('/tmp/lighthouse-filemagik.json');const a=x.audits;console.log(JSON.stringify({performance:x.categories.performance.score,accessibility:x.categories.accessibility.score,seo:x.categories.seo.score,LCP:a['largest-contentful-paint'].displayValue,CLS:a['cumulative-layout-shift'].displayValue,TBT:a['total-blocking-time'].displayValue},null,2));"
+      - name: Save Lighthouse diagnostics
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: filemagik-lighthouse-lab
+          path: /tmp/lighthouse-filemagik.json
+          retention-days: 7
+          if-no-files-found: ignore
