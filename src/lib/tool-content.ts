@@ -209,6 +209,18 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Recorta bordes, gira, comprime y exporta imágenes a PNG, JPG o WebP, eliminando los metadatos EXIF.",
     "Recorte bordas, gire, compacte e exporte imagens PNG, JPG ou WebP sem metadados EXIF.",
     "Rognez les bords, pivotez, compressez et exportez des images PNG, JPG ou WebP sans métadonnées EXIF."
+  ],
+  "srt-to-vtt": [
+    "Convert SRT subtitles into WebVTT with correctly formatted timestamps for web video.",
+    "Convierte subtítulos SRT a WebVTT con tiempos adaptados al vídeo web.",
+    "Converta legendas SRT em WebVTT com carimbos de tempo válidos para vídeo web.",
+    "Convertissez des sous-titres SRT en WebVTT avec des horodatages valides pour la vidéo web."
+  ],
+  "vtt-to-srt": [
+    "Convert WebVTT subtitles into SRT with numbered cues for common media players.",
+    "Convierte subtítulos WebVTT a SRT con numeración para reproductores habituales.",
+    "Converta legendas WebVTT em SRT numerado para reprodutores de vídeo.",
+    "Convertissez des sous-titres WebVTT en SRT numéroté pour les lecteurs vidéo."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
