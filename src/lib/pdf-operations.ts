@@ -1,6 +1,6 @@
 import type {OutputFile} from './convert';
-import {parsePageSelection,partitionPages,remainingPages} from './pdf-pages';
-export type PdfAction='split-pdf-by-count'|'extract-pdf-pages'|'delete-pdf-pages'|'watermark-pdf';
+import {parsePageSelection,partitionPages,remainingPages,parsePageOrder} from './pdf-pages';
+export type PdfAction='split-pdf-by-count'|'extract-pdf-pages'|'delete-pdf-pages'|'watermark-pdf'|'reorder-pdf-pages';
 export type PdfOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number};
 function pdfBlob(bytes:Uint8Array<ArrayBufferLike>):Blob{return new Blob([new Uint8Array(bytes)],{type:'application/pdf'});}
 export async function pdfAction(action:PdfAction,source:File,options:PdfOptions={}):Promise<OutputFile>{
@@ -21,6 +21,11 @@ export async function pdfAction(action:PdfAction,source:File,options:PdfOptions=
    page.drawText(text,{x:(page.getWidth()-width)/2,y:page.getHeight()/2,size,font,rotate:degrees(angle),color:rgb(.36,.38,.48),opacity});
   }
   return {name:base+'-watermarked.pdf',blob:pdfBlob(await pdf.save())};
+ }
+ if(action==='reorder-pdf-pages'){
+  const order=parsePageOrder(options.pages??'',total);
+  const out=await PDFDocument.create();const copied=await out.copyPages(pdf,order);copied.forEach(p=>out.addPage(p));
+  return {name:base+'-reordered.pdf',blob:pdfBlob(await out.save())};
  }
  if(action==='extract-pdf-pages'||action==='delete-pdf-pages'){
   const pages=parsePageSelection(options.pages??'',total);
