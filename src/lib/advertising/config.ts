@@ -42,7 +42,7 @@ export function parseAds(value:unknown):PublicAds{
  const banners:Banner[]=input.banners.map((entry:unknown,index:number)=>{
   if(!entry||typeof entry!=='object')throw new Error('Invalid banner');
   const b=entry as Record<string,unknown>;
-  if(!adPlacements.includes(b.slot as AdPlacement)||typeof b.src!=='string'||typeof b.href!=='string'||typeof b.alt!=='string'||b.alt.trim().length<3||b.alt.length>160||!validImage(b.src)||!validPublicUrl(b.href))throw new Error('Invalid banner details');
+  if(!adPlacements.includes(b.slot as AdPlacement)||typeof b.src!=='string'||typeof b.href!=='string'||typeof b.alt!=='string'||b.alt.trim().length<3||b.alt.length>160||!validImage(b.src)||(b.href!==''&&!validPublicUrl(b.href)))throw new Error('Invalid banner details');
   counts[String(b.slot)]=(counts[String(b.slot)]??0)+1;
   if(counts[String(b.slot)]>5)throw new Error('Maximum five banners per placement');
   return {id:typeof b.id==='string'&&/^[a-zA-Z0-9_-]{1,64}$/.test(b.id)?b.id:'ad-'+(index+1),slot:b.slot as AdPlacement,src:b.src,href:b.href,alt:b.alt.trim(),enabled:b.enabled!==false};
