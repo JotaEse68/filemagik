@@ -14,6 +14,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [prefix,setPrefix]=useState('FileMagik'),[width,setWidth]=useState(1200);
  const [cropPercent,setCropPercent]=useState(0),[rotation,setRotation]=useState<0|90|180|270>(0),[format,setFormat]=useState<'png'|'jpeg'|'webp'>('webp');
  const [signature,setSignature]=useState('');
+ const [formValues,setFormValues]=useState('{}');
  const [subtitleOffsetMs,setSubtitleOffsetMs]=useState(0),[annotationText,setAnnotationText]=useState('');
  const [audioStartSeconds,setAudioStartSeconds]=useState(0),[audioEndSeconds,setAudioEndSeconds]=useState<number|undefined>();
  const [ocrLang,setOcrLang]=useState<'eng'|'spa'|'por'|'fra'>('eng');
@@ -22,7 +23,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  useEffect(()=>()=>{if(result)URL.revokeObjectURL(result.url)},[result]);
  const choose=(incoming:File[])=>{if(busy)return;try{validateFiles(slug,incoming);setResult(null);setError('');setFiles(incoming)}catch(e){setError(e instanceof Error?e.message:d.error);}};
  const run=async()=>{if(!files.length)return;setBusy(true);setError('');try{
- const output=await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,audioStartSeconds,audioEndSeconds});setResult({name:output.name,url:URL.createObjectURL(output.blob)});
+ const output=await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,audioStartSeconds,audioEndSeconds});setResult({name:output.name,url:URL.createObjectURL(output.blob)});
  }catch(e){setError(e instanceof Error?e.message:d.error)}finally{setBusy(false)}};
  const moveFile=(index:number,direction:number)=>setFiles(current=>{const target=index+direction;if(target<0||target>=current.length)return current;const next=[...current];[next[index],next[target]]=[next[target],next[index]];return next;});
  const reset=()=>{setResult(null);setFiles([]);setError('');if(input.current)input.current.value=''};
@@ -46,6 +47,10 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  {files.length>0&&!result&&['ocr-pdf','ocr-image'].includes(slug)&&<div className="pdf-option-panel"><label>{labels[6]}<select value={ocrLang} onChange={e=>setOcrLang(e.target.value as 'eng'|'spa'|'por'|'fra')}><option value="eng">English</option><option value="spa">Español</option><option value="por">Português</option><option value="fra">Français</option></select></label></div>}
  {files.length>0&&!result&&slug==='rename-batch'&&<div className="pdf-option-panel"><label>File prefix / Prefijo<input value={prefix} onChange={e=>setPrefix(e.target.value)} maxLength={60}/></label></div>}
  {files.length>0&&!result&&slug==='resize-image'&&<div className="pdf-option-panel"><label>Output width / Ancho en píxeles<input type="number" min={64} max={4000} value={width} onChange={e=>setWidth(Number(e.target.value))}/></label></div>}
+ {files.length>0&&!result&&['inspect-pdf-form','fill-pdf-form','flatten-pdf-form'].includes(slug)&&<div className="pdf-option-panel">
+ {slug==='fill-pdf-form'&&<label>{({es:'Valores del formulario (JSON: nombre del campo y valor)',en:'Form values (JSON: field name and value)',pt:'Valores do formulário (JSON: nome e valor)',fr:'Valeurs du formulaire (JSON : nom et valeur)'} as const)[locale]}<textarea rows={7} spellCheck={false} value={formValues} onChange={e=>setFormValues(e.target.value)} placeholder={'{"FullName":"Ana","AcceptTerms":true}'}/></label>}
+ <p>{({es:'Compatible con formularios PDF AcroForm. No modifica firmas digitales válidas. Los formularios XFA no son compatibles.',en:'Supports PDF AcroForm fields. Valid digital signatures are not modified. XFA forms are unsupported.',pt:'Compatível com campos AcroForm. Assinaturas digitais válidas não são modificadas; XFA não é suportado.',fr:'Compatible AcroForm. Les signatures numériques valides ne sont pas modifiées. XFA non pris en charge.'} as const)[locale]}</p>
+ </div>}
  {files.length>0&&!result&&slug==='audio-to-wav'&&<div className="pdf-option-panel">
  <label>{({es:'Inicio del recorte (segundos)',en:'Start (seconds)',pt:'Início (segundos)',fr:'Début (secondes)'} as const)[locale]}<input type="number" min={0} step={.1} value={audioStartSeconds} onChange={e=>setAudioStartSeconds(Number(e.target.value))}/></label>
  <label>{({es:'Final (segundos, vacío = todo)',en:'End (seconds, blank = full file)',pt:'Fim (segundos, vazio = tudo)',fr:'Fin (secondes, vide = fichier entier)'} as const)[locale]}<input type="number" min={0} step={.1} value={audioEndSeconds??''} onChange={e=>setAudioEndSeconds(e.target.value===''?undefined:Number(e.target.value))}/></label>
