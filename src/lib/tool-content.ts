@@ -197,6 +197,12 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Cambia el ancho de una imagen a los píxeles que elijas y descarga PNG.",
     "Redimensione a largura de uma imagem em pixels e baixe PNG.",
     "Redimensionnez une image à la largeur souhaitée en pixels, puis téléchargez PNG."
+  ],
+  "batch-images-to-webp": [
+    "Convert up to 30 JPG, PNG or WebP pictures to WebP and download a ZIP, locally in your browser.",
+    "Convierte hasta 30 imágenes JPG, PNG o WebP a WebP y descárgalas juntas en un ZIP, desde tu navegador.",
+    "Converta até 30 imagens JPG, PNG ou WebP para WebP e baixe o ZIP no navegador.",
+    "Convertissez jusqu’à 30 images JPG, PNG ou WebP en WebP et téléchargez le ZIP dans votre navigateur."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
