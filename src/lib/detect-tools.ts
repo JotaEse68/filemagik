@@ -11,6 +11,7 @@ export function getAvailableTools(files:NamedFile[]):ToolSlug[]{
  case 'jpg':case 'jpeg':return ['jpg-to-webp','jpg-to-png','images-to-pdf'];
  case 'png':return ['png-to-webp','png-to-jpg','images-to-pdf'];
  case 'webp':return ['webp-to-png','webp-to-jpg'];
+ case 'zip':return ['extract-zip'];
  case 'csv':return ['csv-to-json','csv-to-xlsx'];
  case 'xlsx':return ['xlsx-to-csv'];
  case 'json':return ['json-to-csv'];
