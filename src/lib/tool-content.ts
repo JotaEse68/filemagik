@@ -167,6 +167,18 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Reduce el tamaño de PDF convirtiendo páginas en imágenes. Pierde texto seleccionable y enlaces.",
     "Reduza PDFs convertendo páginas em imagens. O texto e links são perdidos.",
     "Réduisez un PDF en convertissant les pages en images, sans texte sélectionnable."
+  ],
+  "create-zip": [
+    "Compress several files into a ZIP archive in your browser, without uploading them.",
+    "Comprime varios archivos en un ZIP directamente en el navegador, sin subirlos.",
+    "Compacte vários arquivos em ZIP no navegador, sem upload.",
+    "Compressez plusieurs fichiers dans une archive ZIP sans transfert."
+  ],
+  "extract-zip": [
+    "Extract safely from a ZIP and download the files in a new archive.",
+    "Extrae archivos de un ZIP de forma segura y descárgalos juntos.",
+    "Extraia arquivos ZIP de forma segura e faça download num novo pacote.",
+    "Extrayez les fichiers d'une archive ZIP et récupérez-les en téléchargement."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
