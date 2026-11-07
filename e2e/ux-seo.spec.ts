@@ -101,9 +101,9 @@ test('language switch preserves the current converter route',async({page})=>{
 });
 
 test('image conversion reaches a downloadable WebP',async({page})=>{
- const pixel='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO9pQYgAAAAASUVORK5CYII=';
+ const pixel='iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGNMmfbsPwMDAwMTAxQAACumAuM3xzxNAAAAAElFTkSuQmCC';
  await page.goto('/es/png-to-webp');
  await page.locator('input[type=file]').setInputFiles({name:'pixel.png',mimeType:'image/png',buffer:Buffer.from(pixel,'base64')});
  await page.getByRole('button',{name:/convertir ahora/i}).click();
- await expect(page.locator('a[download]')).toHaveAttribute('download',/\.webp$/);
+ await expect(page.locator('a[download]'),await page.locator('[role=alert]').allTextContents()).toHaveAttribute('download',/\.webp$/);
 });
