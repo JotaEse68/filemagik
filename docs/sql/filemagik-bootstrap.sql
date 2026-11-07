@@ -40,7 +40,7 @@ create policy "admin can append audit" on public.filemagik_admin_audit
  for insert to authenticated with check (actor=(select auth.uid()) and exists(select 1 from public.filemagik_admins a where a.user_id=(select auth.uid())));
 
 revoke all on public.filemagik_admins from anon;
-grant select on public.filemagik_admins to authenticated;
+grant select on public.filemagik_admins to anon,authenticated; -- RLS still forbids anonymous rows
 grant select on public.filemagik_settings to anon,authenticated;
 grant insert,update on public.filemagik_settings to authenticated;
 grant select,insert on public.filemagik_admin_audit to authenticated;
