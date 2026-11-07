@@ -47,9 +47,23 @@ grant select,insert on public.filemagik_admin_audit to authenticated;
 grant usage,select on sequence public.filemagik_admin_audit_id_seq to authenticated;
 
 insert into public.filemagik_settings(key,value)
-values ('ads_public','{"enabled":false,"banners":[]}'::jsonb)
+values ('ads_public','{"enabled":true,"banners":[]}'::jsonb)
 on conflict(key) do nothing;
 
 -- After signing in with the intended account, grant first admin explicitly in SQL editor:
 -- insert into public.filemagik_admins(user_id)
 -- select id from auth.users where email = '<VERIFIED_ADMIN_EMAIL>';
+
+-- Public creative bucket: original JPG/PNG/WebP banners, maximum 1.5MB.
+-- Use ONLY on the dedicated FileMagik project.
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+values ('filemagik-banners','filemagik-banners',true,1500000,array['image/jpeg','image/png','image/webp']::text[])
+on conflict(id) do nothing;
+create policy "filemagik admins can upload own creatives"
+on storage.objects for insert to authenticated
+with check(bucket_id='filemagik-banners' and exists
+ (select 1 from public.filemagik_admins a where a.user_id=(select auth.uid())));
+create policy "filemagik admins can delete own creatives"
+on storage.objects for delete to authenticated
+using(bucket_id='filemagik-banners' and exists
+ (select 1 from public.filemagik_admins a where a.user_id=(select auth.uid())));
