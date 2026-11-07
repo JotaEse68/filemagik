@@ -10,6 +10,12 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,option
  if(['split-pdf-by-count','extract-pdf-pages','delete-pdf-pages','watermark-pdf'].includes(slug)){
   const {pdfAction}=await import('./pdf-operations');return pdfAction(slug as import('./pdf-operations').PdfAction,files[0],options);
  }
+ if(slug==='pdf-to-png'||slug==='pdf-to-word-text'||slug==='word-to-basic-pdf'){
+  const pdf=await import('./pdf-render');
+  if(slug==='pdf-to-png')return pdf.pdfToPngZip(files[0]);
+  if(slug==='pdf-to-word-text')return pdf.pdfToWordText(files[0]);
+  return pdf.wordToBasicPdf(files[0]);
+ }
  const name=files[0].name.replace(/\.[^.]+$/,'');
  if(slug==='csv-to-json'||slug==='json-to-csv'){
   const text=await files[0].text();const result=slug==='csv-to-json'?csvToJson(text):jsonToCsv(text);
