@@ -105,5 +105,5 @@ test('image conversion reaches a downloadable WebP',async({page})=>{
  await page.goto('/es/png-to-webp');
  await page.locator('input[type=file]').setInputFiles({name:'pixel.png',mimeType:'image/png',buffer:Buffer.from(pixel,'base64')});
  await page.getByRole('button',{name:/convertir ahora/i}).click();
- await expect(page.locator('a[download]'),await page.locator('[role=alert]').allTextContents()).toHaveAttribute('download',/\.webp$/);
+ await expect(page.locator('a[download]'),(await page.locator('[role=alert]').allTextContents()).join('; ')).toHaveAttribute('download',/\.webp$/);
 });
