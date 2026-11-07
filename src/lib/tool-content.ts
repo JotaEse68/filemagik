@@ -233,6 +233,12 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Añade una anotación de texto visible al pie de todas las páginas PDF sin convertirlas en imágenes.",
     "Adicione uma nota de texto visível ao rodapé de todas as páginas do PDF sem as rasterizar.",
     "Ajoutez une note visible au bas de toutes les pages PDF sans les convertir en images."
+  ],
+  "audio-to-wav": [
+    "Convert browser-supported audio to uncompressed WAV and optionally trim a segment; codec support varies.",
+    "Convierte audio compatible con tu navegador a WAV sin comprimir y recorta un fragmento si lo necesitas.",
+    "Converta áudio compatível com seu navegador para WAV sem compressão e recorte um trecho.",
+    "Convertissez l’audio pris en charge par votre navigateur en WAV non compressé, avec découpe facultative."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
