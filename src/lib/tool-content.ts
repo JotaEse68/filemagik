@@ -239,6 +239,18 @@ const summaries:Record<ToolSlug,[string,string,string,string]>={
     "Convierte audio compatible con tu navegador a WAV sin comprimir y recorta un fragmento si lo necesitas.",
     "Converta áudio compatível com seu navegador para WAV sem compressão e recorte um trecho.",
     "Convertissez l’audio pris en charge par votre navigateur en WAV non compressé, avec découpe facultative."
+  ],
+  "create-gzip": [
+    "Compress a file into GZIP directly in the browser, without uploading it to a server.",
+    "Comprime un archivo en GZIP directamente en tu navegador, sin subirlo a servidores.",
+    "Compacte um arquivo em GZIP diretamente no navegador sem enviar ao servidor.",
+    "Compressez un fichier en GZIP directement dans votre navigateur, sans transfert."
+  ],
+  "extract-gzip": [
+    "Decompress a GZIP file locally with strict output-size limits to protect your browser.",
+    "Descomprime archivos GZIP localmente con límites de tamaño para proteger el navegador.",
+    "Descompacte arquivos GZIP localmente com limites de tamanho para proteger o navegador.",
+    "Décompressez un fichier GZIP localement avec une limite de taille pour protéger le navigateur."
   ]
 };
 const index:Record<Locale,number>={en:0,es:1,pt:2,fr:3};
