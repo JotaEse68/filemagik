@@ -15,9 +15,16 @@ export const defaultAds:PublicAds={
  external:{name:'',approved:false,frameUrls:{top:'',desktop:'',inline:'',mobile:'',result:''},vendorId:null}
 };
 function validPublicUrl(value:string){
- try{const parsed=new URL(value);return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&parsed.hostname!=='localhost'&&!parsed.hostname.endsWith('.local')&&!parsed.hostname.endsWith('.internal')&&!/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(parsed.hostname)&&!parsed.hostname.startsWith('[');}
- catch{return false;}
+ try{
+  const parsed=new URL(value),host=parsed.hostname;
+  const octets=host.split('.');
+  const isIpv4=octets.length===4&&octets.every(part=>part.length>0&&[...part].every(char=>char>='0'&&char<='9'));
+  const isIpv6=host.startsWith('[')||host.includes(':');
+  return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&host!=='localhost'
+   &&!host.endsWith('.local')&&!host.endsWith('.internal')&&!isIpv4&&!isIpv6;
+ }catch{return false;}
 }
+
 function validImage(value:string){
  return validPublicUrl(value)||/^\/ads\/[a-zA-Z0-9][a-zA-Z0-9._-]{0,119}\.(webp|png|jpe?g)$/i.test(value);
 }
