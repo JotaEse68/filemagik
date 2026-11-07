@@ -24,3 +24,13 @@ El panel de administración está protegido por Supabase Auth + RLS, y necesita 
 
 ## Estado a 2026-11-07
 No hay proyecto de Supabase llamado FileMagik en ninguna de las dos cuentas conectadas; no consta ID de editor ni CMP y no se han conectado las credenciales. No afirmar que el panel ni Google Ads están activos.
+
+## Distribución de espacios FileMagik (nueva estructura)
+- Portada, después de las dos ruedas: `NEXT_PUBLIC_ADSENSE_SLOT_HOME`.
+- Páginas de conversión, debajo del resultado y fuera de la zona de controles: `NEXT_PUBLIC_ADSENSE_SLOT_INCONTENT`.
+- Escritorio/otros diseños futuros: `NEXT_PUBLIC_ADSENSE_SLOT_DESKTOP`.
+- Móvil si se define una posición no intrusiva: `NEXT_PUBLIC_ADSENSE_SLOT_MOBILE`.
+- En la publicación actual no se muestran cuadros vacíos ni publicidad ficticia: los espacios solo se renderizan con identificadores reales, aprobación, bandera de activación y CMP TCF configurada.
+- No usar anuncios intersticiales ni tapar el botón de descarga. La inserción del script sigue condicionada a señal válida de consentimiento del CMP.
+
+El superadmin está aplazado y no es requisito para conectar AdSense mediante variables de entorno. Estas variables no son credenciales secretas (ID de editor y de espacios), pero deben corresponder al sitio aprobado.
