@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import {useState} from 'react';
+import type {CSSProperties} from 'react';
 import {FileText,Image as ImageIcon,FileSpreadsheet,ScanText,FolderArchive,Files,ArrowUpRight,Layers2,Scissors,Merge,RotateCw,FileDown,Stamp,Minimize2,BookOpen,Search} from 'lucide-react';
 import type {Locale} from '@/config/site';
 
@@ -46,7 +47,7 @@ export default function RadialStudio({locale}:{locale:Locale}){
      <div className="wheel-disc"/>
      {sections.map((category,index)=>{
       const Icon=icons[category],angle=index*60-90;
-      return <button type="button" className={`radial-sector ${selected===category?'is-active':''}`} key={category} style={{'--angle':`${angle}deg`} as React.CSSProperties} aria-pressed={selected===category} onClick={()=>{setSelected(category);setHovered(null);}}><Icon size={26}/><span>{t[category]}</span></button>
+      return <button type="button" className={`radial-sector ${selected===category?'is-active':''}`} key={category} style={{'--angle':`${angle}deg`} as CSSProperties} aria-pressed={selected===category} onClick={()=>{setSelected(category);setHovered(null);}}><Icon size={26}/><span>{t[category]}</span></button>
      })}
      <div className="wheel-center"><Files size={22}/><span>{t[selected]}</span></div>
     </div>
@@ -55,7 +56,7 @@ export default function RadialStudio({locale}:{locale:Locale}){
    <div className="radial-column"><h3><span className="radial-step">02</span>{t.actions}</h3>
     <div className="radial-wheel radial-action-wheel" role="group" aria-label={t.actions}>
      <div className="wheel-disc"/>
-     {ring.map((action,index)=>{const Icon=symbols[action.icon as keyof typeof symbols]??Stamp;const angle=index*60-90;return <Link href={`/${locale}/${action.slug}`} key={action.slug} onMouseEnter={()=>setHovered(action.slug)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setHovered(action.slug)} className={`radial-sector radial-sector-link ${fallback.slug===action.slug?'is-active':''}`} style={{'--angle':`${angle}deg`} as React.CSSProperties}><Icon size={25}/><span>{actionNames[locale][action.slug]??action.label}</span></Link>})}
+     {ring.map((action,index)=>{const Icon=symbols[action.icon as keyof typeof symbols]??Stamp;const angle=index*60-90;return <Link href={`/${locale}/${action.slug}`} key={action.slug} onMouseEnter={()=>setHovered(action.slug)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setHovered(action.slug)} className={`radial-sector radial-sector-link ${fallback.slug===action.slug?'is-active':''}`} style={{'--angle':`${angle}deg`} as CSSProperties}><Icon size={25}/><span>{actionNames[locale][action.slug]??action.label}</span></Link>})}
      <Link href={`/${locale}/${fallback.slug}`} className="wheel-center wheel-action-center" aria-label={actionNames[locale][fallback.slug]??fallback.label}><ArrowUpRight size={19}/><span>{actionNames[locale][fallback.slug]??fallback.label}</span></Link>
     </div>
    </div>
