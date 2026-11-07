@@ -21,3 +21,5 @@ test('unsupported inputs return no actions',()=>assert.equal(detect('script.exe'
 test('mixed WebP and PNG can be exported as a WebP ZIP',()=>assert.deepEqual([...detect('a.webp','b.png')],['batch-images-to-webp']));
 
 test('subtitles can be converted both ways',()=>{assert.deepEqual([...detect('movie.srt')],['srt-to-vtt']);assert.deepEqual([...detect('movie.vtt')],['vtt-to-srt']);});
+
+test('audio WAV conversion is offered for browser-supported files',()=>assert.deepEqual([...detect('song.mp3')],['audio-to-wav']));
