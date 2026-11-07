@@ -65,3 +65,28 @@ export async function wordToBasicPdf(file:File):Promise<OutputFile>{
  }
  return {name:file.name.replace(/\.docx$/i,'')+'-basic.pdf',blob:new Blob([new Uint8Array(await pdf.save())],{type:'application/pdf'})};
 }
+export async function pdfToRasterCompact(file:File,quality=.65):Promise<OutputFile>{
+ const pdfjs=await import('pdfjs-dist');
+ pdfjs.GlobalWorkerOptions.workerSrc=pdfWorker();
+ const source=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+ try{
+  if(source.numPages>30)throw new Error('Maximum 30 pages for raster compression');
+  const {PDFDocument}=await import('pdf-lib');const result=await PDFDocument.create();
+  for(let i=1;i<=source.numPages;i++){
+   const page=await source.getPage(i),viewport=page.getViewport({scale:1.1});
+   if(viewport.width*viewport.height>18_000_000)throw new Error('PDF page too large');
+   const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+   const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Canvas unavailable');
+   ctx.fillStyle='white';ctx.fillRect(0,0,canvas.width,canvas.height);
+   await page.render({canvas,canvasContext:ctx,viewport}).promise;
+   const image=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Cannot encode page')),'image/jpeg',quality));
+   const embedded=await result.embedJpg(await image.arrayBuffer());
+   const size=page.getViewport({scale:1});const newPage=result.addPage([size.width,size.height]);
+   newPage.drawImage(embedded,{x:0,y:0,width:size.width,height:size.height});
+   canvas.width=0;canvas.height=0;page.cleanup();
+  }
+  const bytes=await result.save();
+  if(bytes.length>=file.size)throw new Error('Raster version is not smaller; original PDF is better');
+  return {name:file.name.replace(/\.pdf$/i,'')+'-raster-compact.pdf',blob:new Blob([new Uint8Array(bytes)],{type:'application/pdf'})};
+ }finally{await source.destroy();}
+}
