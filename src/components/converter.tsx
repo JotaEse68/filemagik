@@ -1,6 +1,6 @@
 'use client';
 import {useRef,useState,useEffect} from 'react';
-import {ArrowRight,Check,Download,FileUp,LockKeyhole,RotateCcw,LoaderCircle} from 'lucide-react';
+import {ArrowRight,Check,Download,FileUp,RotateCcw,LoaderCircle} from 'lucide-react';
 import {convertFiles} from '@/lib/convert';
 import {validateFiles,sizeLimitLabel} from '@/lib/file-limits';
 import {getTool,type ToolSlug,type Locale} from '@/config/site';
@@ -45,5 +45,5 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  {files.length>0&&!result&&<div className="actions">{(tool.kind==='image'||slug==='images-to-pdf'||slug==='compress-pdf-raster')&&<label className="quality">{d.imageQuality}: {quality}% <input type="range" min="50" max="100" value={quality} onChange={e=>setQuality(Number(e.target.value))}/></label>}<button className="btn btn-primary" disabled={busy} onClick={run}>{busy?<LoaderCircle className="spin" size={18}/>:<ArrowRight size={18}/>} {busy?d.processing:d.convert}</button><button className="btn btn-ghost" onClick={reset}>{d.reset}</button></div>}
  {result&&<div className="actions"><a className="btn btn-primary" href={result.url} download={result.name}><Download size={18}/>{d.download}</a><button className="btn btn-ghost" onClick={reset}><RotateCcw size={17}/>{d.reset}</button></div>}
  {error&&<p role="alert" className="error">{error}</p>}
- </div><div className="privacy-note"><LockKeyhole size={16}/>{d.localNote}</div></section>;
+ </div></section>;
 }
