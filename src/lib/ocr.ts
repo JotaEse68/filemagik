@@ -28,5 +28,5 @@ export async function runOcr(file:File,kind:'ocr-image'|'ocr-pdf',language:OcrLa
   }
   const text=chunks.join('\n\n');
   return {name:file.name.replace(/\.[^.]+$/,'')+'-ocr.txt',blob:new Blob([text],{type:'text/plain;charset=utf-8'})};
- }finally{if(pdf)await pdf.destroy();await worker.terminate();}
+ }finally{if(pdf)await pdf.cleanup();await worker.terminate();}
 }
