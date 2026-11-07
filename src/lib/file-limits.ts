@@ -8,6 +8,7 @@ const archives=new Set<ToolSlug>(['create-zip','extract-zip','rename-batch']);
 export type FileLimits={perFile:number;total:number;maxFiles:number};
 export function limitsFor(slug:ToolSlug):FileLimits{
  if(imageBatch.has(slug))return {perFile:40*MIB,total:120*MIB,maxFiles:30};
+ if(slug==='srt-to-vtt'||slug==='vtt-to-srt')return {perFile:5*MIB,total:5*MIB,maxFiles:1};
  if(archives.has(slug))return {perFile:120*MIB,total:120*MIB,maxFiles:slug==='extract-zip'?1:100};
  if(heavy.has(slug))return {perFile:60*MIB,total:120*MIB,maxFiles:slug==='images-to-pdf'?30:1};
  if(images.has(slug))return {perFile:100*MIB,total:100*MIB,maxFiles:1};
