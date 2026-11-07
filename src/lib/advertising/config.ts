@@ -15,7 +15,7 @@ export const defaultAds:PublicAds={
  external:{name:'',approved:false,frameUrls:{top:'',desktop:'',inline:'',mobile:'',result:''},vendorId:null}
 };
 function validPublicUrl(value:string){
- try{const parsed=new URL(value);return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&parsed.hostname!=='localhost'&&!parsed.hostname.endsWith('.local')&&!parsed.hostname.endsWith('.internal');}
+ try{const parsed=new URL(value);return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&parsed.hostname!=='localhost'&&!parsed.hostname.endsWith('.local')&&!parsed.hostname.endsWith('.internal')&&!/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(parsed.hostname)&&!parsed.hostname.startsWith('[');}
  catch{return false;}
 }
 function validImage(value:string){
