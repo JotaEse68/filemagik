@@ -24,7 +24,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const moveFile=(index:number,direction:number)=>setFiles(current=>{const target=index+direction;if(target<0||target>=current.length)return current;const next=[...current];[next[index],next[target]]=[next[target],next[index]];return next;});
  const reset=()=>{setResult(null);setFiles([]);setError('');if(input.current)input.current.value=''};
  return <section className="converter">
- <input ref={input} className="visually-hidden" type="file" multiple={slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'||slug==='rename-batch'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
+ <input ref={input} className="visually-hidden" type="file" multiple={slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'||slug==='rename-batch'||slug==='batch-images-to-webp'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
  <div className={`dropzone ${drag?'dragging':''}`} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);choose(Array.from(e.dataTransfer.files))}}>
  <div className="upload-icon"><FileUp size={36} strokeWidth={1.6}/></div>
  <h2>{result?<><Check size={25}/>{result.name}</>:files.length?files.map(f=>f.name).join(', '):d.dropTitle}</h2>
