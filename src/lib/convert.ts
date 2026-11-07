@@ -2,9 +2,12 @@ import {csvToJson,jsonToCsv} from './csv';
 import type {ToolSlug} from '@/config/site';
 import {validateFiles} from './file-limits';
 export type OutputFile={name:string;blob:Blob};
-export type ConversionOptions={subtitleOffsetMs?:number;annotationText?:string;cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
+export type ConversionOptions={subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  validateFiles(slug,files);
+ if(slug==='audio-to-wav'){
+  const {audioToWav}=await import('./audio-tools');return audioToWav(files[0],{startSeconds:options.audioStartSeconds,endSeconds:options.audioEndSeconds});
+ }
  if(slug==='srt-to-vtt'||slug==='vtt-to-srt'){
   const {convertSubtitles}=await import('./subtitles');return convertSubtitles(files[0],slug==='srt-to-vtt'?'vtt':'srt',options.subtitleOffsetMs??0);
  }
