@@ -1,11 +1,14 @@
 import '../globals.css';
 import {notFound} from 'next/navigation';
 import type {Metadata} from 'next';
+import {DM_Sans,Space_Grotesk} from 'next/font/google';
 import {isLocale,locales,siteUrl} from '@/config/site';
 import {getDictionary} from '@/lib/i18n';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 
+const dmSans=DM_Sans({subsets:['latin'],display:'swap',variable:'--font-dm'});
+const spaceGrotesk=Space_Grotesk({subsets:['latin'],display:'swap',variable:'--font-space'});
 export const metadata:Metadata={
  applicationName:'FileMagik',
  metadataBase:new URL(siteUrl),
@@ -19,7 +22,7 @@ const skipLabels={en:'Skip to main content',es:'Saltar al contenido',pt:'Ir para
 export default async function LocaleLayout({children,params}:{children:React.ReactNode;params:Promise<{locale:string}>}){
  const {locale}=await params;if(!isLocale(locale))notFound();
  const d=getDictionary(locale);
- return <html lang={locale}><head><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous"/><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"/></head><body>
+ return <html lang={locale} className={`${dmSans.variable} ${spaceGrotesk.variable}`}><body>
   <a className="skip-link" href="#main-content">{skipLabels[locale]}</a>
   <Header locale={locale} d={d}/>
   <main id="main-content" tabIndex={-1}>{children}</main>
