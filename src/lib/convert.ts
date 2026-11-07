@@ -1,7 +1,7 @@
 import {csvToJson,jsonToCsv} from './csv';
 import type {ToolSlug} from '@/config/site';
 export type OutputFile={name:string;blob:Blob};
-export type ConversionOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
+export type ConversionOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  if(!files.length)throw new Error('Select a file');
  if(slug!=='create-zip'&&slug!=='extract-zip'&&files.some(f=>f.size>25*1024*1024))throw new Error('File exceeds 25 MB');
@@ -24,6 +24,12 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,option
  }
  if(slug==='xlsx-to-csv'||slug==='csv-to-xlsx'){
   const excel=await import('./excel');return slug==='xlsx-to-csv'?excel.xlsxToCsv(files[0]):excel.csvToXlsx(files[0]);
+ }
+ if(slug==='inspect-file'||slug==='rename-batch'||slug==='resize-image'){
+  const utils=await import('./windows-tools');
+  if(slug==='inspect-file')return utils.inspectFile(files[0]);
+  if(slug==='rename-batch')return utils.renameBatch(files,options.prefix);
+  return utils.resizeImage(files[0],options.width??1200);
  }
  if(slug==='create-zip'||slug==='extract-zip'){
   const archives=await import('./zip-tools');return slug==='create-zip'?archives.createZip(files):archives.extractZip(files[0]);
