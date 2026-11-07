@@ -74,11 +74,11 @@ test('no serious or critical automated accessibility violations',async({page})=>
 
 test('CSV is converted and downloaded from its dedicated action',async({page})=>{
  await page.goto('/es/csv-to-json');
- await page.locator('input[type=file]').setInputFiles({name:'contacts.csv',mimeType:'text/csv',buffer:Buffer.from('name,age\\nAna,31\\nJota,42\\n')});
+ await page.locator('input[type=file]').setInputFiles({name:'contacts.csv',mimeType:'text/csv',buffer:Buffer.from('name,age\nAna,31\nJota,42\n')});
  await page.getByRole('button',{name:/convertir ahora/i}).click();
  const link=page.locator('a[download]');
- await expect(link).toHaveAttribute('download',/\\.json$/);
- const download=page.waitForEvent('download');await link.click();expect((await download).suggestedFilename()).toMatch(/\\.json$/);
+ await expect(link).toHaveAttribute('download',/\.json$/);
+ const download=page.waitForEvent('download');await link.click();expect((await download).suggestedFilename()).toMatch(/\.json$/);
 });
 
 test('secondary smart uploader suggests actions for supported PDF',async({page})=>{
@@ -96,7 +96,7 @@ test('language switch preserves the current converter route',async({page})=>{
  const switcher=page.locator('a[href="/en/merge-pdf"]');
  await expect(switcher).toHaveCount(1);
  await switcher.click();
- await expect(page).toHaveURL(/\\/en\\/merge-pdf$/);
+ await expect(page).toHaveURL(/\/en\/merge-pdf$/);
  await expect(page.locator('html')).toHaveAttribute('lang','en');
 });
 
@@ -105,5 +105,5 @@ test('image conversion reaches a downloadable WebP',async({page})=>{
  await page.goto('/es/png-to-webp');
  await page.locator('input[type=file]').setInputFiles({name:'pixel.png',mimeType:'image/png',buffer:Buffer.from(pixel,'base64')});
  await page.getByRole('button',{name:/convertir ahora/i}).click();
- await expect(page.locator('a[download]')).toHaveAttribute('download',/\\.webp$/);
+ await expect(page.locator('a[download]')).toHaveAttribute('download',/\.webp$/);
 });
