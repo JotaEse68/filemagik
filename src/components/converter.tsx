@@ -10,13 +10,13 @@ export default function Converter({slug,d}:{slug:ToolSlug;d:Dictionary}){
  const [result,setResult]=useState<{name:string;url:string}|null>(null);
  const [error,setError]=useState(''),[quality,setQuality]=useState(88);
  useEffect(()=>()=>{if(result)URL.revokeObjectURL(result.url)},[result]);
- const choose=(incoming:File[])=>{setResult(null);setError('');setFiles(slug==='merge-pdf'?incoming:incoming.slice(0,1))};
+ const choose=(incoming:File[])=>{if(busy)return;if(incoming.some(f=>f.size>25*1024*1024)){setError(d.fileTooBig);return;}setResult(null);setError('');setFiles(slug==='merge-pdf'||slug==='images-to-pdf'?incoming:incoming.slice(0,1))};
  const run=async()=>{if(!files.length)return;setBusy(true);setError('');try{
  const output=await convertFiles(slug,files,quality/100);setResult({name:output.name,url:URL.createObjectURL(output.blob)});
  }catch(e){setError(e instanceof Error?e.message:d.error)}finally{setBusy(false)}};
  const reset=()=>{setResult(null);setFiles([]);setError('');if(input.current)input.current.value=''};
  return <section className="converter">
- <input ref={input} className="visually-hidden" type="file" multiple={slug==='merge-pdf'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
+ <input ref={input} className="visually-hidden" type="file" multiple={slug==='merge-pdf'||slug==='images-to-pdf'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
  <div className={`dropzone ${drag?'dragging':''}`} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);choose(Array.from(e.dataTransfer.files))}}>
  <div className="upload-icon"><FileUp size={36} strokeWidth={1.6}/></div>
  <h2>{result?<><Check size={25}/>{result.name}</>:files.length?files.map(f=>f.name).join(', '):d.dropTitle}</h2>
