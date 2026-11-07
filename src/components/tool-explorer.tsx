@@ -10,8 +10,8 @@ const text={
  pt:{search:'Pesquise por formato ou ação…',empty:'Nenhuma ferramenta encontrada. Tente outro formato.',heading:'Escolha uma ferramenta'},
  fr:{search:'Rechercher un format ou une action…',empty:'Aucun outil trouvé. Essayez un autre format.',heading:'Choisissez un outil'}
 } as const;
-export default function ToolExplorer({locale}:{locale:Locale}){
- const [category,setCategory]=useState<ToolCategory>('all'),[query,setQuery]=useState('');
+export default function ToolExplorer({locale,initialCategory='all'}:{locale:Locale;initialCategory?:ToolCategory}){
+ const [category,setCategory]=useState<ToolCategory>(initialCategory),[query,setQuery]=useState('');
  const list=useMemo(()=>searchTools(query,category),[query,category]);
  const language=text[locale],labels=categoryLabels[locale];
  return <div className="tool-explorer" aria-label={language.heading}>
