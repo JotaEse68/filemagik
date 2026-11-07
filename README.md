@@ -7,9 +7,9 @@ Free, browser-first conversion and document tools, designed in the JOTA Signatur
 
 ## Modules implemented in source
 - **PDF Studio:** join, split to one page per file, split into groups of N pages, extract/remove selected pages, reorder with thumbnail previews, rotate and add text watermarks.
-- **PDF formats:** JPG/PNG to PDF, PDF pages to PNG ZIP, extract PDF text to simple DOCX, convert DOCX text to basic PDF.
+- **PDF formats:** JPG/PNG to PDF, PDF pages to PNG ZIP, extract PDF text to simple DOCX, convert DOCX text to basic PDF, rasterize for a potentially smaller PDF, and add clearly labeled visual signatures.
 - **Images:** JPG/PNG/WebP conversion and Image Cleanup (local rectangular retouching for small marks over simple backgrounds).
-- **OCR:** text extraction from screenshots and scanned PDF in English, Spanish, Portuguese and French.
+- **SEO catalog:** 28 tools with localized descriptions across four languages.\n- **OCR:** text extraction from screenshots and scanned PDF in English, Spanish, Portuguese and French.
 - **Data:** CSV ↔ XLSX, CSV ↔ JSON.
 - **Interface:** context-aware dropzone, file order controls, responsive layout, localized help for every tool.
 - **SEO:** 26 tool routes × 4 languages, metadata, hreflang, canonical, sitemap and SoftwareApplication JSON-LD.
