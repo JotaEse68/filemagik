@@ -20,7 +20,9 @@
     "mammoth": "^1.10.0",
     "jszip": "^3.10.1",
     "pdfjs-dist": "^6.5.438",
-    "docx": "^9.15.2"
+    "docx": "^9.15.2",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.119.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
