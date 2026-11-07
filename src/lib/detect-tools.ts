@@ -4,7 +4,7 @@ export function getAvailableTools(files:NamedFile[]):ToolSlug[]{
  if(!files.length)return [];
  const extensions=files.map(file=>file.name.split('.').pop()?.toLowerCase()??'');
  if(extensions.every(ext=>ext==='pdf'))return files.length>1?['merge-pdf']:['split-pdf','rotate-pdf','pdf-to-png','pdf-to-word-text'];
- if(extensions.every(ext=>['jpg','jpeg','png'].includes(ext))&&files.length>1)return ['images-to-pdf'];
+ if(extensions.every(ext=>['jpg','jpeg','png','webp'].includes(ext))&&files.length>1)return extensions.every(ext=>['jpg','jpeg','png'].includes(ext))?['images-to-pdf','batch-images-to-webp']:['batch-images-to-webp'];
  if(files.length>1)return [];
  const ext=extensions[0];
  switch(ext){
