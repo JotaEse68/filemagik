@@ -1,5 +1,6 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
+import {upload as blobUpload} from '@vercel/blob/client';
 import type {AdsSettings,Campaign,Placement} from '@/lib/advertising/blob-settings';
 import {adSlots,type AdSlot} from '@/lib/advertising/config';
 import './filemagik-admin.css';
@@ -23,14 +24,13 @@ export default function StandaloneDashboard(){
  function removeCampaign(id:string){setSettings(prev=>prev?{...prev,campaigns:prev.campaigns.filter(c=>c.id!==id),placements:Object.fromEntries(adSlots.map(slot=>[slot,{...prev.placements[slot],campaignIds:prev.placements[slot].campaignIds.filter(x=>x!==id)}])) as AdsSettings['placements']}:prev);}
  async function upload(id:string,file:File){
   setError('');setMessage('');
-  if(file.size>8_000_000||!['image/jpeg','image/png','image/webp'].includes(file.type)){setError('Imagen JPG, PNG o WebP de máximo 8 MB');return;}
+  if(file.size===0||file.size>8_000_000||!['image/jpeg','image/png','image/webp'].includes(file.type)){setError('Imagen JPG, PNG o WebP de máximo 8 MB');return;}
   setUploading(id);
   try{
-   const form=new FormData();form.append('image',file);
-   const res=await fetch('/api/admin/advertising/upload',{method:'POST',body:form,credentials:'same-origin'});
-   const body=await res.json();if(!res.ok||!body.url)throw new Error(body.error||'La subida ha fallado');
-   patchCampaign(id,{src:body.url});
-   setMessage('Imagen subida a Vercel Blob. Guarda ahora la configuración para publicarla.');
+   const extension=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
+   const uploaded=await blobUpload('filemagik/ads/images/'+crypto.randomUUID()+'.'+extension,file,{access:'public',handleUploadUrl:'/api/admin/advertising/client-upload'});
+   patchCampaign(id,{src:uploaded.url});
+   setMessage('Imagen subida directamente a Vercel Blob. Pulsa Guardar para publicar la campaña.');
   }catch(e){setError(e instanceof Error?e.message:'No se pudo subir');}finally{setUploading('');}
  }
  async function save(){
