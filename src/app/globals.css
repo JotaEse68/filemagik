@@ -129,3 +129,15 @@ html{scroll-padding-top:90px}body{min-width:320px}.header-inner{position:relativ
  .fm-global-mobile-ad .fm-ad-rotation{display:none}
 }
 @media(min-width:801px){.fm-mobile-ad-close{display:none}}
+
+/* FileMagik dual sticky desktop rail: two independent ad units, never over the editor */
+@media(min-width:1400px){
+ .fm-global-desktop-ad{display:flex;flex-direction:column;align-items:stretch;gap:12px;overflow-y:auto;overflow-x:hidden;padding:2px 3px 16px;width:218px;right:8px;top:88px;bottom:0}
+ .fm-global-desktop-ad .first-party-ad{flex:0 0 auto;margin:0;width:100%;height:clamp(220px,36vh,365px);display:flex;flex-direction:column}
+ .fm-global-desktop-ad .first-party-ad a{display:flex;align-items:center;justify-content:center;flex:1;min-height:0;max-height:100%}
+ .fm-global-desktop-ad .first-party-ad img{max-width:100%;width:100%;height:100%;max-height:100%;object-fit:contain}
+ .fm-global-desktop-ad .fm-ad-rotation{font-size:10px;flex:0 0 auto;color:#b6c7e7;margin-top:5px}
+}
+.fm-admin-ad-manager{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin:16px 0;padding:13px 15px;border-radius:12px;background:#162945;border:1px solid #415a87;font-size:13px}
+.fm-admin-google-code{grid-column:1/-1}
+.fm-admin textarea{width:100%;background:#09142a;color:#f6faff;border:1px solid #50648a;border-radius:9px;padding:12px;font:12px/1.5 ui-monospace,monospace;resize:vertical}
