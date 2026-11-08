@@ -35,6 +35,10 @@ export function validateAds(input:unknown):AdsSettings {
  const raw=o.placements as Record<string,unknown>;
  for(const slot of adSlots){
   const p=raw[slot] as Record<string,unknown>|undefined;
+  if((!p||typeof p!=='object')&&slot==='desktopLower'){
+   placements[slot]={...defaultPlacement(),enabled:false};
+   continue;
+  }
   if(!p||typeof p!=='object')throw new Error('Falta espacio: '+slot);
   const provider=String(p.provider),campaignIds=p.campaignIds;
   const rotationSeconds=Number(p.rotationSeconds);
