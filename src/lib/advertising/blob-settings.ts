@@ -4,12 +4,14 @@ import {adSlots,type AdSlot,type PublicAds,type Banner} from './config';
 
 export type Campaign={id:string;name:string;src:string;href:string;alt:string;enabled:boolean;newTab?:boolean};
 export type Placement={enabled:boolean;provider:'own'|'partner'|'adsense';campaignIds:string[];rotationSeconds:number;publisherId:string;adSlotId:string};
-export type AdsSettings={enabled:boolean;campaigns:Campaign[];placements:Record<AdSlot,Placement>};
+export type RewardedSettings={enabled:boolean;provider:'admanager'|'adsense_offerwall';adUnitPath:string;operations:{video:boolean;aiExport:boolean;credit:boolean};paidFallbackUrl:string};
+export const defaultRewarded=():RewardedSettings=>({enabled:false,provider:'admanager',adUnitPath:'',operations:{video:true,aiExport:true,credit:true},paidFallbackUrl:''});
+export type AdsSettings={enabled:boolean;campaigns:Campaign[];placements:Record<AdSlot,Placement>;rewarded:RewardedSettings};
 const prefix='filemagik/ads/settings/';
 const allowedProviders=['own','partner','adsense'];
 const defaultPlacement=():Placement=>({enabled:true,provider:'own',campaignIds:[],rotationSeconds:60,publisherId:'',adSlotId:''});
 export function emptyAds():AdsSettings {
- return {enabled:true,campaigns:[],placements:Object.fromEntries(adSlots.map(s=>[s,defaultPlacement()])) as Record<AdSlot,Placement>};
+ return {enabled:true,campaigns:[],placements:Object.fromEntries(adSlots.map(s=>[s,defaultPlacement()])) as Record<AdSlot,Placement>,rewarded:defaultRewarded()};
 }
 function httpsUrl(value:string){
  try{const url=new URL(value);return url.protocol==='https:'&&Boolean(url.hostname)&&!url.username&&!url.password&&url.hostname!=='localhost'&&!url.hostname.endsWith('.local')}catch{return false;}
@@ -49,7 +51,17 @@ export function validateAds(input:unknown):AdsSettings {
   if(p.enabled&&provider==='adsense'&&( !/^ca-pub-\d{16}$/.test(publisherId)||!/^\d{5,20}$/.test(adSlotId)))throw new Error('Datos AdSense incompletos en '+slot);
   placements[slot]={enabled:p.enabled,provider:provider as Placement['provider'],campaignIds:ids,rotationSeconds,publisherId,adSlotId};
  }
- return {enabled:o.enabled,campaigns,placements};
+ const source=o.rewarded&&typeof o.rewarded==='object'?o.rewarded as Record<string,unknown>:{};
+ const provider=source.provider==='adsense_offerwall'?'adsense_offerwall':'admanager';
+ const adUnitPath=typeof source.adUnitPath==='string'?source.adUnitPath.trim():'';
+ const paidFallbackUrl=typeof source.paidFallbackUrl==='string'?source.paidFallbackUrl.trim():'';
+ if(adUnitPath.length>160||paidFallbackUrl.length>500||(paidFallbackUrl&&!httpsUrl(paidFallbackUrl)))throw new Error('Ruta publicitaria o pago de respaldo incorrectos');
+ const rawOperations=source.operations&&typeof source.operations==='object'?source.operations as Record<string,unknown>:{};
+ const operations={video:rawOperations.video!==false,aiExport:rawOperations.aiExport!==false,credit:rawOperations.credit!==false};
+ const enabled=source.enabled===true;
+ if(enabled&&(provider!=='admanager'||!/^\\/\\d{4,20}\\/[A-Za-z0-9/_-]{1,128}$/.test(adUnitPath)))throw new Error('Para desbloquear operaciones con anuncios se necesita una unidad rewarded válida de Google Ad Manager');
+ const rewarded:RewardedSettings={enabled,provider,adUnitPath,operations,paidFallbackUrl};
+ return {enabled:o.enabled,campaigns,placements,rewarded};
 }
 export async function readStoredAds():Promise<{settings:AdsSettings;revision:string}>{
  if(!process.env.BLOB_READ_WRITE_TOKEN)throw new Error('Vercel Blob no está configurado');
