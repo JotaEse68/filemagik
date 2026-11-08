@@ -26,6 +26,7 @@ export default function Login(){
  <h1>Mi administración</h1><p>Acceso privado del propietario.</p>
  <form onSubmit={enter}><label htmlFor="admin-password">Contraseña del propietario</label><input id="admin-password" type="password" required autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} style={{display:'block',width:'100%',padding:13,margin:'10px 0',boxSizing:'border-box',background:'#f6f8ff',color:'#091020',borderRadius:9}}/><button disabled={loading} type="submit" style={{padding:13,background:'#a99afc',color:'#0b1020',border:0,borderRadius:9,fontWeight:700}}>Entrar al panel</button></form>
  {process.env.NEXT_PUBLIC_SUPABASE_URL&&process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?<details style={{marginTop:24}}><summary>Acceso por correo (Supabase)</summary><form onSubmit={signIn}><label htmlFor="admin-email">Correo electrónico</label><input id="admin-email" type="email" required autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} style={{display:'block',width:'100%',padding:12,margin:'10px 0'}}/><button disabled={loading} type="submit">Enviar acceso</button></form></details>:null}
+ <p><a href="/admin/recuperar" style={{color:"#b6cfff"}}>¿Olvidaste la contraseña? Recuperar acceso</a></p>
  <p role="status" aria-live="polite">{message}</p>
  </main>;
 }
