@@ -1,4 +1,4 @@
-export const adSlots=['desktop','desktopLower','mobile','result','home','incontent'] as const;
+export const adSlots=['desktop','desktopLower','homeHeroSide','popularTop','mobile','result','home','incontent'] as const;
 export type AdSlot=typeof adSlots[number];
 export type AdProvider='own'|'adsense'|'partner';
 export type Banner={
@@ -10,6 +10,7 @@ export type Banner={
  alt:string;
  publisherId?:string;
  adSlotId?:string;
+ newTab?:boolean;
 };
 export type PublicAds={enabled:boolean;banners:Banner[]};
 export const defaultAds:PublicAds={enabled:false,banners:[]};
@@ -39,8 +40,8 @@ export function parseAds(value:unknown):PublicAds{
    if(typeof b.publisherId!=='string'||!/^ca-pub-\d{16}$/.test(b.publisherId)||typeof b.adSlotId!=='string'||!/^\d{5,20}$/.test(b.adSlotId))throw new Error('Invalid Google publisher and ad slot');
    return {slot:slot as AdSlot,provider:'adsense',enabled,src:'',href:'',alt:'Publicidad',publisherId:b.publisherId,adSlotId:b.adSlotId};
   }
-  if(typeof b.src!=='string'||!validMediaUrl(b.src)||typeof b.href!=='string'||!validPublicUrl(b.href)||typeof b.alt!=='string'||b.alt.trim().length<3||b.alt.length>160)throw new Error('Invalid banner image, destination or description');
-  return {slot:slot as AdSlot,provider:provider as AdProvider,enabled,src:b.src,href:b.href,alt:b.alt.trim()};
+  if(typeof b.src!=='string'||!validMediaUrl(b.src)||typeof b.href!=='string'||(b.href!==''&&!validPublicUrl(b.href))||typeof b.alt!=='string'||b.alt.length>160)throw new Error('Invalid banner image or destination');
+  return {slot:slot as AdSlot,provider:provider as AdProvider,enabled,src:b.src,href:b.href,alt:b.alt.trim()||'Publicidad',newTab:b.newTab!==false};
  });
  return {enabled:raw.enabled,banners};
 }

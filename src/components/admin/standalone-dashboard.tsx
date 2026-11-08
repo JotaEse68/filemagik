@@ -1,12 +1,13 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
+import {upload as blobUpload} from '@vercel/blob/client';
 import type {AdsSettings,Campaign,Placement} from '@/lib/advertising/blob-settings';
 import {adSlots,type AdSlot} from '@/lib/advertising/config';
 import './filemagik-admin.css';
 
-const labels:Record<AdSlot,string>={home:'Portada',desktop:'Lateral PC · superior',desktopLower:'Lateral PC · inferior',mobile:'Móvil',incontent:'Dentro de herramientas',result:'Tras la conversión'};
-const hints:Record<AdSlot,string>={home:'Antes de las dos ruedas · responsive',desktop:'Bloque 1/2 · rectángulo superior sticky',desktopLower:'Bloque 2/2 · rectángulo inferior sticky',mobile:'Bloque exclusivo de móvil',incontent:'Integrado en la herramienta',result:'Después de completar una conversión'};
-const blank=():Campaign=>({id:crypto.randomUUID(),name:'Nueva campaña',src:'',href:'',alt:'',enabled:false});
+const labels:Record<AdSlot,string>={home:'Portada',desktop:'Lateral PC · superior',desktopLower:'Lateral PC · inferior',homeHeroSide:'Banner junto a Smart Drop',popularTop:'Banner horizontal bajo categorías',mobile:'Móvil',incontent:'Dentro de herramientas',result:'Tras la conversión'};
+const hints:Record<AdSlot,string>={home:'Antes de las dos ruedas · responsive',desktop:'Bloque 1/2 · rectángulo superior sticky',desktopLower:'Bloque 2/2 · rectángulo inferior sticky',homeHeroSide:'Portada · columna 25% junto a subida de archivos',popularTop:'Debajo de filtros de herramientas · 728×90 responsive',mobile:'Bloque exclusivo de móvil',incontent:'Integrado en la herramienta',result:'Después de completar una conversión'};
+const blank=():Campaign=>({id:crypto.randomUUID(),name:'Nueva campaña',src:'',href:'',alt:'',enabled:false,newTab:true});
 export default function StandaloneDashboard(){
  const [settings,setSettings]=useState<AdsSettings|null>(null),[revision,setRevision]=useState(''),[tab,setTab]=useState<'overview'|'banners'|'spaces'|'google'>('overview'),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(''),[message,setMessage]=useState(''),[error,setError]=useState('');
  const load=useCallback(async()=>{
@@ -23,14 +24,13 @@ export default function StandaloneDashboard(){
  function removeCampaign(id:string){setSettings(prev=>prev?{...prev,campaigns:prev.campaigns.filter(c=>c.id!==id),placements:Object.fromEntries(adSlots.map(slot=>[slot,{...prev.placements[slot],campaignIds:prev.placements[slot].campaignIds.filter(x=>x!==id)}])) as AdsSettings['placements']}:prev);}
  async function upload(id:string,file:File){
   setError('');setMessage('');
-  if(file.size>2_000_000||!['image/jpeg','image/png','image/webp'].includes(file.type)){setError('Imagen JPG, PNG o WebP de máximo 2 MB');return;}
+  if(file.size===0||file.size>8_000_000||!['image/jpeg','image/png','image/webp'].includes(file.type)){setError('Imagen JPG, PNG o WebP de máximo 8 MB');return;}
   setUploading(id);
   try{
-   const form=new FormData();form.append('image',file);
-   const res=await fetch('/api/admin/advertising/upload',{method:'POST',body:form,credentials:'same-origin'});
-   const body=await res.json();if(!res.ok||!body.url)throw new Error(body.error||'La subida ha fallado');
-   patchCampaign(id,{src:body.url});
-   setMessage('Imagen subida a Vercel Blob. Guarda ahora la configuración para publicarla.');
+   const extension=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
+   const uploaded=await blobUpload('filemagik/ads/images/'+crypto.randomUUID()+'.'+extension,file,{access:'public',handleUploadUrl:'/api/admin/advertising/client-upload'});
+   patchCampaign(id,{src:uploaded.url});
+   setMessage('Imagen subida directamente a Vercel Blob. Pulsa Guardar para publicar la campaña.');
   }catch(e){setError(e instanceof Error?e.message:'No se pudo subir');}finally{setUploading('');}
  }
  async function save(){
@@ -46,7 +46,7 @@ export default function StandaloneDashboard(){
   finally{setBusy(false);}
  }
  async function logout(){await fetch('/api/admin/local-logout',{method:'POST',credentials:'same-origin'});window.location.assign('/admin/login');}
- const complete=settings?.campaigns.filter(c=>c.enabled&&c.src&&c.href).length??0;
+ const complete=settings?.campaigns.filter(c=>c.enabled&&c.src).length??0;
  const active=settings?adSlots.filter(s=>settings.placements[s].enabled).length:0;
  return <main className="fm-admin">
   <aside className="fm-admin-side">
@@ -66,26 +66,26 @@ export default function StandaloneDashboard(){
    {!settings?<section className="fm-admin-panel">{error?'Revisa el acceso y la conexión de Vercel Blob.':'Cargando campañas…'}</section>:<>
     {tab==='overview'&&<>
      <div className="fm-admin-stats"><article><span>Campañas activas</span><strong>{complete}</strong><small>de {settings.campaigns.length} en biblioteca</small></article><article><span>Espacios habilitados</span><strong>{active}/{adSlots.length}</strong><small>Control independiente</small></article><article><span>Publicación</span><strong>{settings.enabled?'Activa':'Pausada'}</strong><small>Configuración global</small></article></div>
-     <section className="fm-admin-panel"><h2>Estado general</h2><label className="fm-admin-toggle"><input type="checkbox" checked={settings.enabled} onChange={e=>setSettings({...settings,enabled:e.target.checked})}/> Publicidad activada en toda la aplicación</label><p>La publicidad propia funciona sin Google. Un banner necesita imagen, URL de destino y estar habilitado para poder mostrarse.</p><div className="fm-admin-quick"><button onClick={()=>setTab('banners')}>Gestionar banners</button><button onClick={()=>setTab('spaces')}>Configurar espacios</button></div></section>
+     <section className="fm-admin-panel"><h2>Estado general</h2><label className="fm-admin-toggle"><input type="checkbox" checked={settings.enabled} onChange={e=>setSettings({...settings,enabled:e.target.checked})}/> Publicidad activada en toda la aplicación</label><p>La publicidad propia funciona sin Google. Una campaña puede mostrar una imagen sin enlace. Si añades un destino HTTPS, la imagen será clicable. La descripción es opcional.</p><div className="fm-admin-quick"><button onClick={()=>setTab('banners')}>Gestionar banners</button><button onClick={()=>setTab('spaces')}>Configurar espacios</button></div></section>
      <section className="fm-admin-panel"><h2>Inventario de espacios</h2><div className="fm-admin-space-summary">{adSlots.map(slot=><div key={slot}><strong>{labels[slot]}</strong><span>{settings.placements[slot].enabled?'Habilitado':'Desactivado'}</span><small>{settings.placements[slot].campaignIds.length} campañas asignadas</small></div>)}</div></section>
     </>}
     {tab==='banners'&&<section className="fm-admin-panel">
-     <div className="fm-admin-section-head"><div><h2>Mis campañas publicitarias</h2><p>Sube imágenes desde tu ordenador o utiliza una URL HTTPS. Las imágenes se almacenan en Vercel Blob.</p></div><button className="fm-admin-primary" type="button" disabled={settings.campaigns.length>=50} onClick={()=>setSettings({...settings,campaigns:[...settings.campaigns,blank()]})}>+ Crear campaña</button></div>
+     <div className="fm-admin-section-head"><div><h2>Mis campañas publicitarias</h2><p>Puedes subir una imagen o indicar una URL HTTPS de imagen, sin tener que usar ambas. El enlace de destino y la descripción son opcionales; activa y guarda la campaña para publicarla.</p></div><button className="fm-admin-primary" type="button" disabled={settings.campaigns.length>=50} onClick={()=>setSettings({...settings,campaigns:[...settings.campaigns,blank()]})}>+ Crear campaña</button></div>
      {settings.campaigns.length===0&&<p className="fm-admin-empty">Aún no hay banners cargados. Añade una campaña y sube su imagen.</p>}
      <div className="fm-admin-campaigns">{settings.campaigns.map(c=><article className="fm-admin-campaign" key={c.id}>
       <div className="fm-admin-preview">{c.src?<img src={c.src} alt={c.alt||c.name}/>:<span>Vista previa del banner</span>}</div>
       <div className="fm-admin-fields">
        <label>Nombre de la campaña<input value={c.name} maxLength={100} onChange={e=>patchCampaign(c.id,{name:e.target.value})}/></label>
-       <label>Imagen · Subir JPG, PNG o WebP (máx. 2 MB)<input type="file" accept="image/jpeg,image/png,image/webp" disabled={Boolean(uploading)} onChange={e=>{const file=e.target.files?.[0];if(file)void upload(c.id,file);e.currentTarget.value='';}}/></label>
+       <label>Imagen · Subir JPG, PNG o WebP (máx. 8 MB)<input type="file" accept="image/jpeg,image/png,image/webp" disabled={Boolean(uploading)} onChange={e=>{const file=e.target.files?.[0];if(file)void upload(c.id,file);e.currentTarget.value='';}}/></label>
        <label>O URL pública de imagen<input type="url" value={c.src} onChange={e=>patchCampaign(c.id,{src:e.target.value})} placeholder="https://..."/></label>
-       <label>Enlace de destino<input type="url" value={c.href} onChange={e=>patchCampaign(c.id,{href:e.target.value})} placeholder="https://tu-producto.com/"/></label>
-       <label>Texto alternativo<input value={c.alt} maxLength={160} onChange={e=>patchCampaign(c.id,{alt:e.target.value})} placeholder="Descripción del producto anunciado"/></label>
-       <div className="fm-admin-campaign-footer"><label className="fm-admin-toggle"><input type="checkbox" checked={c.enabled} onChange={e=>patchCampaign(c.id,{enabled:e.target.checked})}/> Campaña activada</label><button type="button" className="fm-admin-danger" onClick={()=>{if(window.confirm('¿Eliminar esta campaña de la configuración?'))removeCampaign(c.id);}}>Eliminar</button></div>
+       <label>Enlace de destino (opcional)<input type="url" value={c.href} onChange={e=>patchCampaign(c.id,{href:e.target.value})} placeholder="https://tu-producto.com/"/></label>
+       <label>Descripción de imagen (opcional)<input value={c.alt} maxLength={160} onChange={e=>patchCampaign(c.id,{alt:e.target.value})} placeholder="Descripción del producto anunciado"/></label>
+       <div className="fm-admin-campaign-footer"><label className="fm-admin-toggle"><input type="checkbox" checked={c.newTab!==false} onChange={e=>patchCampaign(c.id,{newTab:e.target.checked})}/> Abrir destino en ventana nueva</label><label className="fm-admin-toggle"><input type="checkbox" checked={c.enabled} onChange={e=>patchCampaign(c.id,{enabled:e.target.checked})}/> Campaña activada</label><button type="button" className="fm-admin-danger" onClick={()=>{if(window.confirm('¿Eliminar esta campaña de la configuración?'))removeCampaign(c.id);}}>Eliminar</button></div>
        {uploading===c.id&&<span role="status">Subiendo imagen…</span>}
       </div>
      </article>)}</div></section>}
     {tab==='spaces'&&<section className="fm-admin-panel">
-     <h2>Ubicaciones y rotación</h2><p><strong>PC: dos anuncios simultáneos propios o de anunciantes directos</strong> en la columna lateral (superior e inferior), cada uno con sus propias campañas y rotación. <strong>Si eliges AdSense, se publica como máximo un anuncio sticky de Google</strong> para respetar sus reglas; no combines este lateral con los side rails automáticos de Google.</p><p><strong>Cómo hacerlo:</strong> crea una campaña para este espacio, sube la imagen y completa el destino en «Mis banners», actívala y guarda. Regresa aquí para marcar tantas campañas como quieras; si seleccionas varias, rotarán dentro de ese bloque.</p>
+     <h2>Ubicaciones y rotación</h2><p><strong>PC: dos anuncios simultáneos propios o de anunciantes directos</strong> en la columna lateral (superior e inferior), cada uno con sus propias campañas y rotación. <strong>Si eliges AdSense, se publica como máximo un anuncio sticky de Google</strong> para respetar sus reglas; no combines este lateral con los side rails automáticos de Google.</p><p><strong>Cómo hacerlo:</strong> crea una campaña para este espacio, sube la imagen o pega su URL HTTPS; el enlace y la descripción son opcionales. Actívala y guarda. Regresa aquí para marcar tantas campañas como quieras; si seleccionas varias, rotarán dentro de ese bloque.</p>
      <div className="fm-admin-placements">{adSlots.map(slot=>{const p=settings.placements[slot];return <article key={slot} className="fm-admin-placement">
       <header><div><h3>{labels[slot]}</h3><small>{hints[slot]}</small></div><label className="fm-admin-toggle"><input type="checkbox" checked={p.enabled} onChange={e=>patchPlacement(slot,{enabled:e.target.checked})}/> Mostrar</label></header>
       <div className="fm-admin-placement-fields"><label>Proveedor<select value={p.provider} onChange={e=>patchPlacement(slot,{provider:e.target.value as Placement['provider']})}><option value="own">Productos propios</option><option value="partner">Colaboradores</option><option value="adsense">AdSense (pendiente)</option></select></label><label>Rotación de banners<select value={p.rotationSeconds} onChange={e=>patchPlacement(slot,{rotationSeconds:Number(e.target.value)})}>{[15,30,45,60,90,120,180,300,600].map(n=><option value={n} key={n}>{n} segundos</option>)}</select></label></div>

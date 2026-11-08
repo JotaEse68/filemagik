@@ -2,7 +2,7 @@ import {list,put} from '@vercel/blob';
 import {randomUUID} from 'node:crypto';
 import {adSlots,type AdSlot,type PublicAds,type Banner} from './config';
 
-export type Campaign={id:string;name:string;src:string;href:string;alt:string;enabled:boolean};
+export type Campaign={id:string;name:string;src:string;href:string;alt:string;enabled:boolean;newTab?:boolean};
 export type Placement={enabled:boolean;provider:'own'|'partner'|'adsense';campaignIds:string[];rotationSeconds:number;publisherId:string;adSlotId:string};
 export type AdsSettings={enabled:boolean;campaigns:Campaign[];placements:Record<AdSlot,Placement>};
 const prefix='filemagik/ads/settings/';
@@ -28,14 +28,14 @@ export function validateAds(input:unknown):AdsSettings {
   names.add(id);
   if(src&&!validImage(src))throw new Error('La imagen debe tener una URL HTTPS válida o una ruta /ads/');
   if(href&&!httpsUrl(href))throw new Error('El destino debe ser HTTPS');
-  if(enabled&&(!src||!href||alt.length<3))throw new Error('Para activar una campaña debes indicar imagen, enlace y descripción');
-  return {id,name,src,href,alt,enabled};
+  if(enabled&&!src)throw new Error('Para activar una campaña necesitas una imagen subida o una URL de imagen HTTPS');
+  return {id,name,src,href,alt,enabled,newTab:b.newTab!==false};
  });
  const placements={} as Record<AdSlot,Placement>;
  const raw=o.placements as Record<string,unknown>;
  for(const slot of adSlots){
   const p=raw[slot] as Record<string,unknown>|undefined;
-  if((!p||typeof p!=='object')&&slot==='desktopLower'){
+  if((!p||typeof p!=='object')&&['desktopLower','homeHeroSide','popularTop'].includes(slot)){
    placements[slot]={...defaultPlacement(),enabled:false};
    continue;
   }
@@ -84,8 +84,8 @@ export function publicAds(state:AdsSettings):PublicAds&{rotation:Partial<Record<
   if(p.provider==='adsense'){
    banners.push({slot,provider:'adsense',enabled:true,src:'',href:'',alt:'Publicidad',publisherId:p.publisherId,adSlotId:p.adSlotId});continue;
   }
-  const group=p.campaignIds.map(id=>state.campaigns.find(c=>c.id===id)).filter((c):c is Campaign=>Boolean(c&&c.enabled&&c.src&&c.href));
-  const items=group.map(c=>({slot,provider:p.provider,enabled:true,src:c.src,href:c.href,alt:c.alt} as Banner));
+  const group=p.campaignIds.map(id=>state.campaigns.find(c=>c.id===id)).filter((c):c is Campaign=>Boolean(c&&c.enabled&&c.src));
+  const items=group.map(c=>({slot,provider:p.provider,enabled:true,src:c.src,href:c.href,alt:c.alt||c.name,newTab:c.newTab!==false} as Banner));
   if(items.length){banners.push(items[0]);rotation[slot]={seconds:p.rotationSeconds,banners:items};}
  }
  return {enabled:true,banners,rotation};
