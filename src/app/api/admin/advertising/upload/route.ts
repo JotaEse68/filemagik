@@ -19,7 +19,7 @@ export async function POST(request:NextRequest){
  if(!(file.type==='image/jpeg'&&jpg||file.type==='image/png'&&png||file.type==='image/webp'&&webp))return NextResponse.json({error:'La imagen no coincide con el formato declarado'},{status:400,headers});
  try{
   const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
-  const blob=await put('filemagik/ads/images/'+randomUUID()+'.'+ext,bytes,{access:'public',contentType:file.type});
+  const blob=await put('filemagik/ads/images/'+randomUUID()+'.'+ext,file,{access:'public',contentType:file.type});
   return NextResponse.json({url:blob.url,pathname:blob.pathname},{headers});
  }catch{return NextResponse.json({error:'No se pudo subir a Vercel Blob'},{status:503,headers});}
 }
