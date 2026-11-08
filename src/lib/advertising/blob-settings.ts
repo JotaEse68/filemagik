@@ -2,7 +2,7 @@ import {list,put} from '@vercel/blob';
 import {randomUUID} from 'node:crypto';
 import {adSlots,type AdSlot,type PublicAds,type Banner} from './config';
 
-export type Campaign={id:string;name:string;src:string;href:string;alt:string;enabled:boolean;newTab?:boolean};
+export type Campaign={id:string;name:string;src:string;href:string;alt:string;enabled:boolean;newTab?:boolean;startsAt?:string;endsAt?:string};
 export type Placement={enabled:boolean;provider:'own'|'partner'|'adsense';campaignIds:string[];rotationSeconds:number;publisherId:string;adSlotId:string};
 export type RewardedSettings={enabled:boolean;provider:'admanager'|'adsense_offerwall';adUnitPath:string;operations:{video:boolean;aiExport:boolean;credit:boolean};paidFallbackUrl:string};
 export const defaultRewarded=():RewardedSettings=>({enabled:false,provider:'admanager',adUnitPath:'',operations:{video:true,aiExport:true,credit:true},paidFallbackUrl:''});
@@ -31,7 +31,11 @@ export function validateAds(input:unknown):AdsSettings {
   if(src&&!validImage(src))throw new Error('La imagen debe tener una URL HTTPS válida o una ruta /ads/');
   if(href&&!httpsUrl(href))throw new Error('El destino debe ser HTTPS');
   if(enabled&&!src)throw new Error('Para activar una campaña necesitas una imagen subida o una URL de imagen HTTPS');
-  return {id,name,src,href,alt,enabled,newTab:b.newTab!==false};
+  const startsAt=typeof b.startsAt==='string'?b.startsAt.trim():'';
+  const endsAt=typeof b.endsAt==='string'?b.endsAt.trim():'';
+  const validDate=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
+  if((startsAt&&!validDate(startsAt))||(endsAt&&!validDate(endsAt))||(startsAt&&endsAt&&endsAt<startsAt))throw new Error('Fechas de campaña incorrectas: fin anterior al inicio o fecha inválida');
+  return {id,name,src,href,alt,enabled,newTab:b.newTab!==false,startsAt,endsAt};
  });
  const placements={} as Record<AdSlot,Placement>;
  const raw=o.placements as Record<string,unknown>;
@@ -96,7 +100,8 @@ export function publicAds(state:AdsSettings):PublicAds&{rotation:Partial<Record<
   if(p.provider==='adsense'){
    banners.push({slot,provider:'adsense',enabled:true,src:'',href:'',alt:'Publicidad',publisherId:p.publisherId,adSlotId:p.adSlotId});continue;
   }
-  const group=p.campaignIds.map(id=>state.campaigns.find(c=>c.id===id)).filter((c):c is Campaign=>Boolean(c&&c.enabled&&c.src));
+  const today=new Date().toISOString().slice(0,10);
+  const group=p.campaignIds.map(id=>state.campaigns.find(c=>c.id===id)).filter((c):c is Campaign=>Boolean(c&&c.enabled&&c.src&&(!c.startsAt||c.startsAt<=today)&&(!c.endsAt||c.endsAt>=today)));
   const items=group.map(c=>({slot,provider:p.provider,enabled:true,src:c.src,href:c.href,alt:c.alt||c.name,newTab:c.newTab!==false} as Banner));
   if(items.length){banners.push(items[0]);rotation[slot]={seconds:p.rotationSeconds,banners:items};}
  }
