@@ -1,4 +1,4 @@
-export const adSlots=['desktop','mobile','result','home','incontent'] as const;
+export const adSlots=['desktop','desktopLower','mobile','result','home','incontent'] as const;
 export type AdSlot=typeof adSlots[number];
 export type AdProvider='own'|'adsense'|'partner';
 export type Banner={

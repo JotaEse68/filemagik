@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {adSlots,type AdSlot,type AdProvider,type Banner,type PublicAds} from '@/lib/advertising/config';
 const empty:PublicAds={enabled:false,banners:[]};
 const names:Record<AdSlot,string>={
- desktop:'Lateral escritorio',mobile:'Móvil',result:'Resultado de conversión',
+ desktop:'Lateral escritorio · superior',desktopLower:'Lateral escritorio · inferior',mobile:'Móvil',result:'Resultado de conversión',
  home:'Portada, bajo las ruedas',incontent:'Dentro de las herramientas'
 };
 function makeBanner(slot:AdSlot):Banner{return {slot,provider:'own',enabled:false,src:'',href:'',alt:''};}

@@ -35,6 +35,10 @@ export function validateAds(input:unknown):AdsSettings {
  const raw=o.placements as Record<string,unknown>;
  for(const slot of adSlots){
   const p=raw[slot] as Record<string,unknown>|undefined;
+  if((!p||typeof p!=='object')&&slot==='desktopLower'){
+   placements[slot]={...defaultPlacement(),enabled:false};
+   continue;
+  }
   if(!p||typeof p!=='object')throw new Error('Falta espacio: '+slot);
   const provider=String(p.provider),campaignIds=p.campaignIds;
   const rotationSeconds=Number(p.rotationSeconds);
@@ -72,7 +76,10 @@ export async function saveStoredAds(input:unknown,revision:string){
 export function publicAds(state:AdsSettings):PublicAds&{rotation:Partial<Record<AdSlot,{seconds:number;banners:Banner[]}>>}{
  const banners:Banner[]=[],rotation:Partial<Record<AdSlot,{seconds:number;banners:Banner[]}>>={};
  if(!state.enabled)return {enabled:false,banners,rotation};
+ // AdSense permits just one sticky ad at a time. Two fixed rail ads are reserved for own/partner campaigns.
+ const googleRail=(['desktop','desktopLower'] as const).find(slot=>state.placements[slot].enabled&&state.placements[slot].provider==='adsense');
  for(const slot of adSlots){
+  if(googleRail&&(slot==='desktop'||slot==='desktopLower')&&slot!==googleRail)continue;
   const p=state.placements[slot];if(!p.enabled)continue;
   if(p.provider==='adsense'){
    banners.push({slot,provider:'adsense',enabled:true,src:'',href:'',alt:'Publicidad',publisherId:p.publisherId,adSlotId:p.adSlotId});continue;
