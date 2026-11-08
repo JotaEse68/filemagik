@@ -1,6 +1,6 @@
 import {list,put} from '@vercel/blob';
 import {randomUUID} from 'node:crypto';
-import {adSlots,parseAds,type AdSlot,type PublicAds,type Banner} from './config';
+import {adSlots,type AdSlot,type PublicAds,type Banner} from './config';
 
 export type Campaign={id:string;name:string;src:string;href:string;alt:string;enabled:boolean};
 export type Placement={enabled:boolean;provider:'own'|'partner'|'adsense';campaignIds:string[];rotationSeconds:number;publisherId:string;adSlotId:string};
