@@ -1,5 +1,6 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
+import Link from 'next/link';
 import {upload as blobUpload} from '@vercel/blob/client';
 import type {AdsSettings,Campaign,Placement} from '@/lib/advertising/blob-settings';
 import {adSlots,type AdSlot} from '@/lib/advertising/config';
@@ -54,6 +55,7 @@ export default function StandaloneDashboard(){
    <nav aria-label="Menú de administración">
     {([['overview','Resumen'],['banners','Mis banners'],['spaces','Espacios publicitarios'],['google','Google AdSense']] as const).map(([key,name])=><button key={key} type="button" aria-current={tab===key?'page':undefined} className={tab===key?'fm-admin-nav active':'fm-admin-nav'} onClick={()=>setTab(key)}>{name}</button>)}
    </nav>
+   <Link href="/admin/seguridad" className="fm-admin-nav">Seguridad de la cuenta</Link>
    <a href="/es" target="_blank" rel="noreferrer">Abrir FileMagik ↗</a>
    <button type="button" className="fm-admin-nav" onClick={()=>void logout()}>Cerrar sesión</button>
   </aside>
