@@ -7,9 +7,9 @@ export default async function HomeLocale({params}:{params:Promise<{locale:string
 <div className="ad-placement ad-placement-home"><AdSlot slot="home" label="Publicidad"/></div>
 <section className="radial-section"><div className="container"><RadialStudio locale={locale}/></div></section>
 <section className="section smart-upload-after" id="auto"><div className="container"><div className="smart-upload-after-layout"><div><span className="eyebrow-line">FILEMAGIK · SMART DROP</span><h2>{d.dropTitle}</h2><p>{d.dropSub}</p></div><div className="magik-uploader"><SmartDropzone locale={locale} d={d}/></div></div></div></section>
-<div className="ad-placement ad-placement-mobile"><AdSlot slot="mobile" label="Publicidad"/></div>
+
 <section className="section tools-home-section" id="tools"><div className="container"><div className="section-heading"><div><span className="eyebrow-line">FILEMAGIK TOOLBOX</span><h2>{d.popular}</h2></div><p>{d.heroSub}</p></div><ToolExplorer locale={locale}/></div></section>
-<div className="ad-placement ad-placement-desktop"><AdSlot slot="desktop" label="Publicidad"/></div>
+
 <section className="section" id="why" style={{background:'#0d1325'}}><div className="container"><div className="section-heading"><div><span className="eyebrow-line">WHY FILEMAGIK</span><h2>{d.featuresTitle}</h2></div></div><div className="feature-row"><div className="feature-card"><LockKeyhole size={27}/><h3>{d.privacy}</h3><p>{d.features[0]}</p></div><div className="feature-card"><Zap size={27}/><h3>{d.fast}</h3><p>{d.features[1]}</p></div><div className="feature-card"><Sparkles size={27}/><h3>{d.free}</h3><p>{d.features[2]}</p></div></div></div></section>
 <section className="section" id="how"><div className="container"><div className="section-heading"><div><span className="eyebrow-line">SIMPLE BY DESIGN</span><h2>{d.howTitle}</h2></div></div><div className="steps">{d.howSteps.map((s,i)=><div className="step" key={s}><strong>0{i+1}</strong><h3>{s}</h3></div>)}</div></div></section>
 </>}

@@ -6,6 +6,7 @@ import {isLocale,locales,siteUrl} from '@/config/site';
 import {getDictionary} from '@/lib/i18n';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
+import AdSlot from '@/components/advertising/ad-slot';
 
 const dmSans=DM_Sans({subsets:['latin'],display:'swap',variable:'--font-dm'});
 const spaceGrotesk=Space_Grotesk({subsets:['latin'],display:'swap',variable:'--font-space'});
@@ -27,5 +28,7 @@ export default async function LocaleLayout({children,params}:{children:React.Rea
   <Header locale={locale} d={d}/>
   <main id="main-content" tabIndex={-1}>{children}</main>
   <Footer locale={locale} d={d}/>
+  <div className="fm-global-desktop-ad"><AdSlot slot="desktop" label="Publicidad lateral"/></div>
+  <div className="fm-global-mobile-ad"><AdSlot slot="mobile" label="Publicidad inferior"/></div>
  </body></html>;
 }
