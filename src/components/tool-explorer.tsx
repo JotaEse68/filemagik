@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import AdSlot from '@/components/advertising/ad-slot';
 import {useEffect,useMemo,useState} from 'react';
 import {ArrowUpRight,FileText,FileSpreadsheet,Files,ImageIcon,ScanText,Search,X} from 'lucide-react';
 import type {Locale} from '@/config/site';
@@ -27,6 +28,7 @@ export default function ToolExplorer({locale,initialCategory='all'}:{locale:Loca
   <div role="group" aria-label={language.heading} className="category-tabs">
    {categoryIds.map(id=><button key={id} type="button" className={category===id?'category-tab active':'category-tab'} aria-pressed={category===id} onClick={()=>setCategory(id)}>{labels[id]} <span>{categoryCounts[id]}</span></button>)}
   </div>
+  <div className="fm-toolbox-ad"><AdSlot slot="popularTop" label="Publicidad"/></div>
   {list.length?<div className="tool-grid">{list.map(tool=>{
    const Icon=tool.category==='images'?ImageIcon:tool.category==='data'?FileSpreadsheet:tool.category==='ocr'?ScanText:tool.category==='office'?FileText:Files;
    return <Link className="tool-card" href={`/${locale}/${tool.slug}`} key={tool.slug}>
