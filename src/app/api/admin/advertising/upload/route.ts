@@ -7,11 +7,11 @@ const headers={'Cache-Control':'private, no-store'};
 export async function POST(request:NextRequest){
  if(!await isLocalAdmin())return NextResponse.json({error:'Acceso denegado'},{status:401,headers});
  if(request.headers.get('origin')!==request.nextUrl.origin)return NextResponse.json({error:'Origen no permitido'},{status:403,headers});
- if(Number(request.headers.get('content-length')||0)>4_000_000)return NextResponse.json({error:'Imagen demasiado grande'},{status:413,headers});
+ if(Number(request.headers.get('content-length')||0)>10_000_000)return NextResponse.json({error:'Imagen demasiado grande'},{status:413,headers});
  const form=await request.formData().catch(()=>null);
  const file=form?.get('image');
  if(!(file instanceof File))return NextResponse.json({error:'Selecciona una imagen válida'},{status:400,headers});
- if(file.size===0||file.size>2_000_000||!['image/jpeg','image/png','image/webp'].includes(file.type))return NextResponse.json({error:'Solo JPG, PNG o WebP de hasta 2 MB'},{status:400,headers});
+ if(file.size===0||file.size>8_000_000||!['image/jpeg','image/png','image/webp'].includes(file.type))return NextResponse.json({error:'Solo JPG, PNG o WebP de hasta 8 MB'},{status:400,headers});
  const bytes=new Uint8Array(await file.arrayBuffer());
  const jpg=bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff;
  const png=bytes.length>8&&bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71;
