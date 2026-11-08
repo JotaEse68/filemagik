@@ -59,7 +59,7 @@ export function validateAds(input:unknown):AdsSettings {
  const rawOperations=source.operations&&typeof source.operations==='object'?source.operations as Record<string,unknown>:{};
  const operations={video:rawOperations.video!==false,aiExport:rawOperations.aiExport!==false,credit:rawOperations.credit!==false};
  const enabled=source.enabled===true;
- if(enabled&&(provider!=='admanager'||!/^\\/\\d{4,20}\\/[A-Za-z0-9/_-]{1,128}$/.test(adUnitPath)))throw new Error('Para desbloquear operaciones con anuncios se necesita una unidad rewarded válida de Google Ad Manager');
+ if(enabled&&(provider!=='admanager'||!/^\/\d{4,20}\/[A-Za-z0-9/_-]{1,128}$/.test(adUnitPath)))throw new Error('Para desbloquear operaciones con anuncios se necesita una unidad rewarded válida de Google Ad Manager');
  const rewarded:RewardedSettings={enabled,provider,adUnitPath,operations,paidFallbackUrl};
  return {enabled:o.enabled,campaigns,placements,rewarded};
 }
