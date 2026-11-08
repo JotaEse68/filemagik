@@ -13,7 +13,8 @@ export async function readCredential():Promise<Credential|null>{
  do{const page=await list({prefix,limit:1000,cursor});rows.push(...page.blobs);cursor=page.hasMore?page.cursor:undefined;}while(cursor);
  const latest=rows.sort((a,b)=>b.pathname.localeCompare(a.pathname))[0];if(!latest)return null;
  const response=await fetch(latest.url,{cache:'no-store'});if(!response.ok)throw new Error('No se pudo leer la credencial');
- const encoded=Buffer.from(await response.arrayBuffer());
+ const payload=await response.json() as {data:string};
+ const encoded=Buffer.from(payload.data,'base64');
  if(encoded.length<29)throw new Error('Registro de contraseña corrupto');
  const decipher=createDecipheriv('aes-256-gcm',key(),encoded.subarray(0,12));decipher.setAuthTag(encoded.subarray(12,28));
  const plaintext=Buffer.concat([decipher.update(encoded.subarray(28)),decipher.final()]).toString('utf8');
@@ -43,6 +44,6 @@ export async function updateCredential(password:string):Promise<{recoveryCode:st
  const encrypted=Buffer.concat([cipher.update(JSON.stringify(c)),cipher.final()]);
  const data=Buffer.concat([iv,cipher.getAuthTag(),encrypted]);
  const stamp=new Date().toISOString().replace(/\D/g,'').padEnd(17,'0');
- await put(prefix+stamp+'-'+randomUUID()+'.bin',data,{access:'public',contentType:'application/octet-stream',cacheControlMaxAge:60});
+ await put(prefix+stamp+'-'+randomUUID()+'.bin',JSON.stringify({data:data.toString('base64')}),{access:'public',contentType:'application/json',cacheControlMaxAge:60});
  return {recoveryCode,version:c.version};
 }
