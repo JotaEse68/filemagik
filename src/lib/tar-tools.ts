@@ -51,7 +51,7 @@ export async function createTar(files:File[]):Promise<OutputFile>{
  for(const [i,file] of files.entries()){
   const name=String(i+1).padStart(3,'0')+'-'+safeName(file.name);
   const bytes=new Uint8Array(await file.arrayBuffer());
-  parts.push(header(name,bytes.byteLength),bytes);
+  parts.push(new Uint8Array(header(name,bytes.byteLength)),bytes);
   const padding=(BLOCK-bytes.byteLength%BLOCK)%BLOCK;
   if(padding)parts.push(new Uint8Array(padding));
  }
