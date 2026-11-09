@@ -13,7 +13,12 @@ export async function securePdf(file:File,password:string,mode:'protect'|'unlock
    return {name:name+'-protected.pdf',blob:new Blob([new Uint8Array(bytes)],{type:'application/pdf'})};
   }
   const doc=await PDFDocument.load(input,{password});
-  const bytes=await doc.save();
+  // Rebuild the output without the original encryption dictionary.
+  // Copying pages also means document-level interactive features may not survive.
+  const plain=await PDFDocument.create();
+  const pages=await plain.copyPages(doc,doc.getPageIndices());
+  pages.forEach(page=>plain.addPage(page));
+  const bytes=await plain.save({useObjectStreams:false});
   return {name:name+'-unlocked.pdf',blob:new Blob([new Uint8Array(bytes)],{type:'application/pdf'})};
  }catch(error){
   if(error instanceof Error&&error.message.startsWith('Use a password'))throw error;
