@@ -13,6 +13,21 @@ export async function extractZip(file:File):Promise<OutputFile>{
  const {default:JSZip}=await import('jszip'),input=await JSZip.loadAsync(await file.arrayBuffer()),out=new JSZip();
  const entries=Object.values(input.files).filter(f=>!f.dir);
  if(entries.length>150)throw new Error('Archive has too many files (150 maximum)');
+ // Preflight every central-directory size before decompressing a single entry.
+ // JSZip's loaded compressed objects report their declared uncompressed sizes.
+ // Unknown or ZIP64-like metadata fails closed instead of risking a ZIP bomb.
+ let declaredTotal=0;
+ for(const entry of entries){
+  const metadata=entry as typeof entry & {_data?:{uncompressedSize?:number;compressedSize?:number}};
+  const size=metadata._data?.uncompressedSize;
+  if(typeof size!=='number'||!Number.isSafeInteger(size)||size<0||size>MAX_TOTAL-declaredTotal)
+   throw new Error('ZIP expanded size exceeds the 120 MB safety limit');
+  declaredTotal+=size;
+  const permissions=typeof entry.unixPermissions==='string'
+   ?parseInt(entry.unixPermissions,8):entry.unixPermissions;
+  if(typeof permissions==='number'&&(permissions&0o170000)===0o120000)
+   throw new Error('ZIP symbolic links are not supported');
+ }
  let total=0;
  for(const [i,entry] of entries.entries()){
   const data=await entry.async('uint8array');total+=data.byteLength;
