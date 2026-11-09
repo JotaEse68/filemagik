@@ -28,12 +28,12 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
     const pdfjs=await import('pdfjs-dist');
     pdfjs.GlobalWorkerOptions.workerSrc=new URL('pdfjs-dist/build/pdf.worker.min.mjs',import.meta.url).toString();
     const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
-    if(canceled){void pdf.destroy();return;}
-    if(pdf.numPages>150){void pdf.destroy();throw new Error('Maximum 150 pages');}
+    if(canceled){void pdf.cleanup();return;}
+    if(pdf.numPages>150){void pdf.cleanup();throw new Error('Maximum 150 pages');}
     pdfRef.current=pdf;setTotal(pdf.numPages);
    }catch(e){if(!canceled)setMessage(e instanceof Error?e.message:t.error);}
   }
-  void open();return()=>{canceled=true;const old=pdfRef.current;pdfRef.current=null;if(old)void old.destroy();};
+  void open();return()=>{canceled=true;const old=pdfRef.current;pdfRef.current=null;if(old)void old.cleanup();};
  },[file,t.error]);
  useEffect(()=>{let canceled=false;const pdf=pdfRef.current,element=canvas.current;if(!pdf||!element||total===0)return;
   async function render(){
