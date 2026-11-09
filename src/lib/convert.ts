@@ -32,6 +32,9 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,option
  if(slug==='inspect-pdf-form'||slug==='fill-pdf-form'||slug==='flatten-pdf-form'){
   const {handlePdfForm}=await import('./pdf-form-tools');return handlePdfForm(files[0],slug==='inspect-pdf-form'?'list':slug==='fill-pdf-form'?'fill':'flatten',options.formValues);
  }
+ if(slug==='epub-to-text'){
+  const {epubToText}=await import('./epub-to-text');return epubToText(files[0]);
+ }
  if(slug==='create-tar'||slug==='extract-tar'){
   const tar=await import('./tar-tools');return slug==='create-tar'?tar.createTar(files):tar.extractTar(files[0]);
  }
