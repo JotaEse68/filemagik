@@ -15,7 +15,7 @@ export default function PdfFormEditor({file,onChange}:{file:File;onChange:(json:
    try{
     const pdf=await PDFDocument.load(await file.arrayBuffer());
     const form=pdf.getForm();if(form.hasXFA())throw new Error('Los formularios XFA no son compatibles');
-    const found:Field[]=form.getFields().map(f=>{
+    const found:Field[]=form.getFields().map((f):Field|null=>{
      if(f instanceof PDFTextField)return {name:f.getName(),kind:'text',options:[],value:f.getText()??''};
      if(f instanceof PDFCheckBox)return {name:f.getName(),kind:'checkbox',options:[],value:f.isChecked()};
      if(f instanceof PDFDropdown)return {name:f.getName(),kind:'choice',options:f.getOptions(),value:f.getSelected()[0]??''};
