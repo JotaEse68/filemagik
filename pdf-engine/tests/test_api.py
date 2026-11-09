@@ -112,3 +112,30 @@ def test_missing_persistent_volume_fails_closed(monkeypatch,tmp_path):
         headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
         files={"file":("report.pdf",make_pdf(),"application/pdf")})
     assert result.status_code==503
+
+def test_lossless_preserves_interactive_form_bytes(monkeypatch):
+    secret="q"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    buffer=io.BytesIO()
+    paper=canvas.Canvas(buffer)
+    paper.drawString(50,700,"Name")
+    paper.acroForm.textfield(name="Customer",x=120,y=686,width=180,height=22)
+    paper.save()
+    original=buffer.getvalue()
+    result=client.post("/v1/jobs?operation=optimize-pdf&quality=lossless",
+        headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+        files={"file":("form.pdf",original,"application/pdf")})
+    assert result.status_code==200
+    assert result.content==original
+
+def test_lossy_refuses_interactive_form(monkeypatch):
+    secret="r"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    buf=io.BytesIO()
+    paper=canvas.Canvas(buf)
+    paper.acroForm.textfield(name="Customer",x=120,y=686,width=180,height=22)
+    paper.save()
+    result=client.post("/v1/jobs?operation=optimize-pdf&quality=balanced",
+        headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+        files={"file":("form.pdf",buf.getvalue(),"application/pdf")})
+    assert result.status_code==422
