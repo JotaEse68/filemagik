@@ -18,13 +18,17 @@ const allowedMime:Record<string,string>={
 function configured(){
  const base=process.env.FILEMAGIK_PDF_ENGINE_URL||'';
  const secret=process.env.FILEMAGIK_PDF_ENGINE_SECRET||'';
- const siteKey=process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY||'';
- const challenge=process.env.FILEMAGIK_TURNSTILE_SECRET||'';
  return process.env.FILEMAGIK_PDF_ENGINE_PUBLIC_ENABLED==='true'&&
-  /^https:\/\/[^\s]+$/i.test(base)&&secret.length>=32&&challenge.length>=16&&siteKey.length>5;
+  /^https:\/\/[^\s]+$/i.test(base)&&secret.length>=32;
+}
+function requiresChallenge(){
+ return !!process.env.FILEMAGIK_TURNSTILE_SECRET&&process.env.FILEMAGIK_TURNSTILE_SECRET.length>=16&&
+  !!process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY&&process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY.length>5;
 }
 export async function GET(){
- return NextResponse.json({available:configured(),siteKey:configured()?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null}, {headers:{'Cache-Control':'no-store'}});
+ return NextResponse.json({available:configured(),challengeRequired:configured()&&requiresChallenge(),
+  siteKey:configured()&&requiresChallenge()?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null},
+  {headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(request:NextRequest){
  const operation=request.nextUrl.searchParams.get('operation')||'';
@@ -41,11 +45,14 @@ export async function POST(request:NextRequest){
  try{data=await request.formData();}catch{return NextResponse.json({error:'Invalid upload'},{status:400});}
  const token=data.get('turnstile');
  const file=data.get('file');
- if(typeof token!=='string'||token.length>2048||!(file instanceof File))
-  return NextResponse.json({error:'Verification and file required'},{status:400});
+ if(!(file instanceof File)||typeof token==='string'&&token.length>2048)
+  return NextResponse.json({error:'Invalid verification token or file'},{status:400});
  if(file.size<1||file.size>maxBytes||!supported[operation].includes(safeExt(file.name)))
   return NextResponse.json({error:'File type or size not allowed'},{status:413});
- // A valid CAPTCHA token is required on EVERY paid-compute request. Never trust the browser alone.
+ // Challenge is extra protection. Persisted daily/global quotas remain mandatory
+ // even when the site owner has not configured a CAPTCHA provider.
+ if(requiresChallenge()){
+ if(typeof token!=='string'||!token)return NextResponse.json({error:'Verification required'},{status:403});
  try{
   const body=new URLSearchParams({secret:process.env.FILEMAGIK_TURNSTILE_SECRET!,response:token,
    remoteip:request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()||''});
@@ -55,6 +62,7 @@ export async function POST(request:NextRequest){
   if(!answer.success||answer.hostname!==request.nextUrl.hostname||answer.action!=='filemagik_pdf')
    return NextResponse.json({error:'Human verification failed'},{status:403});
  }catch{return NextResponse.json({error:'Verification unavailable'},{status:503});}
+ }
  const payload=new FormData();
  payload.set('file',new File([await file.arrayBuffer()],file.name,{type:file.type||'application/octet-stream'}));
  if(operation==='redact-pdf'){
