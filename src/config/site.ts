@@ -18,6 +18,8 @@ export const tools=[
  {slug:'inspect-pdf-form',from:'PDF form',to:'Field list JSON',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'fill-pdf-form',from:'PDF form',to:'Completed PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'flatten-pdf-form',from:'PDF form',to:'Fixed PDF',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'create-tar',from:'Files',to:'TAR archive',kind:'archive',accept:'*/*'},
+ {slug:'extract-tar',from:'TAR archive',to:'Extracted ZIP',kind:'archive',accept:'.tar,application/x-tar'},
  {slug:'create-gzip',from:'File',to:'GZIP',kind:'archive',accept:'*/*'},
  {slug:'extract-gzip',from:'GZIP',to:'File',kind:'archive',accept:'.gz,application/gzip'},
  {slug:'audio-to-wav',from:'Audio',to:'WAV',kind:'audio',accept:'.mp3,.wav,.ogg,.m4a,.flac,audio/*'},
