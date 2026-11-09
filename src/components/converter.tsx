@@ -16,6 +16,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [cropPercent,setCropPercent]=useState(0),[rotation,setRotation]=useState<0|90|180|270>(0),[format,setFormat]=useState<'png'|'jpeg'|'webp'>('webp');
  const [signature,setSignature]=useState('');
  const [pdfPassword,setPdfPassword]=useState('');
+ const [ocrProgress,setOcrProgress]=useState('');
  const [formValues,setFormValues]=useState('{}');
  const [subtitleOffsetMs,setSubtitleOffsetMs]=useState(0),[annotationText,setAnnotationText]=useState('');
  const [annotationPages,setAnnotationPages]=useState(''),[annotationPlacement,setAnnotationPlacement]=useState<'top-left'|'bottom-left'|'top-right'>('bottom-left');
@@ -25,12 +26,12 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const labels={"en":["Pages (e.g. 1,3,5-8)","Pages per file","Watermark text","Opacity","Visible signature","Lossy conversion: pages become images. Text, links and forms will no longer be searchable.","OCR language"],"es":["Páginas (ej. 1,3,5-8)","Páginas por archivo","Texto de marca","Opacidad","Firma visible","Compresión con pérdida: las páginas pasan a ser imágenes. Texto, enlaces y formularios dejan de ser buscables.","Idioma del OCR"],"pt":["Páginas (ex. 1,3,5-8)","Páginas por arquivo","Texto da marca","Opacidade","Assinatura visível","Compressão com perda: páginas viram imagens; textos, links e formulários deixam de ser pesquisáveis.","Idioma do OCR"],"fr":["Pages (ex. 1,3,5-8)","Pages par fichier","Texte du filigrane","Opacité","Signature visible","Compression avec perte : les pages deviennent des images et le texte, les liens et les formulaires ne seront plus recherchables.","Langue de l’OCR"]}[locale];
  useEffect(()=>()=>{if(result)URL.revokeObjectURL(result.url)},[result]);
  const choose=(incoming:File[])=>{if(busy)return;try{validateFiles(slug,incoming);setResult(null);setError('');setFiles(incoming)}catch(e){setError(e instanceof Error?e.message:d.error);}};
- const run=async()=>{if(!files.length)return;setBusy(true);setError('');try{
- const output=await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword});setResult({name:output.name,url:URL.createObjectURL(output.blob)});
+ const run=async()=>{if(!files.length)return;setBusy(true);setError('');setOcrProgress('');try{
+ const output=await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});setResult({name:output.name,url:URL.createObjectURL(output.blob)});
  }catch(e){setError(e instanceof Error?e.message:d.error)}finally{setBusy(false)}};
  const moveFile=(index:number,direction:number)=>setFiles(current=>{const target=index+direction;if(target<0||target>=current.length)return current;const next=[...current];[next[index],next[target]]=[next[target],next[index]];return next;});
  const reset=()=>{setResult(null);setFiles([]);setError('');if(input.current)input.current.value=''};
- const status=busy?d.processing:result?result.name+" · "+d.download:files.length?String(files.length)+" "+d.selected:"";
+ const status=busy?(ocrProgress?`${d.processing} · OCR ${ocrProgress}`:d.processing):result?result.name+" · "+d.download:files.length?String(files.length)+" "+d.selected:"";
  return <section className="converter" aria-busy={busy}>
  <input ref={input} className="visually-hidden" type="file" aria-label={d.browse} multiple={slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'||slug==='rename-batch'||slug==='batch-images-to-webp'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
  <div className={`dropzone ${drag?'dragging':''}`} role="group" aria-label={d.dropTitle} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);choose(Array.from(e.dataTransfer.files))}}>
