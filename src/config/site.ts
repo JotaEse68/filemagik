@@ -5,6 +5,7 @@ export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.verce
 export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
  {slug:'word-to-layout-pdf',from:'Word DOCX',to:'Structured PDF',kind:'document',accept:'.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document'},
+ {slug:'pptx-to-pdf-layout',from:'PowerPoint PPTX',to:'Slides PDF',kind:'document',accept:'.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation'},
  {slug:'xlsx-to-layout-pdf',from:'Excel XLSX',to:'Structured PDF',kind:'document',accept:'.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},
  {slug:'edit-pdf-visual',from:'PDF',to:'Visual PDF editor',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'pdf-to-word-visual',from:'PDF',to:'Word layout (image pages)',kind:'pdf',accept:'.pdf,application/pdf'},
