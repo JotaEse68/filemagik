@@ -123,7 +123,9 @@ test('PDF form inspector and filler process real AcroForm fields',async({page})=
  await expect(page.locator('a[download]')).toHaveAttribute('download',/fields\.json$/);
  await page.goto('/es/fill-pdf-form');
  await page.locator('input[type=file]').setInputFiles({name:'form.pdf',mimeType:'application/pdf',buffer:input});
- await page.locator('textarea').fill('{"FullName":"Jota","Approved":true}');
+ await expect(page.locator('.fm-pdf-form-grid input[type=text]')).toBeVisible();
+ await page.locator('.fm-pdf-form-grid input[type=text]').fill('Jota');
+ await page.locator('.fm-pdf-form-grid input[type=checkbox]').check();
  await page.getByRole('button',{name:/convertir ahora/i}).click();
  await expect(page.locator('a[download]')).toHaveAttribute('download',/completed\.pdf$/);
 });
