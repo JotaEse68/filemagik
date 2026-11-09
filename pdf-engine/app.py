@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Query
 from fastapi.responses import Response
 from pypdf import PdfReader
+from pypdf.errors import PdfReadError
 import httpx
 from document import pdf_to_docx, pdf_to_xlsx
 
@@ -117,7 +118,7 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
                 if len(result)>len(data):result=data
             else:result=await asyncio.to_thread(lossy_optimize,data,quality)
     except HTTPException:raise
-    except (ValueError,KeyError):
+    except (ValueError,KeyError,PdfReadError):
         raise HTTPException(422,"Document could not be reconstructed reliably")
     if not result:raise HTTPException(422,"Empty converted document")
     return Response(result,media_type=MIMES[operation],headers={"Cache-Control":"private, no-store",
