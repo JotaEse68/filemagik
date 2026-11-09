@@ -133,6 +133,7 @@ def test_lossy_refuses_interactive_form(monkeypatch):
     monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
     buf=io.BytesIO()
     paper=canvas.Canvas(buf)
+    paper.drawString(50,700,'Name')
     paper.acroForm.textfield(name="Customer",x=120,y=686,width=180,height=22)
     paper.save()
     result=client.post("/v1/jobs?operation=optimize-pdf&quality=balanced",
