@@ -1,6 +1,7 @@
 import {test,expect} from '@playwright/test';
 import {PDFDocument,StandardFonts} from 'pdf-lib';
 import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
 import {readFile} from 'node:fs/promises';
 
 async function samplePdf(){
@@ -110,4 +111,38 @@ test('Editable Excel cells are converted to PDF with pagination',async({page})=>
  const output=await runAndDownload(page);
  expect(output.name).toContain('-layout.pdf');
  expect((await PDFDocument.load(output.bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
+});
+
+
+test('PDF to editable Word creates a real Word table for aligned column rows',async({page})=>{
+ await page.goto('/es/pdf-to-word-text');
+ await upload(page,await samplePdf());
+ const output=await runAndDownload(page);
+ const zip=await JSZip.loadAsync(output.bytes);
+ const xml=await zip.file('word/document.xml')?.async('text');
+ expect(xml).toContain('<w:tbl');
+ expect(xml).toContain('Notebook');
+});
+test('PowerPoint slide text is exported as a genuine PDF page',async({page})=>{
+ const zip=new JSZip();
+ zip.file('ppt/presentation.xml','<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldSz cx="12192000" cy="6858000"/></p:presentation>');
+ zip.file('ppt/slides/slide1.xml','<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree><p:sp><p:spPr><a:xfrm><a:off x="914400" y="914400"/><a:ext cx="4572000" cy="914400"/></a:xfrm></p:spPr><p:txBody><a:p><a:r><a:t>Slide title</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>');
+ const source=await zip.generateAsync({type:'nodebuffer'});
+ await page.goto('/es/pptx-to-pdf-layout');
+ await page.locator('input[type=file]').setInputFiles({name:'presentation.pptx',mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation',buffer:source});
+ const output=await runAndDownload(page);
+ expect((await PDFDocument.load(output.bytes)).getPageCount()).toBe(1);
+});
+test('Visual editor produces a real fillable checkbox field',async({page})=>{
+ await page.goto('/es/edit-pdf-visual');
+ await upload(page,await samplePdf());
+ await expect(page.locator('.fm-editor-sheet canvas')).toBeVisible({timeout:30000});
+ await page.getByRole('button',{name:/Casilla/}).click();
+ await page.locator('.fm-editor-sheet').click({position:{x:140,y:160}});
+ await expect(page.locator('.fm-editor-overlay')).toHaveCount(1);
+ const promise=page.waitForEvent('download');
+ await page.locator('.fm-editor-actions button').click();
+ const download=await promise;
+ const output=await readFile(await download.path());
+ expect((await PDFDocument.load(output)).getForm().getFields().length).toBe(1);
 });
