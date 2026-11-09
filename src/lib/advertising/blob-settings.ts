@@ -41,7 +41,7 @@ export function validateAds(input:unknown):AdsSettings {
  const raw=o.placements as Record<string,unknown>;
  for(const slot of adSlots){
   const p=raw[slot] as Record<string,unknown>|undefined;
-  if((!p||typeof p!=='object')&&['desktopLower','homeHeroSide','popularTop'].includes(slot)){
+  if((!p||typeof p!=='object')&&['desktopLower','homeHeroSide','popularTop','toolSide','toolHorizontal'].includes(slot)){
    placements[slot]={...defaultPlacement(),enabled:false};
    continue;
   }

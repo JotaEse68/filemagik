@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import ts from 'typescript';
 import crypto from 'node:crypto';
 
-const slots=['desktop','desktopLower','homeHeroSide','popularTop','mobile','result','home','incontent'];
+const slots=['desktop','desktopLower','homeHeroSide','popularTop','toolSide','toolHorizontal','mobile','result','home','incontent'];
 const source=fs.readFileSync(new URL('../src/lib/advertising/blob-settings.ts',import.meta.url),'utf8');
 const transpiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const sandboxModule={exports:{}};
@@ -27,10 +27,12 @@ test('can enable banner by HTTPS image URL without destination or description',(
 
 test('existing advertising configuration migrates with missing optional slots and rewarded',()=>{
  const data=emptyAds();
- delete data.placements.desktopLower;delete data.placements.homeHeroSide;delete data.placements.popularTop;delete data.rewarded;
+ delete data.placements.desktopLower;delete data.placements.homeHeroSide;delete data.placements.popularTop;delete data.placements.toolSide;delete data.placements.toolHorizontal;delete data.rewarded;
  const checked=validateAds(data);
  assert.equal(checked.placements.desktopLower.enabled,false);
  assert.equal(checked.placements.homeHeroSide.enabled,false);
+ assert.equal(checked.placements.toolSide.enabled,false);
+ assert.equal(checked.placements.toolHorizontal.enabled,false);
  assert.equal(checked.rewarded.enabled,false);
 });
 

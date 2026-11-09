@@ -4,6 +4,8 @@ export const defaultLocale:Locale='en';
 export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.vercel.app').replace(/\/$/,'');
 export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
+ {slug:'edit-pdf-visual',from:'PDF',to:'Visual PDF editor',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'pdf-to-word-visual',from:'PDF',to:'Word layout (image pages)',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'ocr-pdf-searchable',from:'Scanned PDF',to:'Searchable PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'compress-pdf-lossless',from:'PDF',to:'Optimized PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'protect-pdf',from:'PDF',to:'Protected PDF',kind:'pdf',accept:'.pdf,application/pdf'},

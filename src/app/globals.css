@@ -178,3 +178,38 @@ html{scroll-padding-top:90px}body{min-width:320px}.header-inner{position:relativ
 .radial-connection{position:relative}.radial-connection small{position:absolute;top:calc(50% + 23px);left:50%;width:120px;transform:translateX(-50%);text-align:center;line-height:1.4;font-size:10px;color:#c1d6ff;font-weight:750}
 @media(max-width:800px){.radial-connection small{display:none}.radial-guide{margin:14px 8px 6px}.radial-guide-step{flex:1 1 150px;justify-content:center}.radial-help-button{width:100%}.radial-column h3{flex-wrap:wrap;justify-content:center;text-align:center}.radial-hint-label{white-space:normal}}
 @media(max-width:470px){.radial-guide-step{font-size:11px;padding:8px}.radial-hint-label{font-size:10px}}
+
+/* Individual conversion pages: useful ad inventory without covering upload or downloads */
+.fm-tool-ad-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(230px,1fr);gap:clamp(15px,2.3vw,30px);align-items:start}
+.fm-tool-ad-layout .tool-main{min-width:0;width:100%;max-width:none}
+.fm-tool-side-ad{min-width:0;position:sticky;top:100px}
+.fm-tool-side-ad .first-party-ad{margin:0;width:100%;min-height:250px;max-height:620px}
+.fm-tool-side-ad .first-party-ad img{display:block;width:100%;max-height:580px;object-fit:contain}
+.fm-tool-horizontal-ad{margin:24px auto 40px;min-height:0}
+.fm-tool-horizontal-ad .first-party-ad{max-width:970px;margin:0 auto;width:100%}
+.fm-tool-horizontal-ad .first-party-ad img{display:block;width:100%;max-height:130px;object-fit:contain}
+@media(max-width:1080px){.fm-tool-ad-layout{grid-template-columns:minmax(0,1fr) 230px}}
+@media(max-width:800px){.fm-tool-ad-layout{display:block}.fm-tool-side-ad{display:none}.fm-tool-horizontal-ad{padding-inline:14px;margin:16px auto 26px}.fm-tool-horizontal-ad .first-party-ad img{max-height:110px}}
+
+/* PDF editor: move elements directly, with visible active selection. */
+.fm-pdf-visual{background:linear-gradient(145deg,#192748,#0c172c);border:1px solid #526992;border-radius:20px;padding:22px;min-width:0}
+.fm-pdf-visual>h2{font-size:clamp(22px,3vw,32px);margin:0 0 9px}.fm-pdf-visual>p{font-size:13px;line-height:1.65;color:#bad0eb}
+.fm-editor-file{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px dashed #839dd5;background:#172747;border-radius:12px;padding:14px;margin:15px 0;color:#e8f4ff;font-weight:700}
+.fm-editor-file input{width:min(100%,330px);color:#cedfff}
+.fm-editor-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:15px 0}
+.fm-editor-toolbar button,.fm-editor-pages button{display:flex;align-items:center;gap:5px;justify-content:center;border:1px solid #59719b;background:#203659;color:#eef5ff;padding:9px 12px;border-radius:10px;min-height:44px;cursor:pointer;font-size:12px}
+.fm-editor-toolbar button.is-active{background:linear-gradient(110deg,#694ee3,#256fb4);border-color:#c8bafa}
+.fm-editor-toolbar button:disabled,.fm-editor-pages button:disabled{opacity:.38;cursor:not-allowed}
+.fm-editor-toolbar label{display:flex;align-items:center;gap:7px;font-size:12px}
+.fm-editor-toolbar input[type=color]{width:43px;height:43px;border:1px solid #7895c0;border-radius:8px;background:#142442}
+.fm-editor-toolbar select{background:#13233e;color:#f1f6ff;border:1px solid #6a87b4;border-radius:8px;padding:8px;min-height:40px}
+.fm-editor-text{display:flex;align-items:center;gap:10px;margin:12px 0;font-size:13px}.fm-editor-text input{flex:1;min-width:0;border-radius:10px;padding:12px;background:#0b1932;color:#fff;border:1px solid #607faf}
+.fm-editor-pages{display:flex;align-items:center;justify-content:center;gap:18px;margin:13px 0;font-size:14px;font-weight:700}
+.fm-editor-scroll{max-height:75vh;overflow:auto;border:1px solid #4c6288;border-radius:15px;background:repeating-linear-gradient(45deg,#172541 0,#172541 12px,#192b4b 12px,#192b4b 24px);padding:16px}
+.fm-editor-sheet{position:relative;max-width:none;min-width:250px;margin:0 auto;background:white;box-shadow:0 12px 40px #0007;cursor:crosshair;touch-action:pan-y}
+.fm-editor-sheet canvas{display:block;width:100%;height:auto}
+.fm-editor-overlay{position:absolute;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:left;border:2px solid transparent;touch-action:none;cursor:grab;user-select:none;font-weight:700;font-size:14px;text-shadow:0 1px 2px #0009;outline:1px dashed #647bb2}
+.fm-editor-overlay.is-selected{outline:3px solid #308cf7}
+.fm-editor-actions{display:flex;gap:15px;align-items:center;justify-content:space-between;margin:20px 0}
+.fm-editor-note{color:#aabdd9;font-size:12px;line-height:1.6}
+@media(max-width:800px){.fm-pdf-visual{padding:13px}.fm-editor-scroll{padding:8px;max-height:66vh}.fm-editor-toolbar{gap:5px}}
