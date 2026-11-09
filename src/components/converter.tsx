@@ -5,6 +5,7 @@ import {convertFiles} from '@/lib/convert';
 import {validateFiles,sizeLimitLabel} from '@/lib/file-limits';
 import {getTool,type ToolSlug,type Locale} from '@/config/site';
 import PdfPreview from '@/components/pdf-preview';
+import PdfFormEditor from '@/components/pdf-form-editor';
 import type {Dictionary} from '@/lib/i18n';
 export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictionary;locale?:Locale}){
  const tool=getTool(slug)!;const input=useRef<HTMLInputElement>(null);const [files,setFiles]=useState<File[]>([]);
@@ -54,7 +55,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  {files.length>0&&!result&&slug==='rename-batch'&&<div className="pdf-option-panel"><label>File prefix / Prefijo<input value={prefix} onChange={e=>setPrefix(e.target.value)} maxLength={60}/></label></div>}
  {files.length>0&&!result&&slug==='resize-image'&&<div className="pdf-option-panel"><label>Output width / Ancho en píxeles<input type="number" min={64} max={4000} value={width} onChange={e=>setWidth(Number(e.target.value))}/></label></div>}
  {files.length>0&&!result&&['inspect-pdf-form','fill-pdf-form','flatten-pdf-form'].includes(slug)&&<div className="pdf-option-panel">
- {slug==='fill-pdf-form'&&<label>{({es:'Valores del formulario (JSON: nombre del campo y valor)',en:'Form values (JSON: field name and value)',pt:'Valores do formulário (JSON: nome e valor)',fr:'Valeurs du formulaire (JSON : nom et valeur)'} as const)[locale]}<textarea rows={7} spellCheck={false} value={formValues} onChange={e=>setFormValues(e.target.value)} placeholder={'{"FullName":"Ana","AcceptTerms":true}'}/></label>}
+ {slug==='fill-pdf-form'&&<PdfFormEditor file={files[0]} onChange={setFormValues}/>} 
  <p>{({es:'Compatible con formularios PDF AcroForm. No modifica firmas digitales válidas. Los formularios XFA no son compatibles.',en:'Supports PDF AcroForm fields. Valid digital signatures are not modified. XFA forms are unsupported.',pt:'Compatível com campos AcroForm. Assinaturas digitais válidas não são modificadas; XFA não é suportado.',fr:'Compatible AcroForm. Les signatures numériques valides ne sont pas modifiées. XFA non pris en charge.'} as const)[locale]}</p>
  </div>}
  {files.length>0&&!result&&slug==='audio-to-wav'&&<div className="pdf-option-panel">
