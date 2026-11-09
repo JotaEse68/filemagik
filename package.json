@@ -26,7 +26,8 @@
     "@supabase/supabase-js": "2.119.0",
     "tesseract.js": "7.0.0",
     "exceljs": "4.4.0",
-    "@vercel/blob": "^1.0.2"
+    "@vercel/blob": "^1.0.2",
+    "@maxwbh/pdf-lib": "^1.18.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

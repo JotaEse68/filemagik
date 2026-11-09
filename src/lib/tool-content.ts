@@ -1,5 +1,11 @@
 import type {Locale,ToolSlug} from '@/config/site';
 const summaries:Record<ToolSlug,[string,string,string,string]>={
+ "ocr-pdf-searchable": ["Adds an invisible OCR text layer over original scanned PDF pages; up to 15 unrotated pages.", "Añade una capa OCR seleccionable sobre el PDF escaneado original; hasta 15 páginas sin rotar.", "Adiciona camada OCR ao PDF digitalizado original; até 15 páginas sem rotação.", "Ajoute une couche OCR au PDF numérisé d’origine ; 15 pages non pivotées maximum."],
+ "compress-pdf-lossless": ["Rewrites PDF object structure without rasterizing; no output if the source is already smaller.", "Reorganiza la estructura PDF sin rasterizar; no genera archivo si el original pesa menos.", "Reorganiza a estrutura PDF sem rasterizar; não exporta se não reduzir.", "Réorganise la structure PDF sans rastériser ; n’exporte que si plus petit."],
+ "protect-pdf": ["Protect your PDF with an opening password. Existing encryption may not be supported.", "Protege el PDF con contraseña de apertura. Algunos cifrados existentes no son compatibles.", "Proteja o PDF com uma senha. Alguns formatos criptografados não são compatíveis.", "Protégez le PDF par mot de passe. Certains PDF chiffrés ne sont pas pris en charge."],
+ "unlock-pdf": ["Unlock only PDFs you are authorized to access and whose password you know.", "Desbloquea documentos autorizados cuya contraseña conozcas.", "Desbloqueie somente documentos autorizados com a senha correta.", "Déverrouillez uniquement les documents autorisés avec le bon mot de passe."],
+ "pdf-to-excel-text": ["Extract rows of text into an Excel workbook; complex table layout and merged cells are not preserved.", "Extrae filas de texto a Excel; las tablas complejas y celdas fusionadas no se reconstruyen fielmente.", "Extrai linhas de texto para Excel; tabelas complexas não são reconstruídas fielmente.", "Extrait des lignes de texte dans Excel ; les tableaux complexes ne sont pas fidèlement reconstruits."],
+
   "jpg-to-webp": [
     "Reduce JPG size for fast-loading websites.",
     "Reduce el peso de tus JPG para webs rápidas.",

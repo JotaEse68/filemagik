@@ -164,3 +164,17 @@ html{scroll-padding-top:90px}body{min-width:320px}.header-inner{position:relativ
 .fm-toolbox-ad .first-party-ad img{width:100%;max-height:120px;object-fit:contain}
 @media(max-width:1120px){.fm-smartdrop-ad-grid{grid-template-columns:minmax(0,1fr) 220px}.fm-smartdrop-main{grid-template-columns:1fr}}
 @media(max-width:800px){.fm-smartdrop-ad-grid{grid-template-columns:1fr}.fm-smartdrop-main{grid-template-columns:1fr}.fm-smartdrop-banner{display:none}.fm-toolbox-ad{margin:10px 0 16px}.fm-toolbox-ad .first-party-ad img{max-height:110px}}
+
+/* Progressive help for Quick Studio; wheels and interactions keep their existing visual system. */
+.radial-guide{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:18px 0 2px}
+.radial-guide-step{display:flex;align-items:center;gap:8px;border:1px solid #6076ac70;background:#121f39;border-radius:13px;padding:9px 13px;color:#bdd0ef;font-size:12px;font-weight:700;min-height:44px}
+.radial-guide-step strong{width:24px;height:24px;display:grid;place-items:center;border-radius:9px;background:#31416a;color:#e6efff}
+.radial-guide-step.guide-current{border-color:#b9a2ff;background:linear-gradient(110deg,#41368c,#1c4b73);box-shadow:0 0 22px #9c72eb44;color:white}
+.radial-help-button{min-height:44px;border:1px solid #6f8fbd;background:#172b4e;color:#dfeeff;border-radius:12px;padding:9px 14px;font-size:12px;font-weight:750;cursor:pointer}
+.radial-help-text{border-radius:12px;background:#1a2c50;border:1px solid #7799ca;color:#e9f4ff;padding:12px 16px;font-size:13px;line-height:1.6}
+.radial-hint-label{margin-left:7px;padding:5px 9px;border:1px solid #988fff9c;border-radius:999px;background:#6c52d544;font-size:11px;color:#e4dcff;font-weight:750;white-space:nowrap}
+.radial-start-column .radial-category-wheel{filter:drop-shadow(0 0 23px #8975fa6c)}
+.radial-action-ready .radial-action-wheel{filter:drop-shadow(0 0 24px #66beff69)}
+.radial-connection{position:relative}.radial-connection small{position:absolute;top:calc(50% + 23px);left:50%;width:120px;transform:translateX(-50%);text-align:center;line-height:1.4;font-size:10px;color:#c1d6ff;font-weight:750}
+@media(max-width:800px){.radial-connection small{display:none}.radial-guide{margin:14px 8px 6px}.radial-guide-step{flex:1 1 150px;justify-content:center}.radial-help-button{width:100%}.radial-column h3{flex-wrap:wrap;justify-content:center;text-align:center}.radial-hint-label{white-space:normal}}
+@media(max-width:470px){.radial-guide-step{font-size:11px;padding:8px}.radial-hint-label{font-size:10px}}
