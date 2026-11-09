@@ -5,6 +5,9 @@ export type OutputFile={name:string;blob:Blob};
 export type ConversionOptions={formValues?:string;subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;annotationPages?:string;annotationPlacement?:'top-left'|'bottom-left'|'top-right';cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra';pdfPassword?:string};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  validateFiles(slug,files);
+ if(slug==='pdf-to-word-visual'){
+  const {pdfToWordVisual}=await import('./pdf-word-visual');return pdfToWordVisual(files[0]);
+ }
  if(slug==='ocr-pdf-searchable'){
   const {pdfToSearchable}=await import('./pdf-searchable');return pdfToSearchable(files[0],options.ocrLang??'eng');
  }
