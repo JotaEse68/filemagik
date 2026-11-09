@@ -39,7 +39,7 @@ export default function ProfessionalPdfOption({siteKey,ready,onToken,onReset}:{s
  const [status,setStatus]=useState<'loading'|'ready'|'failed'>('loading');
  useEffect(()=>{
   if(!ready||!siteKey)return;
-  let active=true;let interval:number|undefined;
+  let active=true;
   function mount(){
    if(!active||!ref.current||!window.turnstile||widget.current!==null)return;
    try{widget.current=window.turnstile.render(ref.current,{
@@ -57,7 +57,7 @@ export default function ProfessionalPdfOption({siteKey,ready,onToken,onReset}:{s
    script.async=true;script.defer=true;document.head.appendChild(script);
   }
   script.addEventListener('load',mount);
-  interval=window.setInterval(mount,300);
+  const interval=window.setInterval(mount,300);
   mount();
   return()=>{active=false;if(interval!==undefined)window.clearInterval(interval);script?.removeEventListener('load',mount);
    if(widget.current!==null&&window.turnstile){try{window.turnstile.remove(widget.current);}catch{/* ignore */}widget.current=null;}};
