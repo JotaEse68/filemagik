@@ -62,7 +62,7 @@ def test_malformed_pdf_is_rejected(monkeypatch):
     secret="k"*40
     monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
     result=client.post("/v1/jobs?operation=pdf-to-xlsx",
-        headers={"Authorization":"Bearer "+secret},
+        headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
         files={"file":("broken.pdf",b"not a pdf","application/pdf")})
     assert result.status_code==422
 
