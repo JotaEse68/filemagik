@@ -55,7 +55,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  useEffect(()=>{let canceled=false;const pdf=pdfRef.current,element=canvas.current;if(!pdf||!element||total===0)return;
   async function render(){
    if(!pdf||!element)return;
-   try{const p=await pdf.getPage(page);const viewport=p.getViewport({scale:1.35});if(canceled)return;
+   try{const pdfjs=await import('pdfjs-dist');const p=await pdf.getPage(page);const viewport=p.getViewport({scale:1.35});if(canceled)return;
     const extracted=await p.getTextContent();
     const native:NativeText[]=extracted.items.filter((it):it is Extract<typeof it,{str:string}>=>'str' in it&&it.str.trim().length>0).slice(0,500).map((it,i)=>{
       const tx=pdfjs.Util.transform(viewport.transform,it.transform);
