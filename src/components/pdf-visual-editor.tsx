@@ -1,15 +1,15 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {Download,Undo2,Redo2,Trash2,Type,Highlighter,Square,ChevronLeft,ChevronRight} from 'lucide-react';
+import {Download,Undo2,Redo2,Trash2,Type,Highlighter,Square,ChevronLeft,ChevronRight,FormInput,ListChecks} from 'lucide-react';
 import type {Locale} from '@/config/site';
 import {exportVisualPdf,type VisualAnnotation} from '@/lib/pdf-visual-export';
 
-type Tool='text'|'highlight'|'rectangle';
+type Tool='text'|'highlight'|'rectangle'|'form-text'|'form-checkbox';
 const words={
- es:{title:'Editor PDF visual',guide:'Sube un PDF, elige una herramienta y pulsa sobre la página. Arrastra los objetos para colocarlos. Deshacer y rehacer funcionan por operación.',upload:'Seleccionar PDF',text:'Texto',highlight:'Resaltar',rectangle:'Rectángulo',undo:'Deshacer',redo:'Rehacer',del:'Eliminar',save:'Exportar PDF',page:'Página',note:'Las anotaciones se superponen al PDF; no eliminan permanentemente texto ni equivalen a una firma digital. Las fuentes de texto se normalizan a caracteres compatibles.',placeholder:'Escribe la nota',error:'No se pudo procesar el PDF'},
- en:{title:'Visual PDF editor',guide:'Upload a PDF, choose a tool and click the page. Drag objects to move them. Undo and redo work per operation.',upload:'Choose PDF',text:'Text',highlight:'Highlight',rectangle:'Rectangle',undo:'Undo',redo:'Redo',del:'Delete',save:'Export PDF',page:'Page',note:'Annotations are overlays, not permanent redactions or digital signatures. Text is normalized for font compatibility.',placeholder:'Enter your note',error:'Could not process PDF'},
- pt:{title:'Editor visual de PDF',guide:'Escolha um PDF, selecione uma ferramenta, toque na página e arraste os objetos. Desfazer e refazer por operação.',upload:'Escolher PDF',text:'Texto',highlight:'Realçar',rectangle:'Retângulo',undo:'Desfazer',redo:'Refazer',del:'Excluir',save:'Exportar PDF',page:'Página',note:'As anotações não removem o texto original nem são assinaturas digitais.',placeholder:'Digite o texto',error:'Falha ao processar PDF'},
- fr:{title:'Éditeur PDF visuel',guide:'Choisissez un PDF et un outil, cliquez sur la page, puis faites glisser les objets. Annuler et rétablir par opération.',upload:'Choisir PDF',text:'Texte',highlight:'Surligner',rectangle:'Rectangle',undo:'Annuler',redo:'Rétablir',del:'Supprimer',save:'Exporter PDF',page:'Page',note:'Les annotations ne suppriment pas le contenu et ne sont pas des signatures numériques.',placeholder:'Votre texte',error:'Impossible de traiter le PDF'}
+ es:{title:'Editor PDF visual',guide:'Sube un PDF, elige una herramienta y pulsa sobre la página. Arrastra los objetos para colocarlos. Deshacer y rehacer funcionan por operación.',upload:'Seleccionar PDF',text:'Texto',highlight:'Resaltar',rectangle:'Rectángulo',formText:'Campo de texto',formCheckbox:'Casilla',undo:'Deshacer',redo:'Rehacer',del:'Eliminar',save:'Exportar PDF',page:'Página',note:'Las anotaciones se superponen al PDF; no eliminan permanentemente texto ni equivalen a una firma digital. Las fuentes de texto se normalizan a caracteres compatibles.',placeholder:'Escribe la nota',error:'No se pudo procesar el PDF'},
+ en:{title:'Visual PDF editor',guide:'Upload a PDF, choose a tool and click the page. Drag objects to move them. Undo and redo work per operation.',upload:'Choose PDF',text:'Text',highlight:'Highlight',rectangle:'Rectangle',formText:'Text field',formCheckbox:'Checkbox',undo:'Undo',redo:'Redo',del:'Delete',save:'Export PDF',page:'Page',note:'Annotations are overlays, not permanent redactions or digital signatures. Text is normalized for font compatibility.',placeholder:'Enter your note',error:'Could not process PDF'},
+ pt:{title:'Editor visual de PDF',guide:'Escolha um PDF, selecione uma ferramenta, toque na página e arraste os objetos. Desfazer e refazer por operação.',upload:'Escolher PDF',text:'Texto',highlight:'Realçar',rectangle:'Retângulo',formText:'Campo de texto',formCheckbox:'Caixa',undo:'Desfazer',redo:'Refazer',del:'Excluir',save:'Exportar PDF',page:'Página',note:'As anotações não removem o texto original nem são assinaturas digitais.',placeholder:'Digite o texto',error:'Falha ao processar PDF'},
+ fr:{title:'Éditeur PDF visuel',guide:'Choisissez un PDF et un outil, cliquez sur la page, puis faites glisser les objets. Annuler et rétablir par opération.',upload:'Choisir PDF',text:'Texte',highlight:'Surligner',rectangle:'Rectangle',formText:'Champ texte',formCheckbox:'Case à cocher',undo:'Annuler',redo:'Rétablir',del:'Supprimer',save:'Exporter PDF',page:'Page',note:'Les annotations ne suppriment pas le contenu et ne sont pas des signatures numériques.',placeholder:'Votre texte',error:'Impossible de traiter le PDF'}
 } as const;
 export default function PdfVisualEditor({locale}:{locale:Locale}){
  const t=words[locale];
@@ -17,6 +17,10 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  const [content,setContent]=useState('Example'),[color,setColor]=useState('#f7d154'),[selected,setSelected]=useState<string|null>(null);
  const [history,setHistory]=useState<VisualAnnotation[][]>([[]]),[cursor,setCursor]=useState(0),[draft,setDraft]=useState<VisualAnnotation[]|null>(null);
  const source=history[cursor]??[],items=draft??source;
+ const selectedItem=items.find(item=>item.id===selected);
+ function editSelected(changes:Partial<VisualAnnotation>){if(!selected)return;commit(source.map(item=>item.id===selected?{...item,...changes}:item));}
+ function duplicateSelected(){if(!selectedItem)return;const clone={...selectedItem,id:crypto.randomUUID(),x:Math.min(.9,selectedItem.x+.04),y:Math.min(.9,selectedItem.y+.04)};commit([...source,clone]);setSelected(clone.id);}
+
  const canvas=useRef<HTMLCanvasElement>(null),pdfRef=useRef<import('pdfjs-dist').PDFDocumentProxy|null>(null);
  const drag=useRef<{id:string;startX:number;startY:number;originX:number;originY:number;original:VisualAnnotation[]}|null>(null);
  function commit(next:VisualAnnotation[]){setHistory(old=>[...old.slice(0,cursor+1),next]);setCursor(c=>c+1);setDraft(null);}
@@ -53,8 +57,8 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
   const rect=event.currentTarget.getBoundingClientRect();
   const x=Math.max(0,Math.min(.9,(event.clientX-rect.left)/rect.width)),y=Math.max(0,Math.min(.9,(event.clientY-rect.top)/rect.height));
   const id=crypto.randomUUID();
-  const item:VisualAnnotation={id,page,kind:tool,x,y,width:tool==='text'?.18:.22,height:tool==='text'?.045:.07,text:content,color,fontSize:14};
-  if(tool==='text'&&!content.trim()){setMessage(t.placeholder);return;}
+  const item:VisualAnnotation={id,page,kind:tool,x,y,width:(tool==='text'||tool==='form-text')?.18:.22,height:(tool==='text'||tool==='form-text')?.045:.07,text:content,color,fontSize:14};
+  if((tool==='text'||tool==='form-text')&&!content.trim()){setMessage(t.placeholder);return;}
   commit([...source,item]);setSelected(id);
  }
  function begin(event:React.PointerEvent<HTMLDivElement>,item:VisualAnnotation){
@@ -76,17 +80,25 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  }
  return <section className="fm-pdf-visual"><h2>{t.title}</h2><p>{t.guide}</p><label className="fm-editor-file">{t.upload}<input type="file" accept=".pdf,application/pdf" onChange={e=>{const selected=e.target.files?.[0];if(selected){if(selected.size>60*1024*1024){setMessage('Maximum 60 MB');return;}setFile(selected)}}}/></label>
  {file&&total>0&&<><div className="fm-editor-toolbar">
- {([['text',Type,t.text],['highlight',Highlighter,t.highlight],['rectangle',Square,t.rectangle]] as const).map(([id,Icon,label])=><button key={id} aria-pressed={tool===id} className={tool===id?'is-active':''} onClick={()=>setTool(id)}><Icon size={17}/>{label}</button>)}
+ {([['text',Type,t.text],['highlight',Highlighter,t.highlight],['rectangle',Square,t.rectangle],['form-text',FormInput,t.formText],['form-checkbox',ListChecks,t.formCheckbox]] as const).map(([id,Icon,label])=><button key={id} aria-pressed={tool===id} className={tool===id?'is-active':''} onClick={()=>setTool(id)}><Icon size={17}/>{label}</button>)}
  <input aria-label="Color" type="color" value={color} onChange={e=>setColor(e.target.value)}/><label>Zoom <select value={zoom} onChange={e=>setZoom(+e.target.value)}><option value={75}>75%</option><option value={100}>100%</option><option value={125}>125%</option><option value={150}>150%</option></select></label>
  <button disabled={cursor===0} onClick={()=>{setCursor(c=>c-1);setDraft(null)}}><Undo2 size={17}/>{t.undo}</button>
  <button disabled={cursor>=history.length-1} onClick={()=>{setCursor(c=>c+1);setDraft(null)}}><Redo2 size={17}/>{t.redo}</button>
  <button disabled={!selected} onClick={()=>{commit(source.filter(a=>a.id!==selected));setSelected(null)}}><Trash2 size={17}/>{t.del}</button>
  </div>
- {tool==='text'&&<label className="fm-editor-text">{t.text}<input value={content} maxLength={180} placeholder={t.placeholder} onChange={e=>setContent(e.target.value)}/></label>}
+ {(tool==='text'||tool==='form-text')&&<label className="fm-editor-text">{t.text}<input value={content} maxLength={180} placeholder={t.placeholder} onChange={e=>setContent(e.target.value)}/></label>}
+ {selectedItem&&<div className="fm-editor-selection"><strong>Editar objeto seleccionado</strong>
+ {(selectedItem.kind==='text'||selectedItem.kind==='form-text')&&<label>Texto <input value={selectedItem.text} maxLength={180} onChange={e=>editSelected({text:e.target.value})}/></label>}
+ <label>Ancho <input type="range" min="4" max="90" value={Math.round(selectedItem.width*100)} onChange={e=>editSelected({width:Number(e.target.value)/100})}/></label>
+ <label>Alto <input type="range" min="2" max="65" value={Math.round(selectedItem.height*100)} onChange={e=>editSelected({height:Number(e.target.value)/100})}/></label>
+ {selectedItem.kind==='text'&&<label>Fuente <input type="number" min="8" max="36" value={selectedItem.fontSize} onChange={e=>editSelected({fontSize:Number(e.target.value)})}/></label>}
+ <button type="button" onClick={duplicateSelected}>Duplicar objeto</button>
+ <button type="button" onClick={()=>{setSelected(null);}}>Deseleccionar</button>
+ </div>}
  <div className="fm-editor-pages"><button disabled={page<=1} onClick={()=>{setPage(p=>p-1);setSelected(null)}} aria-label="Previous page"><ChevronLeft/></button>{t.page} {page} / {total}<button disabled={page>=total} onClick={()=>{setPage(p=>p+1);setSelected(null)}} aria-label="Next page"><ChevronRight/></button></div>
  <div className="fm-editor-scroll"><div className="fm-editor-sheet" style={{width:`${zoom}%`}} onClick={insert}>
  <canvas ref={canvas} aria-label="PDF page preview"/>
- {items.filter(a=>a.page===page).map(a=><div key={a.id} data-pdf-overlay="true" role="button" tabIndex={0} aria-label={a.kind+' annotation'} className={'fm-editor-overlay '+(selected===a.id?'is-selected':'')} style={{left:(a.x*100)+'%',top:(a.y*100)+'%',width:(a.width*100)+'%',height:(a.height*100)+'%',borderColor:a.color,background:a.kind==='highlight'?a.color+'66':'transparent',color:a.color}} onPointerDown={e=>begin(e,a)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onKeyDown={e=>{if(e.key==='Delete'||e.key==='Backspace'){commit(source.filter(x=>x.id!==a.id));setSelected(null);}}}>{a.kind==='text'?a.text:null}</div>)}
+ {items.filter(a=>a.page===page).map(a=><div key={a.id} data-pdf-overlay="true" role="button" tabIndex={0} aria-label={a.kind+' annotation'} className={'fm-editor-overlay '+(selected===a.id?'is-selected':'')} style={{left:(a.x*100)+'%',top:(a.y*100)+'%',width:(a.width*100)+'%',height:(a.height*100)+'%',borderColor:a.color,background:a.kind==='highlight'?a.color+'66':'transparent',color:a.color}} onPointerDown={e=>begin(e,a)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onKeyDown={e=>{if(e.key==='Delete'||e.key==='Backspace'){commit(source.filter(x=>x.id!==a.id));setSelected(null);}}}>{a.kind==='text'||a.kind==='form-text'?a.text:a.kind==='form-checkbox'?'☐':null}</div>)}
  </div></div><div className="fm-editor-actions"><button className="btn btn-primary" onClick={download} disabled={busy}><Download size={18}/>{busy?'…':t.save}</button><span>{source.length} annotations</span></div></>}
  <p className="fm-editor-note">{t.note}</p>{message&&<p role="alert" className="error">{message}</p>}</section>;
 }
