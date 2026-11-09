@@ -17,6 +17,10 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  const [content,setContent]=useState('Example'),[color,setColor]=useState('#f7d154'),[selected,setSelected]=useState<string|null>(null);
  const [history,setHistory]=useState<VisualAnnotation[][]>([[]]),[cursor,setCursor]=useState(0),[draft,setDraft]=useState<VisualAnnotation[]|null>(null);
  const source=history[cursor]??[],items=draft??source;
+ const selectedItem=items.find(item=>item.id===selected);
+ function editSelected(changes:Partial<VisualAnnotation>){if(!selected)return;commit(source.map(item=>item.id===selected?{...item,...changes}:item));}
+ function duplicateSelected(){if(!selectedItem)return;const clone={...selectedItem,id:crypto.randomUUID(),x:Math.min(.9,selectedItem.x+.04),y:Math.min(.9,selectedItem.y+.04)};commit([...source,clone]);setSelected(clone.id);}
+
  const canvas=useRef<HTMLCanvasElement>(null),pdfRef=useRef<import('pdfjs-dist').PDFDocumentProxy|null>(null);
  const drag=useRef<{id:string;startX:number;startY:number;originX:number;originY:number;original:VisualAnnotation[]}|null>(null);
  function commit(next:VisualAnnotation[]){setHistory(old=>[...old.slice(0,cursor+1),next]);setCursor(c=>c+1);setDraft(null);}
@@ -83,6 +87,14 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  <button disabled={!selected} onClick={()=>{commit(source.filter(a=>a.id!==selected));setSelected(null)}}><Trash2 size={17}/>{t.del}</button>
  </div>
  {tool==='text'&&<label className="fm-editor-text">{t.text}<input value={content} maxLength={180} placeholder={t.placeholder} onChange={e=>setContent(e.target.value)}/></label>}
+ {selectedItem&&<div className="fm-editor-selection"><strong>Editar objeto seleccionado</strong>
+ {selectedItem.kind==='text'&&<label>Texto <input value={selectedItem.text} maxLength={180} onChange={e=>editSelected({text:e.target.value})}/></label>}
+ <label>Ancho <input type="range" min="4" max="90" value={Math.round(selectedItem.width*100)} onChange={e=>editSelected({width:Number(e.target.value)/100})}/></label>
+ <label>Alto <input type="range" min="2" max="65" value={Math.round(selectedItem.height*100)} onChange={e=>editSelected({height:Number(e.target.value)/100})}/></label>
+ {selectedItem.kind==='text'&&<label>Fuente <input type="number" min="8" max="36" value={selectedItem.fontSize} onChange={e=>editSelected({fontSize:Number(e.target.value)})}/></label>}
+ <button type="button" onClick={duplicateSelected}>Duplicar objeto</button>
+ <button type="button" onClick={()=>{setSelected(null);}}>Deseleccionar</button>
+ </div>}
  <div className="fm-editor-pages"><button disabled={page<=1} onClick={()=>{setPage(p=>p-1);setSelected(null)}} aria-label="Previous page"><ChevronLeft/></button>{t.page} {page} / {total}<button disabled={page>=total} onClick={()=>{setPage(p=>p+1);setSelected(null)}} aria-label="Next page"><ChevronRight/></button></div>
  <div className="fm-editor-scroll"><div className="fm-editor-sheet" style={{width:`${zoom}%`}} onClick={insert}>
  <canvas ref={canvas} aria-label="PDF page preview"/>
