@@ -18,10 +18,11 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  const [content,setContent]=useState('Example'),[color,setColor]=useState('#f7d154'),[selected,setSelected]=useState<string|null>(null);
  const [history,setHistory]=useState<VisualAnnotation[][]>([[]]),[cursor,setCursor]=useState(0),[draft,setDraft]=useState<VisualAnnotation[]|null>(null);
  const [engineReady,setEngineReady]=useState(false),[siteKey,setSiteKey]=useState('');
+ const [challengeRequired,setChallengeRequired]=useState(false);
  const [challengeToken,setChallengeToken]=useState(''),[challengeVersion,setChallengeVersion]=useState(0);
  useEffect(()=>{let active=true;
-  void fetch('/api/pdf-engine',{cache:'no-store'}).then(r=>r.json()).then((v:{available?:boolean;siteKey?:string})=>{
-   if(active&&v.available===true&&typeof v.siteKey==='string'){setEngineReady(true);setSiteKey(v.siteKey);}
+  void fetch('/api/pdf-engine',{cache:'no-store'}).then(r=>r.json()).then((v:{available?:boolean;siteKey?:string|null;challengeRequired?:boolean})=>{
+   if(active&&v.available===true){setEngineReady(true);setSiteKey(v.siteKey||'');setChallengeRequired(v.challengeRequired===true);}
   }).catch(()=>{});
   return()=>{active=false;};
  },[]);
@@ -90,7 +91,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
   try{
    let input=file;
    if(hasRedactions){
-    if(!engineReady||!challengeToken)throw new Error('La eliminación permanente requiere el motor profesional y una verificación válida.');
+    if(!engineReady||challengeRequired&&!challengeToken)throw new Error('La eliminación permanente requiere un motor profesional disponible y, cuando está activada, verificación válida.');
     const regions=source.filter(a=>a.kind==='redact').map(a=>({page:a.page,x:a.x,y:a.y,width:a.width,height:a.height}));
     const data=new FormData();data.set('file',file);data.set('turnstile',challengeToken);data.set('regions',JSON.stringify(regions));
     const response=await fetch('/api/pdf-engine?operation=redact-pdf',{method:'POST',body:data,cache:'no-store'});
@@ -125,6 +126,6 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  <div className="fm-editor-scroll"><div className="fm-editor-sheet" style={{width:`${zoom}%`}} onClick={insert}>
  <canvas ref={canvas} aria-label="PDF page preview"/>
  {items.filter(a=>a.page===page).map(a=><div key={a.id} data-pdf-overlay="true" role="button" tabIndex={0} aria-label={a.kind+' annotation'} className={'fm-editor-overlay '+(selected===a.id?'is-selected':'')} style={{left:(a.x*100)+'%',top:(a.y*100)+'%',width:(a.width*100)+'%',height:(a.height*100)+'%',borderColor:a.color,background:a.kind==='redact'?'#181818d9':a.kind==='highlight'?a.color+'66':'transparent',color:a.color}} onPointerDown={e=>begin(e,a)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onKeyDown={e=>{if(e.key==='Delete'||e.key==='Backspace'){commit(source.filter(x=>x.id!==a.id));setSelected(null);}}}>{a.kind==='text'||a.kind==='form-text'?a.text:a.kind==='form-checkbox'?'☐':a.kind==='redact'?'BORRAR':null}</div>)}
- </div></div>{hasRedactions&&engineReady&&<div className="fm-pro-engine-panel"><strong>Eliminación permanente verificada</strong><p>Selecciona regiones de contenido original. No se puede deshacer después de descargar el resultado; se verifica el acceso antes de enviar el documento al motor.</p><ProfessionalPdfOption key={challengeVersion} siteKey={siteKey} ready={engineReady} onToken={setChallengeToken} onReset={()=>setChallengeToken('')}/></div>}<div className="fm-editor-actions"><button className="btn btn-primary" onClick={download} disabled={busy}><Download size={18}/>{busy?'…':t.save}</button><span>{source.length} annotations</span></div></>}
+ </div></div>{hasRedactions&&engineReady&&<div className="fm-pro-engine-panel"><strong>Eliminación permanente verificada</strong><p>Selecciona regiones de contenido original. No se puede deshacer después de descargar el resultado; se verifica el acceso antes de enviar el documento al motor.</p>{challengeRequired&&<ProfessionalPdfOption key={challengeVersion} siteKey={siteKey} ready={engineReady} onToken={setChallengeToken} onReset={()=>setChallengeToken('')}/>}</div>}<div className="fm-editor-actions"><button className="btn btn-primary" onClick={download} disabled={busy}><Download size={18}/>{busy?'…':t.save}</button><span>{source.length} annotations</span></div></>}
  <p className="fm-editor-note">{t.note}</p>{message&&<p role="alert" className="error">{message}</p>}</section>;
 }
