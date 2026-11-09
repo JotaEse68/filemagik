@@ -2,12 +2,11 @@ import os
 import io
 import hmac
 import asyncio
-import subprocess
-import tempfile
 from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Query
 from fastapi.responses import Response
-from pypdf import PdfReader
+from pypdf import PdfReader,PdfWriter
+from PIL import Image
 from pypdf.errors import PdfReadError
 import httpx
 from document import pdf_to_docx, pdf_to_xlsx
@@ -54,7 +53,7 @@ def lossy_optimize(data,quality):
     source=inspect_pdf(data)
     fields=source.get_fields() or {}
     if fields:raise HTTPException(422,"PDF form and signature fields require lossless optimization")
-    # Ghostscript rewrites page content: don't risk removing links, comments or attachments.
+    # Rewriting image streams could affect linked or signed documents; fail closed.
     if any("/Annots" in page for page in source.pages):
         raise HTTPException(422,"PDF annotations or hyperlinks require lossless optimization")
     root=source.trailer.get("/Root")
@@ -65,29 +64,34 @@ def lossy_optimize(data,quality):
             raise HTTPException(422,"PDF attachments require lossless optimization")
     if b"/ByteRange" in data:
         raise HTTPException(422,"Digitally signed PDFs cannot be recompressed")
-    preset="/ebook" if quality=="balanced" else "/screen"
-    with tempfile.TemporaryDirectory(prefix="filemagik_") as directory:
-        inp=Path(directory)/"source.pdf";out=Path(directory)/"output.pdf"
-        inp.write_bytes(data)
-        args=["gs","-dSAFER","-dBATCH","-dNOPAUSE","-sDEVICE=pdfwrite",
-              "-dCompatibilityLevel=1.6","-dDetectDuplicateImages=true",
-              "-dSubsetFonts=true",f"-dPDFSETTINGS={preset}",
-              f"-sOutputFile={out}",str(inp)]
-        try:
-            subprocess.run(args,timeout=45,check=True,stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL,cwd=directory)
-        except (subprocess.SubprocessError,OSError):
-            raise HTTPException(422,"PDF image compression failed")
-        data_out=out.read_bytes()
-        if not data_out.startswith(b"%PDF-"):raise HTTPException(502,"Invalid compressed PDF")
-        after=inspect_pdf(data_out)
-        if len(after.pages)!=len(source.pages):
-            raise HTTPException(422,"Compressed PDF lost pages; original preserved")
-        before_len=sum(len(p.extract_text() or "") for p in source.pages)
-        after_len=sum(len(p.extract_text() or "") for p in after.pages)
-        if before_len>100 and after_len<before_len*.90:
-            raise HTTPException(422,"Compression damaged searchable text; original preserved")
-        return data_out if len(data_out)<len(data) else data
+    writer=PdfWriter()
+    writer.append(source)
+    count=0
+    for page in writer.pages:
+        for img in page.images:
+            if count>=100:break
+            try:
+                picture=img.image
+                if picture.mode not in ("RGB","L") or picture.width*picture.height<50000:
+                    continue  # Preserve alpha/CMYK images and small assets.
+                picture=picture.convert("RGB")
+                if quality=="maximum":
+                    picture.thumbnail((max(100,int(picture.width*.65)),
+                                       max(100,int(picture.height*.65))),Image.Resampling.LANCZOS)
+                img.replace(picture,quality=72 if quality=="balanced" else 45)
+                count+=1
+            except (OSError,ValueError,TypeError):
+                continue  # PDF structure remains intact for unsupported images.
+    output=io.BytesIO()
+    writer.write(output)
+    data_out=output.getvalue()
+    after=inspect_pdf(data_out)
+    if len(after.pages)!=len(source.pages):
+        raise HTTPException(422,"Compression changed the page count")
+    for before,page in zip(source.pages,after.pages):
+        if (before.extract_text() or "").strip()!=(page.extract_text() or "").strip():
+            raise HTTPException(422,"Compression changed searchable PDF text")
+    return data_out if len(data_out)<len(data) else data
 
 @app.post("/v1/jobs")
 async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:UploadFile=File(...),
