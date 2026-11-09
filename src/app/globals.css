@@ -228,3 +228,14 @@ html{scroll-padding-top:90px}body{min-width:320px}.header-inner{position:relativ
 .fm-editor-selection input[type=text],.fm-editor-selection input[type=number],.fm-editor-selection input:not([type]){background:#081629;border:1px solid #698abc;border-radius:8px;min-height:40px;padding:7px;color:#fff;min-width:90px}
 .fm-editor-selection button{border:1px solid #829ad5;color:#fff;background:#264375;border-radius:10px;min-height:40px;padding:8px 12px;cursor:pointer}
 @media(max-width:700px){.fm-pdf-form-grid{grid-template-columns:1fr}.fm-editor-selection label{width:100%;justify-content:space-between}.fm-editor-selection input{max-width:60%}}
+
+/* PDF professional conversion: explicit cloud-processing choice and verification. */
+.fm-pro-engine-panel{display:flex;flex-direction:column;gap:11px;background:linear-gradient(125deg,#152747,#0f1e39);border:1px solid #7591c4;border-radius:14px;padding:17px;margin:18px 0;color:#e8f1ff}
+.fm-pro-engine-panel strong{font-size:15px;font-weight:800}
+.fm-pro-engine-panel label{display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.5;min-height:36px}
+.fm-pro-engine-panel input[type=radio]{accent-color:#a796ff;width:20px;height:20px;flex-shrink:0}
+.fm-pro-engine-panel p{color:#b9cfe9;font-size:12px;line-height:1.6;margin:0}
+.fm-pro-engine-panel select{margin-left:6px;min-height:42px;border-radius:9px;background:#0c1b34;color:#fff;border:1px solid #6485b4;padding:8px 12px}
+.fm-professional-challenge{min-height:70px;max-width:100%;overflow:hidden}
+.fm-professional-challenge small{display:block;margin-top:7px;color:#ffddad;font-size:12px}
+@media(max-width:700px){.fm-pro-engine-panel{padding:12px}.fm-pro-engine-panel label{align-items:flex-start}}
