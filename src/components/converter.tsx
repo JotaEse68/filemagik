@@ -20,11 +20,13 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [ocrProgress,setOcrProgress]=useState('');
  const [engineReady,setEngineReady]=useState(false),[professional,setProfessional]=useState(false);
  const [siteKey,setSiteKey]=useState(''),[challengeToken,setChallengeToken]=useState('');
+ const [challengeRequired,setChallengeRequired]=useState(false);
  const [challengeVersion,setChallengeVersion]=useState(0);
  const [compressionMode,setCompressionMode]=useState<'lossless'|'balanced'|'maximum'>('lossless');
  useEffect(()=>{if(!isProfessionalSlug(slug))return;let alive=true;
-  void fetch('/api/pdf-engine',{cache:'no-store'}).then(r=>r.json()).then((value:{available?:boolean;siteKey?:string})=>{
-   if(!alive)return;const ready=value.available===true&&typeof value.siteKey==='string';
+  void fetch('/api/pdf-engine',{cache:'no-store'}).then(r=>r.json()).then((value:{available?:boolean;siteKey?:string|null;challengeRequired?:boolean})=>{
+   if(!alive)return;const ready=value.available===true;
+   setChallengeRequired(ready&&value.challengeRequired===true);
    setEngineReady(ready);setProfessional(ready);setSiteKey(ready?value.siteKey||'':'');
   }).catch(()=>{if(alive){setEngineReady(false);setProfessional(false);}});
   return()=>{alive=false;};
@@ -39,7 +41,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  useEffect(()=>()=>{if(result)URL.revokeObjectURL(result.url)},[result]);
  const choose=(incoming:File[])=>{if(busy)return;try{validateFiles(slug,incoming);setResult(null);setError('');setFiles(incoming)}catch(e){setError(e instanceof Error?e.message:d.error);}};
  const run=async()=>{if(!files.length)return;setBusy(true);setError('');setOcrProgress('');try{
- if(professional&&engineReady&&!challengeToken)throw new Error('Completa la verificación para usar el motor profesional');
+ if(professional&&engineReady&&challengeRequired&&!challengeToken)throw new Error('Completa la verificación para usar el motor profesional');
  const output=professional&&engineReady&&isProfessionalSlug(slug)?await runProfessionalConversion(slug,files[0],challengeToken,slug==='compress-pdf-raster'?compressionMode:'lossless'):
  await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});setResult({name:output.name,url:URL.createObjectURL(output.blob)});
  }catch(e){setError(e instanceof Error?e.message:d.error)}finally{setBusy(false);if(professional){setChallengeToken('');setChallengeVersion(v=>v+1);}}};
@@ -98,7 +100,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  <label><input type="radio" name="filemagik-pdf-engine" checked={!professional} onChange={()=>setProfessional(false)}/> Procesamiento local (archivo permanece en el navegador)</label>
  {professional&&<><p>El archivo se transmite temporalmente al servidor para procesarlo. Máximo 3 MB por operación. No se conserva después de generar el resultado.</p>
  {slug==='compress-pdf-raster'&&<label>Compresión <select value={compressionMode} onChange={e=>setCompressionMode(e.target.value as 'lossless'|'balanced'|'maximum')}><option value="lossless">Sin pérdida</option><option value="balanced">Equilibrada</option><option value="maximum">Máxima reducción</option></select></label>}
- <ProfessionalPdfOption key={challengeVersion} siteKey={siteKey} ready={professional} onToken={setChallengeToken} onReset={()=>setChallengeToken('')}/></>}
+ {challengeRequired&&<ProfessionalPdfOption key={challengeVersion} siteKey={siteKey} ready={professional} onToken={setChallengeToken} onReset={()=>setChallengeToken('')}/>}</>}
  </div>}
  {files.length>0&&!result&&<div className="actions">{(tool.kind==='image'||slug==='images-to-pdf'||slug==='compress-pdf-raster')&&<label className="quality">{d.imageQuality}: {quality}% <input type="range" min="50" max="100" value={quality} onChange={e=>setQuality(Number(e.target.value))}/></label>}<button type="button" className="btn btn-primary" disabled={busy} onClick={run}>{busy?<LoaderCircle className="spin" size={18}/>:<ArrowRight size={18}/>} {busy?d.processing:d.convert}</button><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}>{d.reset}</button></div>}
  {result&&<div className="actions"><a className="btn btn-primary" href={result.url} download={result.name}><Download size={18}/>{d.download}</a><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}><RotateCcw size={17}/>{d.reset}</button></div>}
