@@ -69,3 +69,45 @@ test('Optimized PDF either provides a smaller file or explains original is bette
  },{timeout:12000}).not.toBe('pending');
  if(await alert.isVisible())expect(await alert.textContent()).toMatch(/already optimized|original is smaller|smaller|optimized/i);
 });
+
+
+test('Fill PDF forms visually without writing JSON',async({page})=>{
+ const original=await PDFDocument.create();
+ const p=original.addPage([595,842]);
+ const input=original.getForm().createTextField('ClientName');
+ input.addToPage(p,{x:45,y:700,width:230,height:30});
+ await page.goto('/es/fill-pdf-form');
+ await upload(page,Buffer.from(await original.save()));
+ await expect(page.locator('.fm-pdf-form-grid input[type=text]')).toBeVisible();
+ await page.locator('.fm-pdf-form-grid input[type=text]').fill('Client Example');
+ const output=await runAndDownload(page);
+ const doc=await PDFDocument.load(output.bytes);
+ expect(doc.getForm().getTextField('ClientName').getText()).toBe('Client Example');
+});
+test('Word table and paragraph convert into a structured PDF',async({page})=>{
+ const word=await import('docx');
+ const doc=new word.Document({sections:[{children:[
+  new word.Paragraph('Invoice title'),
+  new word.Table({rows:[new word.TableRow({children:[
+   new word.TableCell({children:[new word.Paragraph('Item')]}),
+   new word.TableCell({children:[new word.Paragraph('Total')]})
+  ]})]})
+ ]}]});
+ const bytes=await word.Packer.toBuffer(doc);
+ await page.goto('/es/word-to-layout-pdf');
+ await page.locator('input[type=file]').setInputFiles({name:'invoice.docx',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',buffer:bytes});
+ const output=await runAndDownload(page);
+ expect(output.name).toContain('-layout.pdf');
+ expect((await PDFDocument.load(output.bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
+});
+test('Editable Excel cells are converted to PDF with pagination',async({page})=>{
+ const book=new ExcelJS.Workbook();
+ const sheet=book.addWorksheet('Sales');
+ sheet.addRow(['Product','Price']);sheet.addRow(['Notebook',15]);
+ const bytes=Buffer.from(await book.xlsx.writeBuffer());
+ await page.goto('/es/xlsx-to-layout-pdf');
+ await page.locator('input[type=file]').setInputFiles({name:'sales.xlsx',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',buffer:bytes});
+ const output=await runAndDownload(page);
+ expect(output.name).toContain('-layout.pdf');
+ expect((await PDFDocument.load(output.bytes)).getPageCount()).toBeGreaterThanOrEqual(1);
+});
