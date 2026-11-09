@@ -4,7 +4,7 @@ const MIB=1024*1024;
 const heavy=new Set<ToolSlug>(['ocr-pdf','ocr-image','compress-pdf-raster','pdf-to-png','images-to-pdf','image-cleanup']);
 const imageBatch=new Set<ToolSlug>(['batch-images-to-webp']);
 const images=new Set<ToolSlug>(['jpg-to-png','jpg-to-webp','png-to-jpg','png-to-webp','webp-to-jpg','webp-to-png','resize-image','adjust-image']);
-const archives=new Set<ToolSlug>(['create-zip','extract-zip','rename-batch']);
+const archives=new Set<ToolSlug>(['create-zip','extract-zip','create-tar','extract-tar','rename-batch']);
 export type FileLimits={perFile:number;total:number;maxFiles:number};
 export function limitsFor(slug:ToolSlug):FileLimits{
  if(imageBatch.has(slug))return {perFile:40*MIB,total:120*MIB,maxFiles:30};
@@ -12,7 +12,7 @@ export function limitsFor(slug:ToolSlug):FileLimits{
  if(slug==='srt-to-vtt'||slug==='vtt-to-srt')return {perFile:5*MIB,total:5*MIB,maxFiles:1};
  if(slug==='create-gzip'||slug==='extract-gzip')return {perFile:60*MIB,total:60*MIB,maxFiles:1};
  if(slug==='image-to-bmp')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
- if(archives.has(slug))return {perFile:120*MIB,total:120*MIB,maxFiles:slug==='extract-zip'?1:100};
+ if(archives.has(slug))return {perFile:120*MIB,total:120*MIB,maxFiles:slug==='extract-zip'||slug==='extract-tar'?1:100};
  if(heavy.has(slug))return {perFile:60*MIB,total:120*MIB,maxFiles:slug==='images-to-pdf'?30:1};
  if(images.has(slug))return {perFile:100*MIB,total:100*MIB,maxFiles:1};
  if(slug==='merge-pdf')return {perFile:100*MIB,total:200*MIB,maxFiles:20};
