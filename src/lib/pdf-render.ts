@@ -32,15 +32,26 @@ export async function pdfToWordText(file:File):Promise<OutputFile>{
   const docx=await import('docx');const paragraphs=[];
   for(let i=1;i<=pdf.numPages;i++){
    const page=await pdf.getPage(i);const text=await page.getTextContent();
-   const lines:string[]=[];let current='';
+   // PDF text items do not guarantee reading order; reconstruct approximate rows by coordinates.
+   type Piece={x:number;y:number;width:number;value:string};
+   const lines:Array<{y:number;pieces:Piece[]}>= [];
    for(const item of text.items){
-    if(!('str' in item))continue;
-    current+=item.str;
-    if(item.hasEOL){lines.push(current);current='';}
-    else current+=' ';
+    if(!('str' in item)||!item.str.trim())continue;
+    const part:Piece={x:item.transform[4],y:item.transform[5],width:Math.abs(item.width||0),value:item.str};
+    const row=lines.find(line=>Math.abs(line.y-part.y)<3);
+    if(row)row.pieces.push(part);
+    else lines.push({y:part.y,pieces:[part]});
    }
-   if(current.trim())lines.push(current);
-   for(const line of lines){if(line.trim())paragraphs.push(new docx.Paragraph({text:line.trim()}));}
+   for(const line of lines.sort((a,b)=>b.y-a.y)){
+    const ordered=line.pieces.sort((a,b)=>a.x-b.x);
+    let sentence='',end=-Infinity;
+    for(const part of ordered){
+     if(end!==-Infinity&&part.x-end>12)sentence+='  ';
+     sentence+=part.value;
+     end=Math.max(end,part.x+part.width);
+    }
+    if(sentence.trim())paragraphs.push(new docx.Paragraph({text:sentence.trim()}));
+   }
    if(i<pdf.numPages)paragraphs.push(new docx.Paragraph({children:[new docx.PageBreak()]}));
    page.cleanup();
   }
