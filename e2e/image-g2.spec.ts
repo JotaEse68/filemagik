@@ -23,9 +23,9 @@ test('Image Cleanup keeps undo/redo history while zooming on desktop and mobile'
  expect(bounds?.width).toBeGreaterThan((initialBounds?.width||0)*1.3);
  expect(bounds).not.toBeNull();
  const box=bounds!;
- await page.mouse.move(box.x+box.width*.25,box.y+box.height*.25);
+ await page.mouse.move(box.x+box.width*.12,box.y+box.height*.12);
  await page.mouse.down();
- await page.mouse.move(box.x+box.width*.55,box.y+box.height*.55,{steps:6});
+ await page.mouse.move(box.x+box.width*.22,box.y+box.height*.22,{steps:6});
  await page.mouse.up();
  const apply=page.getByRole('button',{name:'Limpiar zona seleccionada'});
  await expect(apply).toBeEnabled();
