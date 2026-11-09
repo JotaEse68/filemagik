@@ -94,7 +94,7 @@ export async function POST(request:NextRequest){
   const failure=failures[answer.status]||{status:502,error:'Professional processing failed'};
   const headers:Record<string,string>={'Cache-Control':'no-store'};
   const retryAfter=answer.headers.get('retry-after');
-  if(failure.status===429&&retryAfter&&/^\\d{1,6}$/.test(retryAfter))
+  if(failure.status===429&&retryAfter&&/^[0-9]{1,6}$/.test(retryAfter))
    headers['Retry-After']=retryAfter;
   return NextResponse.json({error:failure.error},{status:failure.status,headers});
  }
