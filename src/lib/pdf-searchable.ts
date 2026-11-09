@@ -14,7 +14,7 @@ function wordsFromBlocks(blocks:unknown):Word[]{
  }
  return words;
 }
-export async function pdfToSearchable(file:File,language:OcrLanguage):Promise<OutputFile>{
+export async function pdfToSearchable(file:File,language:OcrLanguage,onProgress?:(done:number,total:number)=>void):Promise<OutputFile>{
  const pdfjs=await import('pdfjs-dist');
  const {PDFDocument,StandardFonts}=await import('pdf-lib');
  const {createWorker}=await import('tesseract.js');
@@ -22,15 +22,18 @@ export async function pdfToSearchable(file:File,language:OcrLanguage):Promise<Ou
  const original=await file.arrayBuffer();
  const source=await pdfjs.getDocument({data:new Uint8Array(original.slice(0))}).promise;
  const output=await PDFDocument.load(original);
- if(source.numPages>15)throw new Error('Searchable OCR is limited to 15 PDF pages');
+ if(source.numPages>30)throw new Error('Searchable OCR is limited to 30 PDF pages');
  if(source.numPages!==output.getPageCount())throw new Error('PDF page mismatch');
  const worker=await createWorker(language);
  const font=await output.embedFont(StandardFonts.Helvetica);
- let textCount=0;
+ let textCount=0,existingTextPages=0;
  try{
   for(let index=1;index<=source.numPages;index++){
    const page=await source.getPage(index);
    try{
+    const existing=await page.getTextContent();
+    // Already-searchable pages should not receive duplicate hidden text or extra OCR work.
+    if(existing.items.filter((it):it is Extract<typeof it,{str:string}>=>'str' in it).map(it=>it.str).join('').trim().length>80){existingTextPages++;continue;}
     // PDF.js correctly transforms display pixel coordinates back to PDF user space,
     // even when the source page has /Rotate or a non-zero CropBox origin.
     const rotation=(page.rotate%360+360)%360;
@@ -61,9 +64,9 @@ export async function pdfToSearchable(file:File,language:OcrLanguage):Promise<Ou
       try{target.drawText(printable,{x,y,size,font,rotate:degrees((360-rotation)%360),opacity:0,maxWidth:width});textCount++;}catch{/* Skip unsupported fragments without corrupting the original page. */}
      }
     }finally{canvas.width=0;canvas.height=0;}
-   }finally{page.cleanup();}
+   }finally{page.cleanup();onProgress?.(index,source.numPages);}
   }
-  if(textCount===0)throw new Error('OCR found no usable text. The PDF was not changed.');
+  if(textCount===0&&existingTextPages!==source.numPages)throw new Error('OCR found no usable text in the scanned pages. The original PDF was not changed.');
   const bytes=await output.save({useObjectStreams:true});
   return {name:file.name.replace(/\.pdf$/i,'')+'-searchable.pdf',blob:new Blob([new Uint8Array(bytes)],{type:'application/pdf'})};
  }finally{await source.cleanup();await worker.terminate();}
