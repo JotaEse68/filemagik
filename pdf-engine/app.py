@@ -174,9 +174,15 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
                                        {"stages":'[{"op":"optimize"}]'})
         else:
             if quality=="lossless":
-                inspect_pdf(data)
-                result=await call_gotenberg("/forms/pdf/optimize",data,filename)
-                if len(result)>len(data):result=data
+                original=inspect_pdf(data)
+                # Rewrite of any PDF byte stream invalidates digital signatures.
+                # Interactive forms and annotations are also left untouched.
+                if (b"/ByteRange" in data or original.get_fields()
+                    or any("/Annots" in page for page in original.pages)):
+                    result=data
+                else:
+                    result=await call_gotenberg("/forms/pdf/optimize",data,filename)
+                    if len(result)>len(data):result=data
             else:result=await asyncio.to_thread(lossy_optimize,data,quality)
       except HTTPException:raise
       except (ValueError,KeyError,PdfReadError):
