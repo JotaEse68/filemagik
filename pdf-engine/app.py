@@ -129,7 +129,11 @@ def _redaction_regions(data,regions_json):
     for region in regions:
         if not isinstance(region,dict):raise HTTPException(400,"Invalid redaction region")
         try:
-            page_index=int(region["page"])-1
+            # A fractional or coerced page number must never redirect a destructive
+            # redaction to a different page. JSON page indices are exact integers.
+            raw_page=region["page"]
+            if type(raw_page) is not int:raise ValueError("Invalid page index")
+            page_index=raw_page-1
             x=float(region["x"]);y=float(region["y"])
             width=float(region["width"]);height=float(region["height"])
         except (KeyError,TypeError,ValueError):
