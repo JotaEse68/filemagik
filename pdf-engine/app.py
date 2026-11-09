@@ -3,6 +3,7 @@ import io
 import hmac
 import asyncio
 import json
+import math
 from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, Query
 from fastapi.responses import Response
@@ -112,7 +113,7 @@ def _redaction_regions(data,regions_json):
             width=float(region["width"]);height=float(region["height"])
         except (KeyError,TypeError,ValueError):
             raise HTTPException(400,"Invalid redaction rectangle")
-        if page_index<0 or page_index>=len(source.pages) or min(x,y)<0 or width<.01 or height<.01 or x+width>1.001 or y+height>1.001:
+        if (not all(math.isfinite(n) for n in (x,y,width,height)) or page_index<0 or page_index>=len(source.pages) or min(x,y)<0 or width<.01 or height<.01 or x+width>1.001 or y+height>1.001):
             raise HTTPException(400,"Redaction rectangle out of bounds")
         page=source.pages[page_index]
         box=page.cropbox
