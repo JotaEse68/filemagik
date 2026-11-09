@@ -79,7 +79,7 @@ test('rejected professional redaction does not download a visually faked PDF',as
  let downloaded=false;
  page.on('download',()=>{downloaded=true;});
  await page.getByRole('button',{name:'Exportar PDF'}).click();
- await expect(page.getByRole('alert')).toContainText('quota exceeded');
+ await expect(page.locator('.fm-pdf-visual p.error[role="alert"]')).toContainText('quota exceeded');
  expect(requested).toBe(true);
  expect(downloaded).toBe(false);
 });
