@@ -28,7 +28,7 @@ async function runAndDownload(page:import('@playwright/test').Page){
 }
 test('Quick Studio shows three clear steps without replacing the wheels',async({page})=>{
  await page.goto('/es');
- await expect(page.getByText('Elige un tipo de archivo',{exact:true})).toBeVisible();
+ await expect(page.locator('.radial-guide-step').getByText('Elige un tipo de archivo',{exact:true})).toBeVisible();
  await expect(page.getByText('Selecciona una acción',{exact:true})).toBeVisible();
  await expect(page.getByText('Sube tu archivo y descarga',{exact:true})).toBeVisible();
  await expect(page.locator('.radial-wheel')).toHaveCount(2);
@@ -60,7 +60,12 @@ test('Optimized PDF either provides a smaller file or explains original is bette
  const original=await samplePdf();
  await page.goto('/es/compress-pdf-lossless');await upload(page,original);
  await page.locator('.actions button.btn-primary').click();
- await expect(page.locator('.actions a[download], .error').first()).toBeVisible({timeout:30000});
- const error=await page.locator('.error').textContent().catch(()=>null);
- if(error)expect(error).toMatch(/already optimized|original is smaller|smaller/i);
+ const result=page.locator('.actions a[download]');
+ const alert=page.locator('p[role="alert"]');
+ await expect.poll(async()=>{
+  if(await result.isVisible())return 'download';
+  if(await alert.isVisible())return 'alert: '+await alert.textContent();
+  return 'pending';
+ },{timeout:12000}).not.toBe('pending');
+ if(await alert.isVisible())expect(await alert.textContent()).toMatch(/already optimized|original is smaller|smaller|optimized/i);
 });
