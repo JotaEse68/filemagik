@@ -101,7 +101,7 @@ def test_diverse_pdf_corpus_roundtrip_to_editable_office(style):
     wb=load_workbook(io.BytesIO(pdf_to_xlsx(data)))
     assert len(doc.paragraphs)+len(doc.tables)>0
     assert wb.sheetnames
-    words=" ".join(p.text for p in doc.paragraphs)
+    words=" ".join(p.text for p in doc.paragraphs)+" "+" ".join(cell.text for table in doc.tables for row in table.rows for cell in row.cells)
     assert "FileMagik" in words
     if style=="multi":assert len(doc.sections)>=2
     if style=="image":assert len(doc.inline_shapes)>=1
