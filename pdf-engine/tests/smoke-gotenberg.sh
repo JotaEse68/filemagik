@@ -36,3 +36,9 @@ assert 'Text must remain selectable' in (PdfReader('/tmp/filemagik-optimized.pdf
 assert 'Text must remain selectable' not in (PdfReader('/tmp/filemagik-redacted.pdf').pages[0].extract_text() or '')
 print('Gotenberg 9 Office/PDF conversion and lossless optimization smoke tests passed')
 PY
+
+# Run the same private API + Gotenberg release gate used by Railway against
+# the disposable CI container. An invalid or visual-only redaction fails CI.
+GOTENBERG_URL=http://127.0.0.1:3000 \
+PDF_ENGINE_SECRET=ci-filemagik-integration-secret-long-enough-2026 \
+python predeploy_smoke.py
