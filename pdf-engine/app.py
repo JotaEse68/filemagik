@@ -30,7 +30,7 @@ async def reject_oversized_body(request, call_next):
         declared=request.headers.get("content-length")
         if declared:
             try: size=int(declared)
-            except ValueError:raise HTTPException(400,"Invalid content length")
+            except ValueError:return Response("Invalid content length",status_code=400)
             if size>MAX+131072:return Response("Upload exceeds configured limit",status_code=413)
     return await call_next(request)
 
