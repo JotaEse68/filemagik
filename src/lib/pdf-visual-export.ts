@@ -1,11 +1,12 @@
 import type {OutputFile} from './convert';
 
-export type VisualAnnotation={id:string;page:number;kind:'text'|'highlight'|'rectangle';x:number;y:number;width:number;height:number;text:string;color:string;fontSize:number};
+export type VisualAnnotation={id:string;page:number;kind:'text'|'highlight'|'rectangle'|'form-text'|'form-checkbox';x:number;y:number;width:number;height:number;text:string;color:string;fontSize:number};
 export async function exportVisualPdf(source:File,annotations:VisualAnnotation[]):Promise<OutputFile>{
  if(annotations.length>300)throw new Error('Maximum 300 annotations per document');
  const {PDFDocument,StandardFonts,rgb}=await import('pdf-lib');
  const pdf=await PDFDocument.load(await source.arrayBuffer());
  const font=await pdf.embedFont(StandardFonts.Helvetica);
+ const form=annotations.some(a=>a.kind==='form-text'||a.kind==='form-checkbox')?pdf.getForm():null;
  for(const item of annotations){
   if(!Number.isInteger(item.page)||item.page<1||item.page>pdf.getPageCount())throw new Error('Invalid annotation page');
   const nums=[item.x,item.y,item.width,item.height,item.fontSize];
@@ -17,7 +18,18 @@ export async function exportVisualPdf(source:File,annotations:VisualAnnotation[]
   const w=Math.max(1,Math.min(1,item.width)*width),h=Math.max(1,Math.min(1,item.height)*height);
   const hex=/^#[0-9a-f]{6}$/i.test(item.color)?item.color:'#ffce54';
   const color=rgb(parseInt(hex.slice(1,3),16)/255,parseInt(hex.slice(3,5),16)/255,parseInt(hex.slice(5,7),16)/255);
-  if(item.kind==='highlight')page.drawRectangle({x,y:y-h,width:w,height:h,color,opacity:.35});
+  if(item.kind==='form-text'||item.kind==='form-checkbox'){
+   if(!form)throw new Error('Form not available');
+   const safeName=(item.text.trim().replace(/[^a-zA-Z0-9_-]+/g,'_').slice(0,48)||'Field')+'_'+item.id.slice(0,8);
+   if(item.kind==='form-text'){
+    const field=form.createTextField(safeName);
+    field.addToPage(page,{x,y:y-h,width:w,height:h,borderColor:color,borderWidth:1});
+   }else{
+    const field=form.createCheckBox(safeName);
+    field.addToPage(page,{x,y:y-h,width:Math.min(w,h),height:Math.min(w,h),borderColor:color,borderWidth:1});
+   }
+  }
+  else if(item.kind==='highlight')page.drawRectangle({x,y:y-h,width:w,height:h,color,opacity:.35});
   else if(item.kind==='rectangle')page.drawRectangle({x,y:y-h,width:w,height:h,borderColor:color,borderWidth:2});
   else{
    const plain=item.text.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,'?').trim();
