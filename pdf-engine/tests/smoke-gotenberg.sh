@@ -22,6 +22,10 @@ curl --fail --silent --show-error -X POST http://127.0.0.1:3000/forms/libreoffic
   -F files=@/tmp/filemagik-integration.docx -o /tmp/filemagik-integration.pdf
 curl --fail --silent --show-error -X POST http://127.0.0.1:3000/forms/pdf/optimize \
   -F files=@/tmp/filemagik-original.pdf -o /tmp/filemagik-optimized.pdf
+curl --fail --silent --show-error -X POST http://127.0.0.1:3000/forms/pdf/redact \
+  -F files=@/tmp/filemagik-original.pdf \
+  -F 'regions=[{"page":1,"x":70,"y":640,"width":255,"height":22}]' \
+  -o /tmp/filemagik-redacted.pdf
 python - <<'PY'
 from pypdf import PdfReader
 for name in ('/tmp/filemagik-integration.pdf','/tmp/filemagik-optimized.pdf'):
@@ -29,5 +33,6 @@ for name in ('/tmp/filemagik-integration.pdf','/tmp/filemagik-optimized.pdf'):
     assert len(reader.pages)>=1,name
 assert 'FileMagik integration' in (PdfReader('/tmp/filemagik-integration.pdf').pages[0].extract_text() or '')
 assert 'Text must remain selectable' in (PdfReader('/tmp/filemagik-optimized.pdf').pages[0].extract_text() or '')
+assert 'Text must remain selectable' not in (PdfReader('/tmp/filemagik-redacted.pdf').pages[0].extract_text() or '')
 print('Gotenberg 9 Office/PDF conversion and lossless optimization smoke tests passed')
 PY
