@@ -4,7 +4,7 @@ The Railway project is blocked until the workspace can provision more services. 
 
 ## Implementation
 - Existing browser editor, OCR, PDF operations and form tools remain local and operational.
-- `pdf-engine/`: authenticated PDF-to-DOCX/XLSX editable converters, Gotenberg 9 for Word/Excel/PowerPoint-to-PDF and lossless optimization, Ghostscript guarded lossy presets.
+- `pdf-engine/`: authenticated PDF-to-DOCX/XLSX editable converters, Gotenberg 9 for Word/Excel/PowerPoint-to-PDF and lossless optimization, pypdf/Pillow guarded image recompression.
 - `/api/pdf-engine` is a server-only Vercel proxy with request limits, Turnstile verification and no persistent storage. If the env flag is off or secrets missing, the browser keeps current local processing.
 - The professional branch is purposefully fail-closed. Uploads should never be silently sent to a server without the user choosing professional mode.
 
@@ -16,7 +16,7 @@ The Railway project is blocked until the workspace can provision more services. 
 5. Turnstile domain allowlist must contain `filemagik.vercel.app` or final custom domain. A successful challenge token must have action `filemagik_pdf` and matching hostname.
 6. Test 3 MiB limit on Vercel route and 12 MiB limit on direct Railway endpoint. Larger files require a future secure direct-upload flow, not unbounded serverless forwarding.
 7. Compare 10+ source DOCX/XLSX/PPTX and PDFs from different origins with screenshots, extraction, page counts and manual review.
-8. Verify cost ceilings and anti-abuse behavior before switching professional mode on for everyone. A captcha alone is NOT a per-user quota.
+8. Verify cost ceilings and anti-abuse behavior before switching professional mode on for everyone. A captcha alone is NOT a per-user quota. Enable cloud processing only with adequate cost controls.
 9. Verify the original local PDF converters work when the professional service is offline or disabled.
 
 ## Integrity and limitations
