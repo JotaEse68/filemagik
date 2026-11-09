@@ -25,38 +25,53 @@ export async function pdfToPngZip(file:File):Promise<OutputFile>{
 }
 export async function pdfToWordText(file:File):Promise<OutputFile>{
  const pdfjs=await import('pdfjs-dist');
+ const docx=await import('docx');
+ const {makePositionedRows,detectColumns,mapToCells}=await import('./pdf-to-excel');
  pdfjs.GlobalWorkerOptions.workerSrc=pdfWorker();
  const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
  try{
   if(pdf.numPages>120)throw new Error('Maximum 120 pages');
-  const docx=await import('docx');const paragraphs=[];
-  for(let i=1;i<=pdf.numPages;i++){
-   const page=await pdf.getPage(i);const text=await page.getTextContent();
-   // PDF text items do not guarantee reading order; reconstruct approximate rows by coordinates.
-   type Piece={x:number;y:number;width:number;value:string};
-   const lines:Array<{y:number;pieces:Piece[]}>= [];
-   for(const item of text.items){
-    if(!('str' in item)||!item.str.trim())continue;
-    const part:Piece={x:item.transform[4],y:item.transform[5],width:Math.abs(item.width||0),value:item.str};
-    const row=lines.find(line=>Math.abs(line.y-part.y)<3);
-    if(row)row.pieces.push(part);
-    else lines.push({y:part.y,pieces:[part]});
-   }
-   for(const line of lines.sort((a,b)=>b.y-a.y)){
-    const ordered=line.pieces.sort((a,b)=>a.x-b.x);
-    let sentence='',end=-Infinity;
-    for(const part of ordered){
-     if(end!==-Infinity&&part.x-end>12)sentence+='  ';
-     sentence+=part.value;
-     end=Math.max(end,part.x+part.width);
+  const paragraphs:Array<InstanceType<typeof docx.Paragraph>|InstanceType<typeof docx.Table>>=[];
+  for(let number=1;number<=pdf.numPages;number++){
+   const page=await pdf.getPage(number);
+   try{
+    const text=await page.getTextContent();
+    const fragments=text.items.filter((item):item is Extract<typeof item,{str:string}>=>'str' in item).filter(it=>it.str.trim()).map(it=>({x:it.transform[4],y:it.transform[5],width:it.width,height:it.height,text:it.str}));
+    const rows=makePositionedRows(fragments),columns=detectColumns(rows);
+    let index=0;
+    while(index<rows.length){
+     const row=rows[index];
+     const values=mapToCells(row,columns);
+     const filled=values.filter(Boolean).length;
+     // Consecutive multi-column rows become an actual editable Word table.
+     if(columns.length>=2&&filled>=2){
+      const body:Array<string[]>=[];
+      while(index<rows.length){
+       const cells=mapToCells(rows[index],columns);
+       if(cells.filter(Boolean).length<2)break;
+       body.push(cells);index++;
+      }
+      if(body.length>=2){
+       paragraphs.push(new docx.Table({
+        width:{size:100,type:docx.WidthType.PERCENTAGE},
+        rows:body.map(cells=>new docx.TableRow({children:cells.map(value=>new docx.TableCell({children:[new docx.Paragraph({text:value})],margins:{top:65,bottom:65,left:90,right:90}}))}))
+       }));
+      }else for(const cells of body)paragraphs.push(new docx.Paragraph(cells.filter(Boolean).join('    ')));
+      continue;
+     }
+     const str=values.filter(Boolean).join('    ')||row.cells.map(f=>f.text).join(' ');
+     if(str.trim()){
+      const maxHeight=Math.max(...row.cells.map(f=>f.height||12));
+      const heading=maxHeight>17;
+      paragraphs.push(new docx.Paragraph({text:str.trim(),heading:heading?docx.HeadingLevel.HEADING_2:undefined,spacing:{before:heading?150:0,after:90}}));
+     }
+     index++;
     }
-    if(sentence.trim())paragraphs.push(new docx.Paragraph({text:sentence.trim()}));
-   }
-   if(i<pdf.numPages)paragraphs.push(new docx.Paragraph({children:[new docx.PageBreak()]}));
-   page.cleanup();
+    if(number<pdf.numPages)paragraphs.push(new docx.Paragraph({children:[new docx.PageBreak()]}));
+   }finally{page.cleanup();}
   }
   const doc=new docx.Document({sections:[{children:paragraphs.length?paragraphs:[new docx.Paragraph('')]}]});
-  return {name:file.name.replace(/\.pdf$/i,'')+'-text.docx',blob:await docx.Packer.toBlob(doc)};
+  return {name:file.name.replace(/\\.pdf$/i,'')+'-editable.docx',blob:await docx.Packer.toBlob(doc)};
  }finally{await pdf.cleanup();}
 }
 export async function wordToBasicPdf(file:File):Promise<OutputFile>{
