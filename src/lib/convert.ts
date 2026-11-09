@@ -5,6 +5,9 @@ export type OutputFile={name:string;blob:Blob};
 export type ConversionOptions={formValues?:string;subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;annotationPages?:string;annotationPlacement?:'top-left'|'bottom-left'|'top-right';cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra';pdfPassword?:string;onProgress?:(done:number,total:number)=>void};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  validateFiles(slug,files);
+ if(slug==='pptx-to-pdf-layout'){
+  const {pptxToLayoutPdf}=await import('./pptx-pdf');return pptxToLayoutPdf(files[0]);
+ }
  if(slug==='word-to-layout-pdf'||slug==='xlsx-to-layout-pdf'){
   const {wordToLayoutPdf,excelToLayoutPdf}=await import('./office-pdf');return slug==='word-to-layout-pdf'?wordToLayoutPdf(files[0]):excelToLayoutPdf(files[0]);
  }
