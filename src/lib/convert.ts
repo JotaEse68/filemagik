@@ -2,7 +2,7 @@ import {csvToJson,jsonToCsv} from './csv';
 import type {ToolSlug} from '@/config/site';
 import {validateFiles} from './file-limits';
 export type OutputFile={name:string;blob:Blob};
-export type ConversionOptions={formValues?:string;subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;annotationPages?:string;annotationPlacement?:'top-left'|'bottom-left'|'top-right';cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra';pdfPassword?:string};
+export type ConversionOptions={formValues?:string;subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;annotationPages?:string;annotationPlacement?:'top-left'|'bottom-left'|'top-right';cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra';pdfPassword?:string;onProgress?:(done:number,total:number)=>void};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  validateFiles(slug,files);
  if(slug==='word-to-layout-pdf'||slug==='xlsx-to-layout-pdf'){
@@ -12,7 +12,7 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,option
   const {pdfToWordVisual}=await import('./pdf-word-visual');return pdfToWordVisual(files[0]);
  }
  if(slug==='ocr-pdf-searchable'){
-  const {pdfToSearchable}=await import('./pdf-searchable');return pdfToSearchable(files[0],options.ocrLang??'eng');
+  const {pdfToSearchable}=await import('./pdf-searchable');return pdfToSearchable(files[0],options.ocrLang??'eng',options.onProgress);
  }
  if(slug==='compress-pdf-lossless'){
   const {compactPdfWithoutRaster}=await import('./pdf-lossless');return compactPdfWithoutRaster(files[0]);
