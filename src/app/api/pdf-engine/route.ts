@@ -22,6 +22,9 @@ function configured(){
  return process.env.FILEMAGIK_PDF_ENGINE_PUBLIC_ENABLED==='true'&&
   /^https:\/\/[^\s]+$/i.test(base)&&secret.length>=32&&challenge.length>=16&&siteKey.length>5;
 }
+export async function GET(){
+ return NextResponse.json({available:configured(),siteKey:configured()?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null}, {headers:{'Cache-Control':'no-store'}});
+}
 export async function POST(request:NextRequest){
  const operation=request.nextUrl.searchParams.get('operation')||'';
  const quality=request.nextUrl.searchParams.get('quality')||'lossless';
