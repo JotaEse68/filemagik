@@ -2,9 +2,21 @@ import {csvToJson,jsonToCsv} from './csv';
 import type {ToolSlug} from '@/config/site';
 import {validateFiles} from './file-limits';
 export type OutputFile={name:string;blob:Blob};
-export type ConversionOptions={formValues?:string;subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra'};
+export type ConversionOptions={formValues?:string;subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra';pdfPassword?:string};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  validateFiles(slug,files);
+ if(slug==='ocr-pdf-searchable'){
+  const {pdfToSearchable}=await import('./pdf-searchable');return pdfToSearchable(files[0],options.ocrLang??'eng');
+ }
+ if(slug==='compress-pdf-lossless'){
+  const {compactPdfWithoutRaster}=await import('./pdf-lossless');return compactPdfWithoutRaster(files[0]);
+ }
+ if(slug==='protect-pdf'||slug==='unlock-pdf'){
+  const {securePdf}=await import('./pdf-security');return securePdf(files[0],options.pdfPassword||'',slug==='protect-pdf'?'protect':'unlock');
+ }
+ if(slug==='pdf-to-excel-text'){
+  const {pdfToExcelBestEffort}=await import('./pdf-to-excel');return pdfToExcelBestEffort(files[0]);
+ }
  if(slug==='image-to-bmp'){
   const {convertImageToBmp}=await import('./bmp-encode');return convertImageToBmp(files[0]);
  }
