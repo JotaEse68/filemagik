@@ -59,19 +59,19 @@ def _excel_value(value):
     text=(value or "").strip()
     if not text:return ""
     compact=text.replace(" ","")
-    if re.fullmatch(r"-?\\d+",compact):
+    if re.fullmatch(r"-?\d+",compact):
         # Postal codes, product identifiers and numbers with leading zeros are strings.
         if len(compact.lstrip("-"))>1 and compact.lstrip("-").startswith("0"):
             return text
         try:return int(compact)
         except ValueError:return text
-    if re.fullmatch(r"-?\\d+\\.\\d+",compact):
+    if re.fullmatch(r"-?\d+\.\d+",compact):
         try:return float(compact)
         except ValueError:return text
-    if re.fullmatch(r"-?\\d{1,3}(?:\\.\\d{3})+,\\d{1,2}",compact):
+    if re.fullmatch(r"-?\d{1,3}(?:\.\d{3})+,\d{1,2}",compact):
         try:return float(compact.replace(".","").replace(",","."))
         except ValueError:return text
-    if re.fullmatch(r"-?\\d{1,3}(?:,\\d{3})+\\.\\d{1,2}",compact):
+    if re.fullmatch(r"-?\d{1,3}(?:,\d{3})+\.\d{1,2}",compact):
         try:return float(compact.replace(",",""))
         except ValueError:return text
     return text
