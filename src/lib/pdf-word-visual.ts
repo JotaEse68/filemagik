@@ -12,7 +12,7 @@ export async function pdfToWordVisual(file:File):Promise<OutputFile>{
  const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
  try{
   if(pdf.numPages<1||pdf.numPages>30)throw new Error('Visual Word export supports up to 30 pages');
-  const sections:ConstructorParameters<typeof docx.Document>[0]['sections']=[];
+  const sections: Array<NonNullable<ConstructorParameters<typeof docx.Document>[0]['sections']>[number]> = [];
   for(let number=1;number<=pdf.numPages;number++){
    const page=await pdf.getPage(number);
    const view=page.getViewport({scale:1.5});
@@ -31,7 +31,7 @@ export async function pdfToWordVisual(file:File):Promise<OutputFile>{
     ]});
    }finally{canvas.width=0;canvas.height=0;page.cleanup();}
   }
-  const document=new docx.Document({sections});
-  return {name:file.name.replace(/\.pdf$/i,'')+'-visual.docx',blob:await docx.Packer.toBlob(document)};
+  const wordDoc=new docx.Document({sections});
+  return {name:file.name.replace(/\.pdf$/i,'')+'-visual.docx',blob:await docx.Packer.toBlob(wordDoc)};
  }finally{await pdf.cleanup();}
 }
