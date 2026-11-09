@@ -76,7 +76,7 @@ export default function ImageCleanup({locale}:{locale:Locale}){
    <button className="btn btn-primary" disabled={!loaded||showOriginal} onClick={download}><Download size={17}/>{copy.download.replace('PNG',format==='jpeg'?'JPG':format.toUpperCase())}</button>
   </div>
   <p>{copy.select}</p>
-  <div className="image-cleanup-stage" style={zoom>100?{justifyContent:'flex-start'}:undefined}><canvas ref={canvas} className={loaded?'image-cleanup-canvas':'image-cleanup-empty'} style={{display:loaded?'block':'none',maxWidth:zoom===100?'100%':'none',width:zoom+'%'}} onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish}/>{!loaded&&<span>{copy.load}</span>}</div>
+  <div className="image-cleanup-stage" style={zoom>100?{justifyContent:'flex-start'}:undefined}><canvas ref={canvas} className={loaded?'image-cleanup-canvas':'image-cleanup-empty'} style={{display:loaded?'block':'none',maxWidth:zoom===100?'100%':'none',width:zoom+'%',flexShrink:0}} onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish}/>{!loaded&&<span>{copy.load}</span>}</div>
   {error&&<p role="alert" className="error">{error}</p>}
   <p className="image-cleanup-note">{copy.tip} {copy.authorized}</p>
  </section>;
