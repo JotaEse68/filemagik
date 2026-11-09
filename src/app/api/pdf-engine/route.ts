@@ -1,4 +1,5 @@
 import {NextRequest,NextResponse} from 'next/server';
+import {createHmac} from 'node:crypto';
 
 export const runtime='nodejs';
 const supported:Record<string,readonly string[]>={
@@ -34,6 +35,7 @@ export async function POST(request:NextRequest){
  const origin=request.headers.get('origin');
  if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:'Origin not allowed'},{status:403});
  const length=Number(request.headers.get('content-length')||0);
+ if(!Number.isSafeInteger(length)||length<0)return NextResponse.json({error:'Invalid request size'},{status:400});
  if(length>maxBytes+4096)return NextResponse.json({error:'Maximum 3 MB upload'},{status:413});
  let data:FormData;
  try{data=await request.formData();}catch{return NextResponse.json({error:'Invalid upload'},{status:400});}
@@ -61,10 +63,13 @@ export async function POST(request:NextRequest){
   payload.set('regions',regions);
  }
  const base=process.env.FILEMAGIK_PDF_ENGINE_URL!.replace(/\/+$/,'');
+ // Only the trusted Vercel server can derive the privacy-preserving quota identity.
+ const ip=(request.headers.get('x-forwarded-for')||request.headers.get('x-real-ip')||'unknown').split(',')[0].trim().slice(0,90);
+ const visitor=createHmac('sha256',process.env.FILEMAGIK_PDF_ENGINE_SECRET!).update(ip||'unknown').digest('hex');
  let answer:Response;
  try{
   answer=await fetch(base+'/v1/jobs?operation='+encodeURIComponent(operation)+'&quality='+encodeURIComponent(quality),
-   {method:'POST',headers:{Authorization:'Bearer '+process.env.FILEMAGIK_PDF_ENGINE_SECRET!},
+   {method:'POST',headers:{Authorization:'Bearer '+process.env.FILEMAGIK_PDF_ENGINE_SECRET!,'X-Filemagik-Visitor':visitor},
     body:payload,cache:'no-store',signal:AbortSignal.timeout(85000)});
  }catch{return NextResponse.json({error:'Advanced conversion engine unavailable'},{status:503});}
  if(!answer.ok){
