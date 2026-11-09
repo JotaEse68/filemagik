@@ -28,6 +28,16 @@ def test_redaction_regions_convert_normalized_coordinates():
     assert region["width"]>20
     assert region["height"]>10
 
+@pytest.mark.parametrize("bad_page",[1.5,"1",True,0,-1])
+def test_redaction_rejects_coerced_or_out_of_range_page_indices(bad_page):
+    import json
+    from fastapi import HTTPException
+    with pytest.raises(HTTPException) as rejected:
+        _redaction_regions(make_pdf(),json.dumps([
+            {"page":bad_page,"x":0.1,"y":0.1,"width":0.2,"height":0.1}
+        ]))
+    assert rejected.value.status_code==400
+
 def test_health_endpoint_is_public_only_for_status():
     result=client.get("/healthz")
     assert result.status_code==200
