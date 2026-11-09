@@ -8,7 +8,7 @@ import JSZip from 'jszip';
 
 const source=readFileSync('src/lib/zip-tools.ts','utf8')
  .replace(/import type .*?;\s*/g,'')
- .replace(/await import\('jszip'\)/g,'Promise.resolve({default:ZipLibrary})')
+ .replace(/await import\('jszip'\)/g,'await Promise.resolve({default:ZipLibrary})')
  .replace(/export async function /g,'async function ');
 const code=ts.transpileModule(source,{compilerOptions:{
  module:ts.ModuleKind.None,target:ts.ScriptTarget.ES2022,
