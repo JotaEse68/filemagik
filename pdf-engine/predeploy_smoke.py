@@ -71,9 +71,27 @@ async def verify():
                 files={"file":("predeploy.pdf",office.content,"application/pdf")})
             if blocked.status_code!=401:
                 raise RuntimeError("Missing bearer token was not denied")
+            # A real protected redaction must remove original searchable text,
+            # not merely paint an overlay over it. Use a separate test visitor
+            # because the main smoke identity already consumes its hourly budget.
+            redact_headers={**headers,"X-Filemagik-Visitor":"f"*64}
+            from json import dumps
+            redaction=client.post("/v1/jobs?operation=redact-pdf",headers=redact_headers,
+                files={"file":("predeploy.pdf",office.content,"application/pdf")},
+                data={"regions":dumps([{"page":1,"x":0.01,"y":0.01,"width":0.98,"height":0.98}])})
+            if redaction.status_code!=200 or not redaction.content.startswith(b"%PDF-"):
+                raise RuntimeError("Authenticated PDF redaction failed: "+str(redaction.status_code))
+            before=PdfReader(io.BytesIO(office.content))
+            after=PdfReader(io.BytesIO(redaction.content))
+            if len(before.pages)!=len(after.pages):
+                raise RuntimeError("Redaction changed document page count")
+            original_text=" ".join(page.extract_text() or "" for page in before.pages)
+            redacted_text=after.pages[0].extract_text() or ""
+            if "FileMagik integration" not in original_text or "FileMagik integration" in redacted_text:
+                raise RuntimeError("Redaction did not irreversibly remove searchable source text")
         finally:
             if original_path is None:os.environ.pop("PDF_ENGINE_QUOTA_DB",None)
             else:os.environ["PDF_ENGINE_QUOTA_DB"]=original_path
-    print("PASS: private Gotenberg, authenticated FastAPI Office/PDF, DOCX/XLSX and denial checks")
+    print("PASS: private Gotenberg, authenticated FastAPI Office/PDF, DOCX/XLSX, irreversible redaction and denial checks")
 if __name__=="__main__":
     asyncio.run(verify())
