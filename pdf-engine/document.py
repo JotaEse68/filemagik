@@ -5,6 +5,7 @@ from docx.shared import Inches, Pt
 from openpyxl import Workbook
 from openpyxl.styles import Alignment
 from pypdf import PdfReader
+from PIL import Image
 
 def _validate(data):
     reader=PdfReader(io.BytesIO(data),strict=False)
@@ -17,7 +18,56 @@ def _tables(page):
     for t in page.find_tables(table_settings={"vertical_strategy":"lines","horizontal_strategy":"lines"}):
         rows=t.extract()
         if rows: out.append((t.bbox,rows))
+    if not out:
+        try:
+            for t in page.find_tables(table_settings={"vertical_strategy":"text","horizontal_strategy":"text",
+                    "min_words_vertical":3,"min_words_horizontal":2,"intersection_tolerance":4}):
+                rows=t.extract()
+                if len(rows)>=3 and len(rows[0])>=2:
+                    out.append((t.bbox,rows))
+        except (TypeError,ValueError):
+            pass
     return out
+
+def _inline_images(reader,index):
+    extracted=0
+    for img in reader.pages[index].images:
+        if extracted>=12:break
+        try:
+            bitmap=Image.open(io.BytesIO(img.data))
+            if bitmap.width*bitmap.height>16000000:continue
+            buff=io.BytesIO()
+            bitmap.convert("RGB").save(buff,"PNG")
+            buff.seek(0);extracted+=1
+            yield buff
+        except (OSError,ValueError):
+            continue
+
+def _borderless_rows(page):
+    words=page.extract_words(x_tolerance=2,y_tolerance=3)
+    bands=[]
+    for w in sorted(words,key=lambda w:(w["top"],w["x0"])):
+        row=next((r for r in bands if abs(r[0]-w["top"])<=3),None)
+        if row is None:bands.append([w["top"],[w]])
+        else:row[1].append(w)
+    # Determine anchors from repeatable positions across at least two rows.
+    anchors=[]
+    for _,row in bands:
+        for w in row:
+            nearest=next((a for a in anchors if abs(a[0]-w["x0"])<18),None)
+            if nearest is None:anchors.append([w["x0"],1])
+            else:nearest[1]+=1
+    chosen=sorted((a[0] for a in anchors if a[1]>=2))[:24]
+    if len(chosen)<2:
+        return [[text] for _,text in _lines(page,[])]
+    result=[]
+    for _,row in bands:
+        cells=[""]*len(chosen)
+        for w in sorted(row,key=lambda w:w["x0"]):
+            idx=min(range(len(chosen)),key=lambda i:abs(chosen[i]-w["x0"]))
+            cells[idx]+=(" " if cells[idx] else "")+w["text"]
+        result.append(cells)
+    return result
 
 def _lines(page,tables):
     bands=[]
@@ -44,6 +94,9 @@ def pdf_to_docx(data):
                     table=out.add_table(rows=len(rows),cols=cols);table.style="Table Grid"
                     for i,row in enumerate(rows):
                         for j,text in enumerate(row[:cols]): table.cell(i,j).text=text or ""
+            for image in _inline_images(reader,index):
+                try:out.add_picture(image,width=Inches(5.8))
+                except (ValueError,OSError):continue
     buffer=io.BytesIO();out.save(buffer);return buffer.getvalue()
 
 def pdf_to_xlsx(data):
@@ -60,7 +113,9 @@ def pdf_to_xlsx(data):
                         line+=1
                     line+=2
             else:
-                for _,text in _lines(page,[]):sheet.cell(line,1,text);line+=1
+                for row in _borderless_rows(page):
+                    for col,text in enumerate(row,1):sheet.cell(line,col,text)
+                    line+=1
             for row in sheet:
                 for cell in row:cell.alignment=Alignment(wrap_text=True,vertical="top")
             for col in sheet.columns:sheet.column_dimensions[col[0].column_letter].width=24
