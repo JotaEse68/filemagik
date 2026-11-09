@@ -24,6 +24,7 @@ jobs:
       - run: pip install -r requirements.txt pytest reportlab
       - run: python -m compileall -q app.py document.py
       - run: python -m pytest -q tests
+      - run: bash tests/smoke-gotenberg.sh
   docker-build:
     runs-on: ubuntu-latest
     steps:
