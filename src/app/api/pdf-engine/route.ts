@@ -81,8 +81,22 @@ export async function POST(request:NextRequest){
     body:payload,cache:'no-store',signal:AbortSignal.timeout(85000)});
  }catch{return NextResponse.json({error:'Advanced conversion engine unavailable'},{status:503});}
  if(!answer.ok){
-  return NextResponse.json({error:answer.status===422?'Document cannot be converted reliably':'Professional processing failed'},
-    {status:answer.status===413?413:answer.status===422?422:502});
+  // Preserve actionable refusal statuses instead of hiding quota and availability
+  // errors as generic 502 responses. Never expose upstream response bodies.
+  const failures:Record<number,{status:number;error:string}>={
+   401:{status:503,error:'Professional engine authentication unavailable'},
+   403:{status:503,error:'Professional processing configuration unavailable'},
+   413:{status:413,error:'File exceeds professional processing limits'},
+   422:{status:422,error:'Document cannot be converted reliably'},
+   429:{status:429,error:'Professional processing quota exceeded. Try again later'},
+   503:{status:503,error:'Advanced conversion engine unavailable'},
+  };
+  const failure=failures[answer.status]||{status:502,error:'Professional processing failed'};
+  const headers:Record<string,string>={'Cache-Control':'no-store'};
+  const retryAfter=answer.headers.get('retry-after');
+  if(failure.status===429&&retryAfter&&/^\\d{1,6}$/.test(retryAfter))
+   headers['Retry-After']=retryAfter;
+  return NextResponse.json({error:failure.error},{status:failure.status,headers});
  }
  const bytes=await answer.arrayBuffer();
  if(bytes.byteLength===0||bytes.byteLength>maxResponseBytes)
