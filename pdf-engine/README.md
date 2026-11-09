@@ -2,7 +2,7 @@
 
 Dedicated Railway worker for layout-aware PDF -> editable DOCX/XLSX, professional Office -> PDF, and native PDF optimization. This service is NOT a public unlimited conversion API.
 
-Service: Python/FastAPI; Gotenberg 9 required for Office rendering and lossless optimization. Image quality reduction is processed with Ghostscript with explicit preservation checks.
+Service: Python/FastAPI; Gotenberg 9 required for Office rendering and lossless optimization. Image quality reduction uses native pypdf + Pillow image-stream replacement, with integrity checks; no Ghostscript or AGPL dependency.
 
 ## Security
 Every POST requires Authorization: Bearer <PDF_ENGINE_SECRET>. Set the same secret only in the Vercel server environment, never NEXT_PUBLIC_*. Railway deployment should not be exposed unless using a secured public domain, and all uploads are processed in memory or within short-lived temporary files deleted on completion.
