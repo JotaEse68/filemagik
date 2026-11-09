@@ -114,6 +114,7 @@ def _lines(page,tables):
 def pdf_to_docx(data):
     reader=_validate(data)
     out=Document()
+    total_text=0
     with pdfplumber.open(io.BytesIO(data)) as pdf:
         for index,page in enumerate(pdf.pages):
             section=out.sections[0] if index==0 else out.add_section(WD_SECTION.NEW_PAGE)
@@ -126,21 +127,26 @@ def pdf_to_docx(data):
             items += [(y,"text",text) for y,text in _lines(page,tables)]
             items += [(top,"image",(image,width)) for top,image,width in _inline_images(reader,index,page)]
             for _,kind,value in sorted(items,key=lambda x:x[0]):
-                if kind=="text":out.add_paragraph(value)
+                if kind=="text":
+                    total_text+=len(value.strip())
+                    out.add_paragraph(value)
                 elif kind=="image":
                     image,width=value
                     try:out.add_picture(image,width=Inches(width))
                     except (ValueError,OSError):continue
                 else:
-                    rows=value;cols=min(24,max(len(row) for row in rows))
+                    rows=value;total_text+=sum(len(v or "") for row in rows for v in row)
+                    cols=min(24,max(len(row) for row in rows))
                     table=out.add_table(rows=len(rows),cols=cols);table.style="Table Grid"
                     for i,row in enumerate(rows):
                         for j,text in enumerate(row[:cols]): table.cell(i,j).text=text or ""
+    if total_text==0:raise ValueError("Scanned PDF requires OCR before editable Word conversion")
     buffer=io.BytesIO();out.save(buffer);return buffer.getvalue()
 
 def pdf_to_xlsx(data):
     _validate(data)
     book=Workbook();book.remove(book.active)
+    extracted=0
     with pdfplumber.open(io.BytesIO(data)) as pdf:
         for index,page in enumerate(pdf.pages):
             sheet=book.create_sheet(f"Page {index+1}")
@@ -148,14 +154,19 @@ def pdf_to_xlsx(data):
             if tables:
                 for _,rows in tables:
                     for row in rows:
-                        for col,value in enumerate(row[:80],1):sheet.cell(line,col,_excel_value(value))
+                        for col,value in enumerate(row[:80],1):
+                            sheet.cell(line,col,_excel_value(value))
+                            extracted+=1 if value and str(value).strip() else 0
                         line+=1
                     line+=2
             else:
                 for row in _borderless_rows(page):
-                    for col,text in enumerate(row,1):sheet.cell(line,col,_excel_value(text))
+                    for col,text in enumerate(row,1):
+                        sheet.cell(line,col,_excel_value(text))
+                        extracted+=1 if text and str(text).strip() else 0
                     line+=1
             for row in sheet:
                 for cell in row:cell.alignment=Alignment(wrap_text=True,vertical="top")
             for col in sheet.columns:sheet.column_dimensions[col[0].column_letter].width=24
+    if extracted==0:raise ValueError("Scanned PDF requires OCR before editable Excel conversion")
     buffer=io.BytesIO();book.save(buffer);return buffer.getvalue()
