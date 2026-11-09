@@ -1,7 +1,7 @@
 import type {OutputFile} from './convert';
 import {parsePageSelection,partitionPages,remainingPages,parsePageOrder} from './pdf-pages';
 export type PdfAction='split-pdf-by-count'|'extract-pdf-pages'|'delete-pdf-pages'|'watermark-pdf'|'reorder-pdf-pages'|'sign-pdf-visual'|'crop-pdf'|'annotate-pdf-text';
-export type PdfOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;signature?:string;cropPercent?:number;annotationText?:string};
+export type PdfOptions={pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;signature?:string;cropPercent?:number;annotationText?:string;annotationPages?:string;annotationPlacement?:'top-left'|'bottom-left'|'top-right'};
 function pdfBlob(bytes:Uint8Array<ArrayBufferLike>):Blob{return new Blob([new Uint8Array(bytes)],{type:'application/pdf'});}
 export async function pdfAction(action:PdfAction,source:File,options:PdfOptions={}):Promise<OutputFile>{
  const {PDFDocument,degrees,rgb,StandardFonts}=await import('pdf-lib');
@@ -23,12 +23,17 @@ export async function pdfAction(action:PdfAction,source:File,options:PdfOptions=
   if(!text||text.length>120)throw new Error('Annotation must have 1–120 characters');
   const font=await pdf.embedFont(StandardFonts.Helvetica);
   const printable=text.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,'?');
-  for(const page of pdf.getPages()){
-   const box=page.getCropBox(),x=box.x+22,y=box.y+22;
+  const pages=options.annotationPages?.trim()?parsePageSelection(options.annotationPages,total):Array.from({length:total},(_,i)=>i);
+  const placement=options.annotationPlacement??'bottom-left';
+  for(const index of pages){
+   const page=pdf.getPage(index),box=page.getCropBox();
    const maxWidth=box.width-44;
    let size=12;while(size>6&&font.widthOfTextAtSize(printable,size)>maxWidth)size--;
-   if(font.widthOfTextAtSize(printable,size)>maxWidth)throw new Error('Annotation too long for the page');
-   page.drawRectangle({x:x-5,y:y-7,width:font.widthOfTextAtSize(printable,size)+10,height:size+14,color:rgb(1,1,.8),opacity:.82});
+   const textWidth=font.widthOfTextAtSize(printable,size);
+   if(textWidth>maxWidth)throw new Error('Annotation too long for the page');
+   const x=placement==='top-right'?box.x+box.width-textWidth-22:box.x+22;
+   const y=placement==='bottom-left'?box.y+22:box.y+box.height-size-25;
+   page.drawRectangle({x:x-5,y:y-7,width:textWidth+10,height:size+14,color:rgb(1,1,.8),opacity:.82});
    page.drawText(printable,{x,y,size,font,color:rgb(.1,.1,.2)});
   }
   return {name:base+'-annotated.pdf',blob:pdfBlob(await pdf.save())};
