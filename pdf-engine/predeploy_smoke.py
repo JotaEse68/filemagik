@@ -5,6 +5,8 @@ Runs locally inside the new container; no user documents or credentials logged.
 import io
 import os
 import asyncio
+import tempfile
+from fastapi.testclient import TestClient
 import httpx
 from docx import Document
 from pypdf import PdfReader
@@ -39,6 +41,39 @@ async def verify():
             raise RuntimeError("Gotenberg PDF optimization predeploy smoke failed")
         if "FileMagik integration" not in (PdfReader(io.BytesIO(optimized.content)).pages[0].extract_text() or ""):
             raise RuntimeError("Optimization lost searchable content")
-    print("PASS: private Gotenberg health, DOCX->PDF and PDF optimization")
+    # Exercise the real FastAPI auth, quota and routing layers without exposing
+    # the bearer externally or consuming production users' usage counters.
+    from app import app
+    original_path=os.environ.get("PDF_ENGINE_QUOTA_DB")
+    with tempfile.TemporaryDirectory(prefix="filemagik-railway-qa-") as temp_dir:
+        os.environ["PDF_ENGINE_QUOTA_DB"]=temp_dir+"/quota.sqlite3"
+        try:
+            headers={"Authorization":"Bearer "+os.environ["PDF_ENGINE_SECRET"],
+                     "X-Filemagik-Visitor":"e"*64}
+            client=TestClient(app)
+            office=client.post("/v1/jobs?operation=office-to-pdf",headers=headers,
+                files={"file":("predeploy.docx",buf.getvalue(),"application/vnd.openxmlformats-officedocument.wordprocessingml.document")})
+            if office.status_code!=200 or not office.content.startswith(b"%PDF-"):
+                raise RuntimeError("FastAPI Office->PDF authenticated route failed: "+str(office.status_code))
+            optimized=client.post("/v1/jobs?operation=optimize-pdf",headers=headers,
+                files={"file":("predeploy.pdf",office.content,"application/pdf")})
+            if optimized.status_code!=200 or not optimized.content.startswith(b"%PDF-"):
+                raise RuntimeError("FastAPI PDF optimize authenticated route failed: "+str(optimized.status_code))
+            docx=client.post("/v1/jobs?operation=pdf-to-docx",headers=headers,
+                files={"file":("predeploy.pdf",office.content,"application/pdf")})
+            if docx.status_code!=200 or not docx.content.startswith(b"PK"):
+                raise RuntimeError("FastAPI PDF->DOCX authenticated route failed: "+str(docx.status_code))
+            excel=client.post("/v1/jobs?operation=pdf-to-xlsx",headers=headers,
+                files={"file":("predeploy.pdf",office.content,"application/pdf")})
+            if excel.status_code!=200 or not excel.content.startswith(b"PK"):
+                raise RuntimeError("FastAPI PDF->XLSX authenticated route failed: "+str(excel.status_code))
+            blocked=client.post("/v1/jobs?operation=pdf-to-docx",
+                files={"file":("predeploy.pdf",office.content,"application/pdf")})
+            if blocked.status_code!=401:
+                raise RuntimeError("Missing bearer token was not denied")
+        finally:
+            if original_path is None:os.environ.pop("PDF_ENGINE_QUOTA_DB",None)
+            else:os.environ["PDF_ENGINE_QUOTA_DB"]=original_path
+    print("PASS: private Gotenberg, authenticated FastAPI Office/PDF, DOCX/XLSX and denial checks")
 if __name__=="__main__":
     asyncio.run(verify())
