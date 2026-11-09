@@ -3,7 +3,7 @@ import os
 from fastapi.testclient import TestClient
 from reportlab.pdfgen import canvas
 from docx import Document
-from app import app
+from app import app,_redaction_regions
 
 client=TestClient(app)
 
@@ -13,6 +13,13 @@ def make_pdf():
     p.drawString(60,700,"FileMagik validation")
     p.save()
     return stream.getvalue()
+
+def test_redaction_regions_convert_normalized_coordinates():
+    import json
+    region=json.loads(_redaction_regions(make_pdf(),'[{"page":1,"x":0.1,"y":0.1,"width":0.2,"height":0.05}]'))[0]
+    assert region["page"]==1
+    assert region["width"]>20
+    assert region["height"]>10
 
 def test_health_endpoint_is_public_only_for_status():
     result=client.get("/healthz")

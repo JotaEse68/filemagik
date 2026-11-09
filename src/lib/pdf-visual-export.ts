@@ -1,6 +1,6 @@
 import type {OutputFile} from './convert';
 
-export type VisualAnnotation={id:string;page:number;kind:'text'|'highlight'|'rectangle'|'form-text'|'form-checkbox';x:number;y:number;width:number;height:number;text:string;color:string;fontSize:number};
+export type VisualAnnotation={id:string;page:number;kind:'text'|'highlight'|'rectangle'|'form-text'|'form-checkbox'|'redact';x:number;y:number;width:number;height:number;text:string;color:string;fontSize:number};
 export async function exportVisualPdf(source:File,annotations:VisualAnnotation[]):Promise<OutputFile>{
  if(annotations.length>300)throw new Error('Maximum 300 annotations per document');
  const {PDFDocument,StandardFonts,rgb}=await import('pdf-lib');
@@ -8,6 +8,7 @@ export async function exportVisualPdf(source:File,annotations:VisualAnnotation[]
  const font=await pdf.embedFont(StandardFonts.Helvetica);
  const form=annotations.some(a=>a.kind==='form-text'||a.kind==='form-checkbox')?pdf.getForm():null;
  for(const item of annotations){
+  if(item.kind==='redact')throw new Error('Permanent redaction requires the verified professional PDF engine; an overlay is not secure');
   if(!Number.isInteger(item.page)||item.page<1||item.page>pdf.getPageCount())throw new Error('Invalid annotation page');
   const nums=[item.x,item.y,item.width,item.height,item.fontSize];
   if(nums.some(n=>!Number.isFinite(n)))throw new Error('Invalid annotation coordinates');

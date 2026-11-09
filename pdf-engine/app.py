@@ -2,8 +2,10 @@ import os
 import io
 import hmac
 import asyncio
+import json
+import math
 from pathlib import Path
-from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Query
+from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, Query
 from fastapi.responses import Response
 from pypdf import PdfReader,PdfWriter
 from PIL import Image
@@ -19,7 +21,7 @@ MIMES={"pdf-to-docx":"application/vnd.openxmlformats-officedocument.wordprocessi
 "office-to-pdf":"application/pdf","optimize-pdf":"application/pdf"}
 EXTENSIONS={"pdf-to-docx":".pdf","pdf-to-xlsx":".pdf",
 "office-to-pdf":(".docx",".xlsx",".pptx",".odt",".ods",".odp"),
-"optimize-pdf":".pdf"}
+"optimize-pdf":".pdf","redact-pdf":".pdf"}
 
 @app.get("/healthz")
 def health():
@@ -93,8 +95,38 @@ def lossy_optimize(data,quality):
             raise HTTPException(422,"Compression changed searchable PDF text")
     return data_out if len(data_out)<len(data) else data
 
+def _redaction_regions(data,regions_json):
+    if not regions_json or len(regions_json)>6000:raise HTTPException(400,"Redaction regions missing")
+    try:regions=json.loads(regions_json)
+    except (TypeError,ValueError):raise HTTPException(400,"Invalid redaction regions")
+    if not isinstance(regions,list) or not 1<=len(regions)<=20:
+        raise HTTPException(400,"Maximum 20 regions per operation")
+    source=inspect_pdf(data)
+    if b"/ByteRange" in data or source.get_fields() or any("/Annots" in page for page in source.pages):
+        raise HTTPException(422,"Signed PDFs, forms and annotations cannot be redacted by this tool")
+    rectangles=[]
+    for region in regions:
+        if not isinstance(region,dict):raise HTTPException(400,"Invalid redaction region")
+        try:
+            page_index=int(region["page"])-1
+            x=float(region["x"]);y=float(region["y"])
+            width=float(region["width"]);height=float(region["height"])
+        except (KeyError,TypeError,ValueError):
+            raise HTTPException(400,"Invalid redaction rectangle")
+        if (not all(math.isfinite(n) for n in (x,y,width,height)) or page_index<0 or page_index>=len(source.pages) or min(x,y)<0 or width<.01 or height<.01 or x+width>1.001 or y+height>1.001):
+            raise HTTPException(400,"Redaction rectangle out of bounds")
+        page=source.pages[page_index]
+        box=page.cropbox
+        if int(page.get("/Rotate",0))%360!=0 or abs(float(box.left))>.01 or abs(float(box.bottom))>.01:
+            raise HTTPException(422,"Redaction supports only unrotated pages with standard crop origin")
+        w=float(box.width);h=float(box.height)
+        rectangles.append({"page":page_index+1,"x":round(x*w,2),
+                           "y":round((1-y-height)*h,2),
+                           "width":round(width*w,2),"height":round(height*h,2)})
+    return json.dumps(rectangles,separators=(",",":"))
+
 @app.post("/v1/jobs")
-async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:UploadFile=File(...),
+async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:UploadFile=File(...),regions:str|None=Form(None),
                   authorization:str|None=Header(None)):
     expected=os.getenv("PDF_ENGINE_SECRET","")
     if len(expected)<32 or not authorization or not authorization.startswith("Bearer "):
@@ -112,6 +144,9 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
     try:
         if operation=="pdf-to-docx":result=await asyncio.to_thread(pdf_to_docx,data)
         elif operation=="pdf-to-xlsx":result=await asyncio.to_thread(pdf_to_xlsx,data)
+        elif operation=="redact-pdf":
+            rects=_redaction_regions(data,regions)
+            result=await call_gotenberg("/forms/pdf/redact",data,filename,{"regions":rects})
         elif operation=="office-to-pdf":
             result=await call_gotenberg("/forms/libreoffice/convert",data,filename,
                                        {"stages":'[{"op":"optimize"}]'})
