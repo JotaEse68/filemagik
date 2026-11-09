@@ -52,9 +52,18 @@ def inspect_pdf(data):
 def lossy_optimize(data,quality):
     source=inspect_pdf(data)
     fields=source.get_fields() or {}
-    if any(getattr(field,"field_type","") == "/Sig" for field in fields.values()):
-        raise HTTPException(422,"Signed PDFs cannot be recompressed without invalidating signatures")
-    if fields:raise HTTPException(422,"PDF forms require lossless optimization")
+    if fields:raise HTTPException(422,"PDF form and signature fields require lossless optimization")
+    # Ghostscript rewrites page content: don't risk removing links, comments or attachments.
+    if any("/Annots" in page for page in source.pages):
+        raise HTTPException(422,"PDF annotations or hyperlinks require lossless optimization")
+    root=source.trailer.get("/Root")
+    if root is not None:
+        root=root.get_object()
+        names=root.get("/Names")
+        if names is not None and "/EmbeddedFiles" in names.get_object():
+            raise HTTPException(422,"PDF attachments require lossless optimization")
+    if b"/ByteRange" in data:
+        raise HTTPException(422,"Digitally signed PDFs cannot be recompressed")
     preset="/ebook" if quality=="balanced" else "/screen"
     with tempfile.TemporaryDirectory(prefix="filemagik_") as directory:
         inp=Path(directory)/"source.pdf";out=Path(directory)/"output.pdf"
