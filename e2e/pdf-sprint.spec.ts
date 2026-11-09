@@ -51,7 +51,7 @@ test('PDF text extraction into XLSX retains rows as editable cells',async({page}
  await upload(page,await samplePdf());
  const output=await runAndDownload(page);
  const book=new ExcelJS.Workbook();
- await book.xlsx.load(output.bytes);
+ await book.xlsx.load(Uint8Array.from(output.bytes).buffer);
  const rows=book.worksheets[0].getSheetValues().flat().filter(Boolean).map(String);
  expect(rows.join(' ')).toContain('Notebook');
  expect(rows.join(' ')).toContain('3');
