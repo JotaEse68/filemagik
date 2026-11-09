@@ -14,8 +14,8 @@ async function samplePdf(){
  page.drawText('3',{x:260,y:713,size:12,font});
  return Buffer.from(await pdf.save({useObjectStreams:false}));
 }
-async function upload(page:import('@playwright/test').Page,bytes:Buffer){
- await page.locator('input[type=file]').setInputFiles({name:'sample.pdf',mimeType:'application/pdf',buffer:bytes});
+async function upload(page:import('@playwright/test').Page,bytes:Uint8Array){
+ await page.locator('input[type=file]').setInputFiles({name:'sample.pdf',mimeType:'application/pdf',buffer:Buffer.from(bytes)});
 }
 async function runAndDownload(page:import('@playwright/test').Page){
  await page.locator('.actions button.btn-primary').first().click();
