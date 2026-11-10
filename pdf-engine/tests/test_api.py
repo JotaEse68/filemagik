@@ -230,14 +230,56 @@ def test_native_text_object_replacement_is_searchable_and_not_rasterized(monkeyp
     assert "FileMagik alteration" in edited
     assert "FileMagik validation" not in edited
 
-def test_native_text_object_edit_rejects_length_changes(monkeypatch):
+def test_native_text_varlen_winansi_accents_and_full_document_fidelity(monkeypatch):
+    from pypdf import PdfReader
+    from reportlab.pdfgen import canvas
     secret="u"*40
     monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
-    response=client.post("/v1/jobs?operation=replace-pdf-text",headers={
+    stream=io.BytesIO()
+    pdf=canvas.Canvas(stream)
+    pdf.setFont("Helvetica",14)
+    pdf.drawString(65,730,"Facturation originale")
+    pdf.drawString(65,700,"Unchanged paragraph")
+    pdf.showPage()
+    pdf.drawString(65,740,"Another original page")
+    pdf.save()
+    original=stream.getvalue()
+    result=client.post("/v1/jobs?operation=replace-pdf-text",headers={
         "Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
-        files={"file":("text.pdf",make_pdf(),"application/pdf")},
-        data={"page":"1","source_text":"FileMagik validation","new_text":"different"})
-    assert response.status_code==400
+        files={"file":("text.pdf",original,"application/pdf")},
+        data={"page":"1","source_text":"Facturation originale","new_text":"Factura número 1"})
+    assert result.status_code==200,result.text[:250] if result.status_code!=200 else ""
+    before=PdfReader(io.BytesIO(original))
+    after=PdfReader(io.BytesIO(result.content))
+    assert len(after.pages)==2
+    assert "Factura número 1" in after.pages[0].extract_text()
+    assert "Facturation originale" not in after.pages[0].extract_text()
+    assert "Unchanged paragraph" in after.pages[0].extract_text()
+    assert after.pages[1].extract_text()==before.pages[1].extract_text()
+
+def test_native_text_refuses_wider_string_or_unrepresentable_unicode(monkeypatch):
+    secret="e"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR}
+    for text in ("WWWWWWWWWWWWWWWWWWWWWWWW", "Factura 日本語"):
+        response=client.post("/v1/jobs?operation=replace-pdf-text",headers=headers,
+            files={"file":("text.pdf",make_pdf(),"application/pdf")},
+            data={"page":"1","source_text":"FileMagik validation","new_text":text})
+        assert response.status_code==422
+
+def test_native_text_rejects_duplicates_and_incompatible_font(monkeypatch):
+    from reportlab.pdfgen import canvas
+    secret="f"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR}
+    src=io.BytesIO();pdf=canvas.Canvas(src)
+    pdf.drawString(40,760,"Duplicate")
+    pdf.drawString(40,730,"Duplicate")
+    pdf.save()
+    response=client.post("/v1/jobs?operation=replace-pdf-text",headers=headers,
+        files={"file":("duplicates.pdf",src.getvalue(),"application/pdf")},
+        data={"page":"1","source_text":"Duplicate","new_text":"Nuevo"})
+    assert response.status_code==422
 
 
 def test_authorized_password_pdf_unlock_preserves_pages_and_searchable_text(monkeypatch):
