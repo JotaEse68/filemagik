@@ -5,7 +5,7 @@ export const runtime='nodejs';
 const supported:Record<string,readonly string[]>={
  'pdf-to-docx':['.pdf'],'pdf-to-xlsx':['.pdf'],
  'office-to-pdf':['.docx','.xlsx','.pptx','.odt','.ods','.odp'],
- 'optimize-pdf':['.pdf'],'redact-pdf':['.pdf'],'ocr-pdf':['.pdf'],
+ 'optimize-pdf':['.pdf'],'redact-pdf':['.pdf'],'ocr-pdf':['.pdf'],'replace-pdf-image':['.pdf'],
 };
 const maxBytes=3*1024*1024;
 const maxResponseBytes=22*1024*1024;
@@ -13,7 +13,7 @@ const safeExt=(name:string)=>name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0]||'';
 const allowedMime:Record<string,string>={
  'pdf-to-docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
  'pdf-to-xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
- 'office-to-pdf':'application/pdf','optimize-pdf':'application/pdf','redact-pdf':'application/pdf','ocr-pdf':'application/pdf',
+ 'office-to-pdf':'application/pdf','optimize-pdf':'application/pdf','redact-pdf':'application/pdf','ocr-pdf':'application/pdf','replace-pdf-image':'application/pdf',
 };
 function configured(){
  const base=process.env.FILEMAGIK_PDF_ENGINE_URL||'';
@@ -65,6 +65,15 @@ export async function POST(request:NextRequest){
  }
  const payload=new FormData();
  payload.set('file',new File([await file.arrayBuffer()],file.name,{type:file.type||'application/octet-stream'}));
+ if(operation==='replace-pdf-image'){
+  const image=data.get('replacement'),page=Number(data.get('page')),imageIndex=Number(data.get('image_index'));
+  if(!(image instanceof File)||image.size<1||image.size>maxBytes||!/^image\\/(png|jpeg|webp)$/.test(image.type)||
+    !/\\.(png|jpg|jpeg|webp)$/i.test(image.name)||!Number.isInteger(page)||page<1||page>100||
+    !Number.isInteger(imageIndex)||imageIndex<1||imageIndex>100)
+   return NextResponse.json({error:'Invalid replacement image or object index'},{status:400});
+  payload.set('replacement',new File([await image.arrayBuffer()],image.name,{type:image.type}));
+  payload.set('page',String(page));payload.set('image_index',String(imageIndex));
+ }
  if(operation==='redact-pdf'){
   const regions=data.get('regions');
   if(typeof regions!=='string'||regions.length>6000)return NextResponse.json({error:'Invalid redaction request'},{status:400});
