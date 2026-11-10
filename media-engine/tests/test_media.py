@@ -76,3 +76,22 @@ def test_animated_gif_to_mp4_retains_multiple_frames(monkeypatch,tmp_path):
     "-select_streams","v:0","-show_entries","stream=nb_read_frames",
     "-of","default=noprint_wrappers=1:nokey=1",str(output)])
  assert int(probe.strip())>=2
+
+def test_concurrency_limit_returns_busy_without_processing(monkeypatch,tmp_path):
+ import app as module
+ monkeypatch.setenv("FILEMAGIK_MEDIA_SECRET",TOKEN)
+ class Busy:
+  def acquire(self,blocking=False):return False
+ monkeypatch.setattr(module,"_LIMIT",Busy())
+ result=client.post("/v1/media?operation=audio-to-mp3",headers=HEADERS,
+                    files={"file":("sample.wav",sample_audio(tmp_path),"audio/wav")})
+ assert result.status_code==429
+
+def test_refuses_media_over_120_seconds(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_MEDIA_SECRET",TOKEN)
+ path=tmp_path/"long.wav"
+ subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-f","lavfi",
+                 "-i","sine=frequency=440:duration=121","-ar","8000","-y",str(path)],check=True)
+ result=client.post("/v1/media?operation=audio-to-mp3",headers=HEADERS,
+                    files={"file":("long.wav",path.read_bytes(),"audio/wav")})
+ assert result.status_code==413
