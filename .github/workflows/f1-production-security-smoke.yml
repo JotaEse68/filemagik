@@ -1,0 +1,22 @@
+name: F1 production security smoke
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/f1-production-gates.mjs'
+      - '.github/workflows/f1-production-security-smoke.yml'
+      - 'src/app/api/worker-engine/route.ts'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-fail-closed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify current public production refuses intensive jobs
+        run: node scripts/f1-production-gates.mjs https://filemagik.vercel.app off
