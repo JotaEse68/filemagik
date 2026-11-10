@@ -1,3 +1,4 @@
+import pytest
 import io
 import os
 import subprocess
@@ -7,7 +8,11 @@ from pathlib import Path
 
 client=TestClient(app)
 TOKEN="test-filemagik-private-media-secret-"+"a"*35
-HEADERS={"Authorization":"Bearer "+TOKEN}
+HEADERS={"Authorization":"Bearer "+TOKEN,"X-Filemagik-Visitor":"a"*64}
+@pytest.fixture(autouse=True)
+def persistent_quota_db(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_MEDIA_QUOTA_DB",str(tmp_path/"quota.sqlite3"))
+
 
 def sample_audio(tmp_path):
  path=tmp_path/"sample.wav"
