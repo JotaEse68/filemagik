@@ -7,6 +7,7 @@ import tempfile
 import zipfile
 from pathlib import Path
 import libarchive
+from quota import reserve
 from fastapi import FastAPI,Header,UploadFile,File,HTTPException
 from fastapi.responses import Response
 
@@ -57,17 +58,18 @@ def safe_extract(data:bytes,filename:str)->bytes:
   raise HTTPException(422,"Archive format unsupported, corrupted or encrypted")
 
 @app.post("/v1/extract")
-async def extract(file:UploadFile=File(...),authorization:str|None=Header(None)):
+async def extract(file:UploadFile=File(...),authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
  secret=os.environ.get("FILEMAGIK_ARCHIVE_SECRET","")
  if len(secret)<32 or not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(authorization[7:],secret):
   raise HTTPException(401,"Not authorized")
  if not _LIMIT.acquire(blocking=False):raise HTTPException(429,"Archive engine busy")
  try:
-  data=await file.read(MAX_ARCHIVE+1)
-  if not data or len(data)>MAX_ARCHIVE:raise HTTPException(413,"Archive exceeds 25 MB")
-  zipped=safe_extract(data,file.filename or "")
-  if len(zipped)>MAX_EXPANDED+1024*1024:raise HTTPException(413,"ZIP output exceeds size limit")
-  return Response(zipped,media_type="application/zip",headers={
-   "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
-   "Content-Disposition":'attachment; filename="filemagik-extracted.zip"'})
+  with reserve(x_filemagik_visitor):
+   data=await file.read(MAX_ARCHIVE+1)
+   if not data or len(data)>MAX_ARCHIVE:raise HTTPException(413,"Archive exceeds 25 MB")
+   zipped=safe_extract(data,file.filename or "")
+   if len(zipped)>MAX_EXPANDED+1024*1024:raise HTTPException(413,"ZIP output exceeds size limit")
+   return Response(zipped,media_type="application/zip",headers={
+    "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
+    "Content-Disposition":'attachment; filename="filemagik-extracted.zip"'})
  finally:_LIMIT.release()
