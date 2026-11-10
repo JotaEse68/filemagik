@@ -45,13 +45,23 @@ def test_limit_and_symlink_refusal(tmp_path):
  r=client.post("/v1/extract",headers=HEADERS,
      files={"file":("huge.7z",b"x"*(25*1024*1024+1),"application/x-7z-compressed")})
  assert r.status_code==413
- file=tmp_path/"link"
- file.symlink_to("unsafe-target")
- dest=tmp_path/"link.7z"
- subprocess.run(["7z","a","-bd",str(dest),str(file)],check=True,capture_output=True)
- r=client.post("/v1/extract",headers=HEADERS,
-     files={"file":("link.7z",dest.read_bytes(),"application/x-7z-compressed")})
- assert r.status_code in (200,422)  # Depends on whether 7z stores link itself as a regular file
- if r.status_code==200:
-  with zipfile.ZipFile(io.BytesIO(r.content)) as archive:
-   assert len(archive.namelist())==1
+ # Reject a real directory entry that isn't a regular file even when
+ # archive metadata claims it is a symlink; avoid relying on p7zip packaging
+ # a dangling symlink, which differs across OS distributions.
+ import app as module
+ from contextlib import contextmanager
+ class SymlinkEntry:
+  isfile=False
+  isdir=False
+ @contextmanager
+ def link_reader(_):
+  yield [SymlinkEntry()]
+ monkeypatch_module=None
+ original=module.libarchive.file_reader
+ module.libarchive.file_reader=link_reader
+ try:
+  r=client.post("/v1/extract",headers=HEADERS,
+      files={"file":("link.7z",make_7z(tmp_path),"application/x-7z-compressed")})
+  assert r.status_code==422
+ finally:
+  module.libarchive.file_reader=original
