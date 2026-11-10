@@ -89,3 +89,22 @@ def test_quota_refusal_and_invalid_input(monkeypatch):
     invalid=client.post("/workers/archive/v1/extract",headers=HEADERS,
              files={"file":("bad.7z",b"fake data","application/x-7z-compressed")})
     assert invalid.status_code==422
+
+def test_extract_real_video_audio_and_pcm_wav(tmp_path):
+    video=tmp_path/"sound.mp4"
+    subprocess.run(["ffmpeg","-hide_banner","-loglevel","error",
+      "-f","lavfi","-i","color=c=blue:s=160x120:r=5:d=1",
+      "-f","lavfi","-i","sine=frequency=600:duration=1",
+      "-c:v","mpeg4","-c:a","aac","-shortest","-y",str(video)],
+      check=True,timeout=25)
+    extracted=client.post("/workers/media/v1/media?operation=extract-audio-mp3",
+       headers=HEADERS,files={"file":("clip.mp4",video.read_bytes(),"video/mp4")})
+    assert extracted.status_code==200, extracted.text[:150] if extracted.status_code!=200 else ""
+    assert extracted.content.startswith(b"ID3") or extracted.content[:1]==b"\\xff"
+    pcm=client.post("/workers/media/v1/media?operation=audio-to-wav",
+       headers=HEADERS,files={"file":("voice.mp3",extracted.content,"audio/mpeg")})
+    assert pcm.status_code==200,pcm.text[:150] if pcm.status_code!=200 else ""
+    assert pcm.content[:4]==b"RIFF" and pcm.content[8:12]==b"WAVE"
+    with wave.open(io.BytesIO(pcm.content),"rb") as audio:
+        assert audio.getnchannels()==2
+        assert audio.getnframes()>1000
