@@ -6,6 +6,7 @@
 
 | Servicio | Directorio | Funciones | Estado |
 |---|---|---|---|
+| Image codec service | `image-engine/` | HEIC/HEIF → PNG y GIF animado → WebP animado con Pillow/libheif | Docker y CI desarrollados; NO desplegado |
 | PDF + Gotenberg | `pdf-engine/` | PDF/Office, redacción, cuota SQLite | Railway desplegado; acceso público desactivado |
 | Multimedia FFmpeg | `media-engine/` | MP3/WAV, MP4, GIF, extracción audio | Docker y CI desarrollados; NO desplegado |
 | Archivos 7Z/RAR | `archive-engine/` | 7Z/RAR → ZIP, límites de descompresión | Docker y CI desarrollados; NO desplegado |
@@ -16,8 +17,9 @@
 - [x] TIFF sin compresión, PackBits y multipágina → PNG ZIP con límites.
 - [x] GIF → primer fotograma; GIF → todos los fotogramas y metadatos de duración en ZIP (requiere ImageDecoder nativo).
 - [x] Lotes imágenes → WebP ZIP con progreso, cancelación cooperativa y prohibición de descarga ficticia.
-- [ ] HEIC multiplataforma con decodificador alternativo certificado.
-- [ ] Exportación GIF animado nativo con duración/disposal/loop conservados y corpus extensivo.
+- [x] HEIC/HEIF → PNG y GIF animado → WebP animado mediante motor privado Pillow/libheif, con tests de muestras auténticas y conservación de frames/duración. Aún no expuesto a web.
+- [ ] Conectar flujo fallback HEIC en cliente sin exponer credenciales ni habilitar API pública hasta cuota y streaming.
+- [ ] Validación exhaustiva de disposal/loop/transparencia y compatibilidad WebP móvil con corpus de GIF complejos.
 - [ ] Pruebas adicionales de memoria en móviles de gama media y lotes 100% completos.
 
 ## Gate G3 — servidor FFmpeg
