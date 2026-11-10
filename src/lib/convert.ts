@@ -44,6 +44,9 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,option
  if(slug==='tiff-to-png'){
   const {tiffToPng}=await import('./tiff-to-png');return tiffToPng(files[0]);
  }
+ if(slug==='gif-frames-to-zip'){
+  const {gifFramesToZip}=await import('./gif-frames');return gifFramesToZip(files[0],{signal:options.signal,onProgress:options.onProgress});
+ }
  if(slug==='gif-to-png'){
   const {gifToPng}=await import('./gif-to-png');return gifToPng(files[0]);
  }
