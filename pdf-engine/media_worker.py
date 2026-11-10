@@ -119,3 +119,60 @@ def convert(operation:str=Query(...),file:UploadFile=File(...),start:float|None=
     return Response(result,media_type=mime,headers={"Cache-Control":"private, no-store",
       "X-Content-Type-Options":"nosniff","Content-Disposition":'attachment; filename="filemagik'+out_ext+'"'})
  finally:_LIMIT.release()
+
+
+@app.post("/v1/join")
+def join_media(operation:str=Query(...),files:list[UploadFile]=File(...),
+               authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
+ """Bounded FFmpeg concat after normalization; retain audio for video clips."""
+ secret=os.environ.get("PDF_ENGINE_SECRET","")
+ if len(secret)<32 or not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(authorization[7:],secret):
+  raise HTTPException(401,"Not authorized")
+ if operation not in ("join-audio-mp3","join-video-mp4"):raise HTTPException(400,"Invalid join operation")
+ if not 2<=len(files)<=4:raise HTTPException(413,"Join requires 2 to 4 files")
+ if not _LIMIT.acquire(blocking=False):raise HTTPException(429,"Media engine busy")
+ try:
+  with reserve(x_filemagik_visitor):
+   total_size=0;total_duration=0
+   with tempfile.TemporaryDirectory(prefix="fm-join-") as dirname:
+    root=Path(dirname);pieces=[]
+    for index,file in enumerate(files):
+     ext=Path(file.filename or "").suffix.lower()
+     accepted={".mp3",".wav",".m4a",".ogg",".flac"} if operation=="join-audio-mp3" else {".mp4",".mov",".webm"}
+     if ext not in accepted:raise HTTPException(415,"Incompatible file for this join")
+     data=file.file.read(3*1024*1024+1)
+     total_size+=len(data)
+     if not data or len(data)>3*1024*1024 or total_size>12*1024*1024:
+      raise HTTPException(413,"Join file size exceeded")
+     source=root/f"source-{index}{ext}";source.write_bytes(data)
+     total_duration+=inspect(source)
+     if total_duration>120:raise HTTPException(413,"Combined duration exceeds 120 seconds")
+     audio_stream=run_command(["ffprobe","-v","error","-protocol_whitelist","file,pipe",
+      "-select_streams","a:0","-show_entries","stream=index","-of","csv=p=0",str(source)],timeout=8)
+     if not audio_stream.strip():raise HTTPException(422,"Every input must have an audio track")
+     suffix=".wav" if operation=="join-audio-mp3" else ".mp4"
+     part=root/f"part-{index}{suffix}"
+     if operation=="join-audio-mp3":
+      options=["-vn","-map","0:a:0","-ar","44100","-ac","2","-c:a","pcm_s16le"]
+     else:
+      options=["-map","0:v:0","-map","0:a:0","-vf",
+       "fps=24,scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2",
+       "-c:v","libx264","-pix_fmt","yuv420p","-preset","veryfast","-crf","27",
+       "-ar","44100","-ac","2","-c:a","aac","-b:a","96k","-movflags","+faststart"]
+     run_command(["ffmpeg","-hide_banner","-nostdin","-loglevel","error","-y",
+       "-threads","1","-protocol_whitelist","file,pipe","-i",str(source),*options,str(part)],timeout=45)
+     if not part.exists() or not part.stat().st_size:raise HTTPException(422,"Input cannot be normalized")
+     pieces.append(part)
+    playlist=root/"list.txt";playlist.write_text("".join(f"file '{p.name}'\\n" for p in pieces),encoding="utf8")
+    suffix=".mp3" if operation=="join-audio-mp3" else ".mp4"
+    result_path=root/("joined"+suffix)
+    output_args=["-vn","-c:a","libmp3lame","-b:a","128k"] if operation=="join-audio-mp3" else ["-c","copy","-movflags","+faststart"]
+    run_command(["ffmpeg","-hide_banner","-nostdin","-loglevel","error","-y",
+      "-threads","1","-protocol_whitelist","file,pipe,concat","-safe","1",
+      "-f","concat","-i",str(playlist),*output_args,str(result_path)],timeout=55)
+    if not result_path.exists() or not 8<=result_path.stat().st_size<=MAX_OUTPUT:
+     raise HTTPException(413,"Joined output size invalid")
+    return Response(result_path.read_bytes(),media_type="audio/mpeg" if operation=="join-audio-mp3" else "video/mp4",
+      headers={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
+       "Content-Disposition":'attachment; filename="filemagik-joined'+suffix+'"'})
+ finally:_LIMIT.release()
