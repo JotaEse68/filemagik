@@ -186,3 +186,16 @@ def test_new_video_trim_and_single_png_frame(tmp_path):
         files={"file":("moving.mp4",data,"video/mp4")})
     assert trimmed.status_code==200,trimmed.text[:150] if trimmed.status_code!=200 else ""
     assert b"ftyp" in trimmed.content[:64]
+
+
+def test_gif_frame_zip_contains_real_pngs_and_timing():
+    import json
+    response=client.post("/workers/image/v1/convert?operation=gif-to-frames-zip",
+        headers=HEADERS,files={"file":("animation.gif",gif_bytes(),"image/gif")})
+    assert response.status_code==200,response.text[:160] if response.status_code!=200 else ""
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        assert archive.namelist()==["frame-001.png","frame-002.png","frames.json"]
+        assert archive.read("frame-001.png").startswith(bytes.fromhex("89504e470d0a1a0a"))
+        meta=json.loads(archive.read("frames.json"))
+        assert meta["frames"]==2
+        assert meta["durations_ms"]==[120,240]
