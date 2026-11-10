@@ -15,23 +15,27 @@ const operations:Record<string,Operation>={
  'server-extract-7z':{engine:'archive',endpoint:'extract',extension:['.7z'],mime:'application/zip',max:3*MiB},
  'server-extract-rar':{engine:'archive',endpoint:'extract',extension:['.rar'],mime:'application/zip',max:3*MiB},
 };
-const config=(engine:Engine)=>{
+const config=(engine:Engine,operation:string)=>{
  // All three engines live behind the existing FileMagik PDF API on Railway.
  const base=process.env.FILEMAGIK_PDF_ENGINE_URL||'';
  const secret=process.env.FILEMAGIK_PDF_ENGINE_SECRET||'';
  // Activation is two-stage: deployment AND explicit post-QA certification.
  // Merely adding Cloudflare keys must never open expensive conversions.
+ const permitted=(process.env.FILEMAGIK_WORKER_ENABLED_OPERATIONS||'')
+  .split(',').map(value=>value.trim()).filter(Boolean);
+ const allowed=permitted.includes(operation);
  const flag=process.env.FILEMAGIK_WORKER_ENGINES_PUBLIC_ENABLED==='true';
  const certified=process.env.FILEMAGIK_WORKER_ENGINES_CERTIFIED==='true';
  const challengeSecret=process.env.FILEMAGIK_TURNSTILE_SECRET||'';
  const siteKey=process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY||'';
- return {base,secret,ready:flag&&certified&&/^https:\/\/[^\s/?#]+/i.test(base)
+ return {base,secret,ready:flag&&certified&&allowed&&/^https:\/\/[^\s/?#]+/i.test(base)
   &&secret.length>=32&&challengeSecret.length>=16&&siteKey.length>=6};
 };
 const json=(error:string,status:number)=>NextResponse.json({error},{status,headers:{'Cache-Control':'no-store'}});
 export async function GET(request:NextRequest){
  const op=operations[request.nextUrl.searchParams.get('operation')||''];
- const ready=!!op&&config(op.engine).ready;
+ const name=request.nextUrl.searchParams.get('operation')||'';
+ const ready=!!op&&config(op.engine,name).ready;
  return NextResponse.json({available:ready,challengeRequired:ready,
   siteKey:ready?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null},
   {headers:{'Cache-Control':'no-store'}});
@@ -40,7 +44,7 @@ export async function POST(request:NextRequest){
  const name=request.nextUrl.searchParams.get('operation')||'';
  const op=operations[name];
  if(!op)return json('Unsupported operation',400);
- const {base,secret,ready}=config(op.engine);
+ const {base,secret,ready}=config(op.engine,name);
  if(!ready)return json('Professional engine not enabled',503);
  const tokenSecret=process.env.FILEMAGIK_TURNSTILE_SECRET||'';
  const siteKey=process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY||'';
