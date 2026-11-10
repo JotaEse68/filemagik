@@ -13,8 +13,9 @@ const MAX_FILE=30*1024*1024;
 export default function ZipExplorer({locale}:{locale:Locale}){
  const t=labels[locale],input=useRef<HTMLInputElement>(null);
  const [entries,setEntries]=useState<ZipEntry[]>([]),[name,setName]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(''),[loading,setLoading]=useState(false);
+ const [downloadName,setDownloadName]=useState('');
  async function open(file:File){
-  setError('');setEntries([]);setLoading(true);setName(file.name);
+  setError('');setDownloadName('');setEntries([]);setLoading(true);setName(file.name);
   try{
    if(file.size>120*1024*1024)throw new Error(t.limit);
    const {default:JSZip}=await import('jszip');const zip=await JSZip.loadAsync(await file.arrayBuffer());
@@ -36,6 +37,7 @@ export default function ZipExplorer({locale}:{locale:Locale}){
    const blob=new Blob([new Uint8Array(data)],{type:'application/octet-stream'});
    const url=URL.createObjectURL(blob),link=document.createElement('a');
    link.href=url;link.download=item.name.split('/').pop()||'file';link.click();
+   setDownloadName(link.download);
    setTimeout(()=>URL.revokeObjectURL(url),12000);
   }catch(e){setError(e instanceof Error?e.message:'Unable to extract file');}finally{setBusy('');}
  }
@@ -45,6 +47,7 @@ export default function ZipExplorer({locale}:{locale:Locale}){
   <button type="button" className="btn btn-primary" onClick={()=>input.current?.click()}><FileUp size={17}/>{t.choose}</button>
   <p className="zip-explorer-note">{t.limit}</p>
   {loading&&<p><Loader2 className="spin" size={18}/></p>}
+  {downloadName&&<div className="conversion-complete" role="status" data-testid="conversion-success"><div className="conversion-complete-heading"><Download size={22} aria-hidden="true"/><div><h3>{({es:'Archivo extraído correctamente',en:'File extracted successfully',pt:'Ficheiro extraído corretamente',fr:'Fichier extrait avec succès'} as const)[locale]}</h3><p>{({es:'Se ha solicitado su descarga. Revisa las descargas del navegador.',en:'Download requested. Check your browser downloads.',pt:'Transferência solicitada. Consulte o navegador.',fr:'Téléchargement demandé. Consultez votre navigateur.'} as const)[locale]}</p></div></div><p className="conversion-complete-file">{downloadName}</p></div>}
   {error&&<p role="alert" className="error">{error}</p>}
   {!entries.length&&!loading&&!error&&<p className="zip-explorer-empty">{t.empty}</p>}
   {entries.length>0&&<div><h3>{name} · {entries.length} {t.files}</h3><div className="zip-entries">{entries.map((item,i)=><div key={i}><span><FileArchive size={18}/><span>{item.name}</span><small>{Math.ceil(item.size/1024)} KB</small></span><button className="btn btn-ghost" disabled={Boolean(busy)} onClick={()=>void download(item)}><Download size={15}/>{busy===item.name?'…':t.download}</button></div>)}</div></div>}
