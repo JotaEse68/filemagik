@@ -16,6 +16,8 @@ const operations:Record<string,Operation>={
  'server-gif-to-mp4':{engine:'media',endpoint:'animated-gif-to-mp4',extension:['.gif'],mime:'video/mp4',max:3*MiB},
  'server-extract-7z':{engine:'archive',endpoint:'extract',extension:['.7z'],mime:'application/zip',max:3*MiB},
  'server-extract-rar':{engine:'archive',endpoint:'extract',extension:['.rar'],mime:'application/zip',max:3*MiB},
+ 'server-join-audio':{engine:'media',endpoint:'join-audio-mp3',extension:['.mp3','.wav','.m4a','.ogg','.flac'],mime:'audio/mpeg',max:12*MiB},
+ 'server-join-video':{engine:'media',endpoint:'join-video-mp4',extension:['.mp4','.webm','.mov'],mime:'video/mp4',max:12*MiB},
  'server-audio-to-flac':{engine:'media',endpoint:'audio-to-flac',extension:['.mp3','.wav','.m4a','.ogg','.flac'],mime:'audio/flac',max:3*MiB},
  'server-audio-to-ogg':{engine:'media',endpoint:'audio-to-ogg',extension:['.mp3','.wav','.m4a','.ogg','.flac'],mime:'audio/ogg',max:3*MiB},
  'server-trim-audio':{engine:'media',endpoint:'trim-audio-mp3',extension:['.mp3','.wav','.m4a','.ogg','.flac'],mime:'audio/mpeg',max:3*MiB},
@@ -67,12 +69,14 @@ export async function POST(request:NextRequest){
  try{form=await request.formData();}catch{return json('Invalid upload',400);}
  const token=form.get('turnstile');
  const batch=op.engine==='batch';
- const incoming=batch?form.getAll('files'): [form.get('file')];
- if(!incoming.length||incoming.length>(batch?6:1))return json('Invalid file count',413);
+ const joining=name==='server-join-audio'||name==='server-join-video';
+ const multi=batch||joining;
+ const incoming=multi?form.getAll('files'):[form.get('file')];
+ if(incoming.length<(joining?2:1)||incoming.length>(batch?6:joining?4:1))return json('Invalid file count',413);
  if(incoming.some(item=>!(item instanceof File)))return json('Missing uploaded file',400);
  const files=incoming as File[];
  const total=files.reduce((sum,file)=>sum+file.size,0);
- if(total>op.max||files.some(file=>file.size<1||file.size>(batch?3*MiB:op.max)))
+ if(total>op.max||files.some(file=>file.size<1||file.size>(multi?3*MiB:op.max)))
   return json('File size exceeds secure limits',413);
  if(files.some(file=>!op.extension.includes(file.name.toLowerCase().match(/\\.[a-z0-9]+$/)?.[0]||'')))
   return json('Invalid file extension',415);
@@ -102,11 +106,11 @@ export async function POST(request:NextRequest){
    return json('Human verification failed',403);
  }catch{return json('Human verification unavailable',503);}
  const payload=new FormData();
- for(const file of files)payload.append(batch?'files':'file',
+ for(const file of files)payload.append(multi?'files':'file',
   new File([await file.arrayBuffer()],file.name,{type:file.type||'application/octet-stream'}));
  const ip=(request.headers.get('x-forwarded-for')||request.headers.get('x-real-ip')||'unknown').split(',')[0].trim().slice(0,90);
  const visitor=createHmac('sha256',secret).update(ip||'unknown').digest('hex');
- const workerPath=op.engine==='batch'?'/workers/batch/v1/convert':op.engine==='archive'?'/workers/archive/v1/extract':
+ const workerPath=op.engine==='batch'?'/workers/batch/v1/convert':joining?'/workers/media/v1/join':op.engine==='archive'?'/workers/archive/v1/extract':
   '/workers/'+op.engine+'/v1/'+(op.engine==='image'?'convert':'media');
  const url=base.replace(/\/+$/,'')+workerPath+
   (batch?'?preset='+encodeURIComponent(preset):op.engine==='archive'?'':
