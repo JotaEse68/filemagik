@@ -11,6 +11,7 @@ export function limitsFor(slug:ToolSlug):FileLimits{
  if(slug==='server-mixed-batch')return {perFile:3*MIB,total:12*MIB,maxFiles:6};
  if(slug.startsWith('server-'))return {perFile:3*MIB,total:3*MIB,maxFiles:1};
  if(imageBatch.has(slug))return {perFile:40*MIB,total:120*MIB,maxFiles:30};
+ if(slug==='ocr-pdf-professional')return {perFile:3*MIB,total:3*MIB,maxFiles:1};
  if(slug==='ods-to-pdf'||slug==='odp-to-pdf')return {perFile:3*MIB,total:3*MIB,maxFiles:1};
  if(slug==='heic-to-png')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
  if(slug==='tiff-pages-to-zip')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
