@@ -27,10 +27,10 @@ MAX=int(os.getenv("MAX_UPLOAD_MIB","12"))*1024*1024
 GOTENBERG=os.getenv("GOTENBERG_URL","http://gotenberg.railway.internal:3000").rstrip("/")
 MIMES={"pdf-to-docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 "pdf-to-xlsx":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-"office-to-pdf":"application/pdf","optimize-pdf":"application/pdf","redact-pdf":"application/pdf","ocr-pdf":"application/pdf","replace-pdf-image":"application/pdf","replace-pdf-text":"application/pdf"}
+"office-to-pdf":"application/pdf","optimize-pdf":"application/pdf","redact-pdf":"application/pdf","ocr-pdf":"application/pdf","replace-pdf-image":"application/pdf","replace-pdf-text":"application/pdf","unlock-pdf":"application/pdf"}
 EXTENSIONS={"pdf-to-docx":".pdf","pdf-to-xlsx":".pdf",
 "office-to-pdf":(".docx",".xlsx",".pptx",".odt",".ods",".odp"),
-"optimize-pdf":".pdf","redact-pdf":".pdf","ocr-pdf":".pdf","replace-pdf-image":".pdf","replace-pdf-text":".pdf"}
+"optimize-pdf":".pdf","redact-pdf":".pdf","ocr-pdf":".pdf","replace-pdf-image":".pdf","replace-pdf-text":".pdf","unlock-pdf":".pdf"}
 
 @app.middleware("http")
 async def reject_oversized_body(request, call_next):
@@ -181,6 +181,38 @@ def _redaction_regions(data,regions_json):
 
 
 
+def unlock_pdf(data:bytes,password:str)->bytes:
+    """Decrypt a PDF only with its valid user/owner password. No cracking.
+    Any digital signature would be invalidated by rewrite, so reject.
+    """
+    if not password or len(password)>256 or any(ord(c)<32 for c in password):
+        raise HTTPException(400,"Valid PDF password required")
+    try:
+        reader=PdfReader(io.BytesIO(data),strict=False)
+        if not reader.is_encrypted:
+            raise HTTPException(422,"This PDF is not password-protected")
+        if b"/ByteRange" in data:
+            raise HTTPException(422,"Signed PDFs cannot be rewritten safely")
+        if not reader.decrypt(password):
+            raise HTTPException(422,"Incorrect PDF password")
+        if not 1<=len(reader.pages)<=100:
+            raise HTTPException(413,"PDF page count exceeds limits")
+        source_text=[page.extract_text() or "" for page in reader.pages]
+        writer=PdfWriter()
+        writer.append(reader)
+        buffer=io.BytesIO()
+        writer.write(buffer)
+        output=buffer.getvalue()
+        if len(output)>35*1024*1024:
+            raise HTTPException(413,"Unlocked document exceeds output limits")
+        check=PdfReader(io.BytesIO(output),strict=True)
+        if check.is_encrypted or len(check.pages)!=len(reader.pages) or [p.extract_text() or "" for p in check.pages]!=source_text:
+            raise HTTPException(422,"Unlocking changed searchable PDF content")
+        return output
+    except HTTPException:raise
+    except (ValueError,TypeError,KeyError,IndexError,AttributeError,PdfReadError):
+        raise HTTPException(422,"Unable to unlock PDF safely")
+
 def replace_pdf_text(data:bytes,page_index:int,original:str,replacement:str)->bytes:
     """Replace one simple text-show object without rasterizing the PDF."""
     if not original or not replacement or len(original)>120 or len(original)!=len(replacement):
@@ -260,6 +292,7 @@ def replace_pdf_image(data:bytes,image_bytes:bytes,page_index:int,image_index:in
 async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:UploadFile=File(...),regions:str|None=Form(None),
                   replacement:UploadFile|None=File(None),page:int|None=Form(None),image_index:int|None=Form(None),
                   source_text:str|None=Form(None),new_text:str|None=Form(None),
+                  pdf_password:str|None=Form(None),
                   authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
     expected=os.getenv("PDF_ENGINE_SECRET","")
     if len(expected)<32 or not authorization or not authorization.startswith("Bearer "):
@@ -276,7 +309,11 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
     if not data or len(data)>MAX:raise HTTPException(413,"File too large")
     with reserve(x_filemagik_visitor or ""):
       try:
-        if operation=="replace-pdf-text":
+        if operation=="unlock-pdf":
+            if pdf_password is None:
+                raise HTTPException(400,"PDF password required")
+            result=await asyncio.to_thread(unlock_pdf,data,pdf_password)
+        elif operation=="replace-pdf-text":
             if page is None or source_text is None or new_text is None:
                 raise HTTPException(400,"Page and original/replacement text are required")
             result=await asyncio.to_thread(replace_pdf_text,data,page,source_text,new_text)
