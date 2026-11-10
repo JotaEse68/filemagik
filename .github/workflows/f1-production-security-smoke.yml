@@ -7,6 +7,12 @@ on:
       - '.github/workflows/f1-production-security-smoke.yml'
       - 'src/app/api/worker-engine/route.ts'
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Public capability mode
+        type: choice
+        options: [off, wave]
+        default: off
 permissions:
   contents: read
 jobs:
@@ -19,4 +25,6 @@ jobs:
         with:
           node-version: '22'
       - name: Verify current public production refuses intensive jobs
-        run: node scripts/f1-production-gates.mjs https://filemagik.vercel.app off
+        env:
+          CHECK_MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'off' }}
+        run: node scripts/f1-production-gates.mjs https://filemagik.vercel.app "$CHECK_MODE"
