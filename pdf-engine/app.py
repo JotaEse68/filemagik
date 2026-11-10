@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, Query
 from fastapi.responses import Response
 from pypdf import PdfReader,PdfWriter
-from PIL import Image
+from PIL import Image, ImageOps
 from pypdf.errors import PdfReadError
 import httpx
 from document import pdf_to_docx, pdf_to_xlsx
@@ -26,10 +26,10 @@ MAX=int(os.getenv("MAX_UPLOAD_MIB","12"))*1024*1024
 GOTENBERG=os.getenv("GOTENBERG_URL","http://gotenberg.railway.internal:3000").rstrip("/")
 MIMES={"pdf-to-docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 "pdf-to-xlsx":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-"office-to-pdf":"application/pdf","optimize-pdf":"application/pdf","redact-pdf":"application/pdf","ocr-pdf":"application/pdf"}
+"office-to-pdf":"application/pdf","optimize-pdf":"application/pdf","redact-pdf":"application/pdf","ocr-pdf":"application/pdf","replace-pdf-image":"application/pdf"}
 EXTENSIONS={"pdf-to-docx":".pdf","pdf-to-xlsx":".pdf",
 "office-to-pdf":(".docx",".xlsx",".pptx",".odt",".ods",".odp"),
-"optimize-pdf":".pdf","redact-pdf":".pdf","ocr-pdf":".pdf"}
+"optimize-pdf":".pdf","redact-pdf":".pdf","ocr-pdf":".pdf","replace-pdf-image":".pdf"}
 
 @app.middleware("http")
 async def reject_oversized_body(request, call_next):
@@ -178,8 +178,45 @@ def _redaction_regions(data,regions_json):
                            "width":round(width*w,2),"height":round(height*h,2)})
     return json.dumps(rectangles,separators=(",",":"))
 
+
+def replace_pdf_image(data:bytes,image_bytes:bytes,page_index:int,image_index:int)->bytes:
+    """Replace an actual image XObject, not a visual overlay.
+    Refuse shared signatures/forms; do not claim to edit unsupported inline art.
+    """
+    if len(image_bytes)>3*1024*1024 or not image_bytes:
+        raise HTTPException(413,"Replacement image exceeds 3 MB")
+    source=inspect_pdf(data)
+    if b"/ByteRange" in data or source.get_fields():
+        raise HTTPException(422,"Signed PDF and interactive forms are not supported")
+    if not 1<=page_index<=len(source.pages):
+        raise HTTPException(400,"Invalid PDF page")
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as picture:
+            if picture.width<2 or picture.height<2 or picture.width*picture.height>12_000_000:
+                raise HTTPException(413,"Replacement image dimensions exceed limits")
+            bitmap=ImageOps.exif_transpose(picture).convert("RGB")
+        writer=PdfWriter()
+        writer.append(source)
+        images=list(writer.pages[page_index-1].images)
+        if not 1<=image_index<=len(images):
+            raise HTTPException(400,"Image index not found on page")
+        images[image_index-1].replace(bitmap,quality=90)
+        output=io.BytesIO();writer.write(output)
+        result=output.getvalue()
+        after=inspect_pdf(result)
+        if len(after.pages)!=len(source.pages):
+            raise HTTPException(422,"PDF pages changed unexpectedly")
+        for before_page,after_page in zip(source.pages,after.pages):
+            if (before_page.extract_text() or "")!=(after_page.extract_text() or ""):
+                raise HTTPException(422,"PDF searchable text changed during image replacement")
+        return result
+    except HTTPException:raise
+    except (OSError,ValueError,TypeError,KeyError,IndexError):
+        raise HTTPException(422,"Image XObject cannot be replaced safely")
+
 @app.post("/v1/jobs")
 async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:UploadFile=File(...),regions:str|None=Form(None),
+                  replacement:UploadFile|None=File(None),page:int|None=Form(None),image_index:int|None=Form(None),
                   authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
     expected=os.getenv("PDF_ENGINE_SECRET","")
     if len(expected)<32 or not authorization or not authorization.startswith("Bearer "):
@@ -196,7 +233,15 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
     if not data or len(data)>MAX:raise HTTPException(413,"File too large")
     with reserve(x_filemagik_visitor or ""):
       try:
-        if operation=="pdf-to-docx":result=await asyncio.to_thread(pdf_to_docx,data)
+        if operation=="replace-pdf-image":
+            if replacement is None or page is None or image_index is None:
+                raise HTTPException(400,"PDF, replacement image, page and image number are required")
+            extension=Path(replacement.filename or "").suffix.lower()
+            if extension not in (".png",".jpg",".jpeg",".webp"):
+                raise HTTPException(415,"Replacement image must be PNG, JPG or WebP")
+            new_image=await replacement.read(3*1024*1024+1)
+            result=await asyncio.to_thread(replace_pdf_image,data,new_image,page,image_index)
+        elif operation=="pdf-to-docx":result=await asyncio.to_thread(pdf_to_docx,data)
         elif operation=="pdf-to-xlsx":result=await asyncio.to_thread(pdf_to_xlsx,data)
         elif operation=="ocr-pdf":result=await asyncio.to_thread(raster_ocr_pdf,data)
         elif operation=="redact-pdf":
