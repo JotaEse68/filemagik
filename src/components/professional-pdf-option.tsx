@@ -34,7 +34,7 @@ export async function runProfessionalConversion(slug:ProfessionalSlug,file:File,
  const name=file.name.replace(/\.[^.]+$/,'')+'-professional'+suffix;
  return {name,blob:await response.blob()};
 }
-export default function ProfessionalPdfOption({siteKey,ready,onToken,onReset}:{siteKey:string;
+export default function ProfessionalPdfOption({siteKey,ready,onToken,onReset,action='filemagik_pdf'}:{siteKey:string;action?:string;
  ready:boolean;onToken:(token:string)=>void;onReset:()=>void}){
  const ref=useRef<HTMLDivElement|null>(null),widget=useRef<string|number|null>(null);
  const [status,setStatus]=useState<'loading'|'ready'|'failed'>('loading');
@@ -44,7 +44,7 @@ export default function ProfessionalPdfOption({siteKey,ready,onToken,onReset}:{s
   function mount(){
    if(!active||!ref.current||!window.turnstile||widget.current!==null)return;
    try{widget.current=window.turnstile.render(ref.current,{
-    sitekey:siteKey,action:'filemagik_pdf',
+    sitekey:siteKey,action,
     callback:token=>{if(active)onToken(token);},
     'expired-callback':()=>{if(active)onReset();},
     'error-callback':()=>{if(active){onReset();setStatus('failed');}},
@@ -64,7 +64,7 @@ export default function ProfessionalPdfOption({siteKey,ready,onToken,onReset}:{s
    if(widget.current!==null&&window.turnstile){try{window.turnstile.remove(widget.current);}catch{/* ignore */}widget.current=null;}};
  // Callbacks are stable at render for this widget's lifetime.
  // eslint-disable-next-line react-hooks/exhaustive-deps
- },[ready,siteKey]);
+ },[ready,siteKey,action]);
  return <div className="fm-professional-challenge" aria-live="polite">
   <div ref={ref}/>
   {status==='loading'&&<small>Cargando verificación para la conversión profesional…</small>}
