@@ -289,10 +289,18 @@ def test_gif_editor_trims_frames_and_updates_duration():
     assert two.status_code==200
     with Image.open(io.BytesIO(two.content)) as edited:
         assert edited.n_frames==2
-        edited.seek(0);first_duration=edited.info.get("duration",0)
-        edited.seek(1);second_duration=edited.info.get("duration",0)
-        assert 40<=first_duration<=90
-        assert 100<=second_duration<=160
+        # Pillow does not consistently expose WebP frame timing in .info.
+        # Check the animation container's ANMF frame-duration fields directly.
+        marker=b"ANMF"
+        offsets=[];cursor=0
+        while True:
+            at=two.content.find(marker,cursor)
+            if at<0:break
+            offsets.append(at);cursor=at+4
+        assert len(offsets)==2
+        durations=[int.from_bytes(two.content[at+20:at+23],"little") for at in offsets]
+        assert 40<=durations[0]<=90
+        assert 100<=durations[1]<=160
     bad=client.post("/workers/image/v1/convert?operation=gif-edit-webp&start_frame=3&end_frame=4&speed=1",
       headers=HEADERS,files={"file":("animation.gif",gif_bytes(),"image/gif")})
     assert bad.status_code==400
