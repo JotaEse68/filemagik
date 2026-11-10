@@ -1,0 +1,16 @@
+name: F1 real production rollout canary
+on:
+  pull_request:
+    branches: [main]
+    paths: ['scripts/f1-live-rollout.mjs','.github/workflows/f1-live-rollout.yml']
+permissions:
+  contents: read
+jobs:
+  check-public-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node scripts/f1-live-rollout.mjs https://filemagik.vercel.app wave2
