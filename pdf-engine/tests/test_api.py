@@ -238,3 +238,53 @@ def test_native_text_object_edit_rejects_length_changes(monkeypatch):
         files={"file":("text.pdf",make_pdf(),"application/pdf")},
         data={"page":"1","source_text":"FileMagik validation","new_text":"different"})
     assert response.status_code==400
+
+
+def test_authorized_password_pdf_unlock_preserves_pages_and_searchable_text(monkeypatch):
+    from pypdf import PdfReader,PdfWriter
+    secret="w"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    writer=PdfWriter()
+    writer.append(PdfReader(io.BytesIO(make_pdf())))
+    writer.encrypt(user_password="authorized-pass",owner_password="owner-pass",algorithm="AES-256")
+    secured=io.BytesIO();writer.write(secured)
+    before=PdfReader(io.BytesIO(secured.getvalue()))
+    assert before.is_encrypted
+    response=client.post("/v1/jobs?operation=unlock-pdf",headers={
+      "Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+      files={"file":("secured.pdf",secured.getvalue(),"application/pdf")},
+      data={"pdf_password":"authorized-pass"})
+    assert response.status_code==200,response.text[:200] if response.status_code!=200 else ""
+    unlocked=PdfReader(io.BytesIO(response.content))
+    assert not unlocked.is_encrypted
+    assert len(unlocked.pages)==1
+    assert "FileMagik validation" in unlocked.pages[0].extract_text()
+
+def test_pdf_unlock_refuses_bad_or_missing_password_and_plain_pdf(monkeypatch):
+    from pypdf import PdfReader,PdfWriter
+    secret="v"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    writer=PdfWriter();writer.append(PdfReader(io.BytesIO(make_pdf())))
+    writer.encrypt("valid-password",algorithm="AES-256")
+    secured=io.BytesIO();writer.write(secured)
+    headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR}
+    for password,expected in (("wrong",422),("",400)):
+        response=client.post("/v1/jobs?operation=unlock-pdf",headers=headers,
+          files={"file":("encrypted.pdf",secured.getvalue(),"application/pdf")},
+          data={"pdf_password":password})
+        assert response.status_code==expected
+    plain=client.post("/v1/jobs?operation=unlock-pdf",headers=headers,
+      files={"file":("plain.pdf",make_pdf(),"application/pdf")},
+      data={"pdf_password":"valid-password"})
+    assert plain.status_code==422
+
+def test_pdf_unlock_requires_private_authorization(monkeypatch):
+    from pypdf import PdfReader,PdfWriter
+    monkeypatch.setenv("PDF_ENGINE_SECRET","j"*40)
+    writer=PdfWriter();writer.append(PdfReader(io.BytesIO(make_pdf())))
+    writer.encrypt("known")
+    stream=io.BytesIO();writer.write(stream)
+    response=client.post("/v1/jobs?operation=unlock-pdf",
+      files={"file":("secure.pdf",stream.getvalue(),"application/pdf")},
+      data={"pdf_password":"known"})
+    assert response.status_code==401
