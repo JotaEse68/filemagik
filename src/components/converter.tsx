@@ -49,6 +49,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [subtitleOffsetMs,setSubtitleOffsetMs]=useState(0),[annotationText,setAnnotationText]=useState('');
  const [annotationPages,setAnnotationPages]=useState(''),[annotationPlacement,setAnnotationPlacement]=useState<'top-left'|'bottom-left'|'top-right'>('bottom-left');
  const [audioStartSeconds,setAudioStartSeconds]=useState(0),[audioEndSeconds,setAudioEndSeconds]=useState<number|undefined>();
+ const [batchPreset,setBatchPreset]=useState<'web-friendly'|'extract'>('web-friendly');
  const [ocrLang,setOcrLang]=useState<'eng'|'spa'|'por'|'fra'>('eng');
  const [pages,setPages]=useState('1-2'),[groupSize,setGroupSize]=useState(2),[watermark,setWatermark]=useState('CONFIDENTIAL'),[opacity,setOpacity]=useState(25);
  const labels={"en":["Pages (e.g. 1,3,5-8)","Pages per file","Watermark text","Opacity","Visible signature","Lossy conversion: pages become images. Text, links and forms will no longer be searchable.","OCR language"],"es":["Páginas (ej. 1,3,5-8)","Páginas por archivo","Texto de marca","Opacidad","Firma visible","Compresión con pérdida: las páginas pasan a ser imágenes. Texto, enlaces y formularios dejan de ser buscables.","Idioma del OCR"],"pt":["Páginas (ex. 1,3,5-8)","Páginas por arquivo","Texto da marca","Opacidade","Assinatura visível","Compressão com perda: páginas viram imagens; textos, links e formulários deixam de ser pesquisáveis.","Idioma do OCR"],"fr":["Pages (ex. 1,3,5-8)","Pages par fichier","Texte du filigrane","Opacité","Signature visible","Compression avec perte : les pages deviennent des images et le texte, les liens et les formulaires ne seront plus recherchables.","Langue de l’OCR"]}[locale];
@@ -59,7 +60,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  if(serverOnlyWorker&&!workerReady)throw new Error('Private conversion engine not available; no insecure fallback');
  if(serverOnlyWorker&&!workerToken)throw new Error('Completa la verificación para convertir');
  if(professional&&engineReady&&challengeRequired&&!challengeToken)throw new Error('Completa la verificación para usar el motor profesional');
- const output=serverOnlyWorker?await runWorkerConversion(slug,files[0],workerToken,abortController.current.signal):
+ const output=serverOnlyWorker?await runWorkerConversion(slug,files,workerToken,abortController.current.signal,{start: ['server-trim-audio','server-trim-video','server-video-frame'].includes(slug)?audioStartSeconds:undefined,end: ['server-trim-audio','server-trim-video'].includes(slug)?audioEndSeconds:undefined,preset:batchPreset}):
  professional&&engineReady&&isProfessionalSlug(slug)?await runProfessionalConversion(slug,files[0],challengeToken,slug==='compress-pdf-raster'?compressionMode:'lossless'):
  await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,signal:abortController.current.signal,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});if(!output.blob.size)throw new Error('El archivo generado está vacío. Prueba otro archivo.');setResult({name:output.name,url:URL.createObjectURL(output.blob)});
  }catch(e){setError(e instanceof Error?(e.name==='AbortError'?'Conversión cancelada':e.message):d.error)}finally{abortController.current=null;setBusy(false);if(serverOnlyWorker){setWorkerToken('');setWorkerVersion(v=>v+1);}if(professional){setChallengeToken('');setChallengeVersion(v=>v+1);}}};
@@ -77,7 +78,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
   <Info size={19} aria-hidden="true"/>
   <div><h3>{messages.why}</h3><p>{getConversionBenefit(slug,locale)}</p></div>
  </aside>
- <input ref={input} className="visually-hidden" type="file" aria-label={d.browse} multiple={slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'||slug==='create-tar'||slug==='rename-batch'||slug==='batch-images-to-webp'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
+ <input ref={input} className="visually-hidden" type="file" aria-label={d.browse} multiple={slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'||slug==='create-tar'||slug==='rename-batch'||slug==='batch-images-to-webp'||slug==='server-mixed-batch'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
  <div className={`dropzone ${drag?'dragging':''}`} role="group" aria-label={d.dropTitle} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);choose(Array.from(e.dataTransfer.files))}}>
  <div className="upload-icon"><FileUp size={36} strokeWidth={1.6}/></div>
  <h2>{result?<><Check size={25}/>{result.name}</>:files.length?files.map(f=>f.name).join(', '):d.dropTitle}</h2>
@@ -130,13 +131,27 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  {slug==='compress-pdf-raster'&&<label>Compresión <select value={compressionMode} onChange={e=>setCompressionMode(e.target.value as 'lossless'|'balanced'|'maximum')}><option value="lossless">Sin pérdida</option><option value="balanced">Equilibrada</option><option value="maximum">Máxima reducción</option></select></label>}
  {challengeRequired&&<ProfessionalPdfOption key={challengeVersion} siteKey={siteKey} ready={professional} onToken={setChallengeToken} onReset={()=>setChallengeToken('')}/>}</>}
  </div>}
+ {files.length>0&&!result&&['server-trim-audio','server-trim-video','server-video-frame'].includes(slug)&&<div className="pdf-option-panel">
+ <label>{({es:'Inicio (segundos)',en:'Start time (seconds)',pt:'Início (segundos)',fr:'Début (secondes)'} as const)[locale]}
+ <input type="number" min={0} max={120} step={0.1} value={audioStartSeconds} onChange={e=>setAudioStartSeconds(Number(e.target.value))}/></label>
+ {slug!=='server-video-frame'&&<label>{({es:'Fin del tramo (segundos)',en:'End time (seconds)',pt:'Fim (segundos)',fr:'Fin (secondes)'} as const)[locale]}
+ <input type="number" min={0.1} max={120} step={0.1} value={audioEndSeconds??''} onChange={e=>setAudioEndSeconds(e.target.value===''?undefined:Number(e.target.value))} required/></label>}
+ <p>{({es:'El intervalo debe estar dentro de la duración original. Máximo 120 segundos.',en:'The range must fit within the source duration. Maximum 120 seconds.',pt:'O trecho deve caber na duração original. Máximo 120 segundos.',fr:'La plage doit rester dans la durée d’origine. Maximum 120 secondes.'} as const)[locale]}</p>
+ </div>}
+ {files.length>0&&!result&&slug==='server-mixed-batch'&&<div className="pdf-option-panel">
+ <label>{({es:'Preset del lote',en:'Batch preset',pt:'Preset do lote',fr:'Préréglage du lot'} as const)[locale]}
+ <select value={batchPreset} onChange={e=>setBatchPreset(e.target.value as 'web-friendly'|'extract')}>
+ <option value="web-friendly">{({es:'Optimizado para compartir',en:'Web-friendly',pt:'Otimizado para partilhar',fr:'Optimisé pour le partage'} as const)[locale]}</option>
+ <option value="extract">{({es:'Extraer fotogramas y audio',en:'Extract frames and audio',pt:'Extrair quadros e áudio',fr:'Extraire images et audio'} as const)[locale]}</option></select></label>
+ <p>{({es:'Hasta 6 archivos y 12 MB en total. El ZIP incluye manifest.json con el estado de cada archivo. No conserva los trabajos tras cerrar el navegador.',en:'Up to 6 files / 12 MB. ZIP includes a per-file status manifest. Jobs do not persist after closing the browser.',pt:'Até 6 arquivos / 12 MB. ZIP inclui estado por arquivo; não retoma após fechar o navegador.',fr:'6 fichiers / 12 Mo au maximum. ZIP avec état par fichier ; aucune reprise après fermeture.'} as const)[locale]}</p>
+ </div>}
  {files.length>0&&!result&&serverOnlyWorker&&<div className="fm-pro-engine-panel"><strong>Motor profesional privado</strong>
   {!workerReady?<p role="status">Servicio privado no habilitado. No se subirá ningún archivo.</p>:
    <><p>Máximo 3 MB. Se envía temporalmente al servidor para convertirlo. Se aplican cuotas y verificación.</p>
     <ProfessionalPdfOption key={workerVersion} siteKey={workerSiteKey} ready={workerReady} action="filemagik_worker" onToken={setWorkerToken} onReset={()=>setWorkerToken('')}/></>}
  </div>}
  {files.length>0&&!result&&serverOnlyOffice&&!engineReady&&<p role="status">Esta conversión necesita el motor Office profesional; no hay conversión local compatible.</p>}
- {files.length>0&&!result&&<div className="actions">{(tool.kind==='image'||slug==='images-to-pdf'||slug==='compress-pdf-raster')&&<label className="quality">{d.imageQuality}: {quality}% <input type="range" min="50" max="100" value={quality} onChange={e=>setQuality(Number(e.target.value))}/></label>}<button type="button" className="btn btn-primary" disabled={busy} onClick={run}>{busy?<LoaderCircle className="spin" size={18}/>:<ArrowRight size={18}/>} {busy?d.processing:d.convert}</button><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}>{d.reset}</button>{busy&&slug==='batch-images-to-webp'&&<button type="button" className="btn btn-ghost" onClick={()=>abortController.current?.abort()}>{({es:'Cancelar lote',en:'Cancel batch',pt:'Cancelar lote',fr:'Annuler le lot'} as const)[locale]}</button>}</div>}
+ {files.length>0&&!result&&<div className="actions">{(tool.kind==='image'||slug==='images-to-pdf'||slug==='compress-pdf-raster')&&<label className="quality">{d.imageQuality}: {quality}% <input type="range" min="50" max="100" value={quality} onChange={e=>setQuality(Number(e.target.value))}/></label>}<button type="button" className="btn btn-primary" disabled={busy} onClick={run}>{busy?<LoaderCircle className="spin" size={18}/>:<ArrowRight size={18}/>} {busy?d.processing:d.convert}</button><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}>{d.reset}</button>{busy&&(slug==='batch-images-to-webp'||serverOnlyWorker)&&<button type="button" className="btn btn-ghost" onClick={()=>abortController.current?.abort()}>{({es:'Cancelar lote',en:'Cancel batch',pt:'Cancelar lote',fr:'Annuler le lot'} as const)[locale]}</button>}</div>}
  {result&&<div className="conversion-complete" role="status" aria-live="polite" data-testid="conversion-success">
    <div className="conversion-complete-heading"><CheckCircle2 size={25} aria-hidden="true"/><div><h3>{messages.finished}</h3><p>{messages.ready}</p></div></div>
    <p className="conversion-complete-file"><strong>{messages.file}:</strong> <span>{result.name}</span></p>
