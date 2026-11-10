@@ -212,3 +212,29 @@ def test_native_pdf_replacement_rejects_missing_image(monkeypatch):
              "replacement":("new.png",b"broken","image/png")},
       data={"page":"1","image_index":"1"})
     assert result.status_code in (400,422)
+
+
+def test_native_text_object_replacement_is_searchable_and_not_rasterized(monkeypatch):
+    from pypdf import PdfReader
+    secret="s"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    original=make_pdf()
+    response=client.post("/v1/jobs?operation=replace-pdf-text",headers={
+        "Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+        files={"file":("text.pdf",original,"application/pdf")},
+        data={"page":"1","source_text":"FileMagik validation","new_text":"FileMagik alteration"})
+    assert response.status_code==200,response.text[:250] if response.status_code!=200 else ""
+    source=PdfReader(io.BytesIO(original)).pages[0].extract_text()
+    edited=PdfReader(io.BytesIO(response.content)).pages[0].extract_text()
+    assert "FileMagik validation" in source
+    assert "FileMagik alteration" in edited
+    assert "FileMagik validation" not in edited
+
+def test_native_text_object_edit_rejects_length_changes(monkeypatch):
+    secret="u"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    response=client.post("/v1/jobs?operation=replace-pdf-text",headers={
+        "Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+        files={"file":("text.pdf",make_pdf(),"application/pdf")},
+        data={"page":"1","source_text":"FileMagik validation","new_text":"different"})
+    assert response.status_code==400
