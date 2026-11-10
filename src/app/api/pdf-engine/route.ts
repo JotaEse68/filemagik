@@ -40,7 +40,7 @@ export async function POST(request:NextRequest){
  if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:'Origin not allowed'},{status:403});
  const length=Number(request.headers.get('content-length')||0);
  if(!Number.isSafeInteger(length)||length<0)return NextResponse.json({error:'Invalid request size'},{status:400});
- if(length>maxBytes+4096)return NextResponse.json({error:'Maximum 3 MB upload'},{status:413});
+ if(length>(operation==='replace-pdf-image'?2*maxBytes+8192:maxBytes+4096))return NextResponse.json({error:'Upload exceeds secure size limit'},{status:413});
  let data:FormData;
  try{data=await request.formData();}catch{return NextResponse.json({error:'Invalid upload'},{status:400});}
  const token=data.get('turnstile');
