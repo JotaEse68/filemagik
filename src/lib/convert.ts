@@ -32,6 +32,9 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,option
  if(slug==='inspect-pdf-form'||slug==='fill-pdf-form'||slug==='flatten-pdf-form'){
   const {handlePdfForm}=await import('./pdf-form-tools');return handlePdfForm(files[0],slug==='inspect-pdf-form'?'list':slug==='fill-pdf-form'?'fill':'flatten',options.formValues);
  }
+ if(slug==='heic-to-png'){
+  const {heicToPng}=await import('./heic-to-png');return heicToPng(files[0]);
+ }
  if(slug==='tiff-to-png'){
   const {tiffToPng}=await import('./tiff-to-png');return tiffToPng(files[0]);
  }
