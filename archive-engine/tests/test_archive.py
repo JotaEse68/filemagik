@@ -8,10 +8,14 @@ import pytest
 
 client=TestClient(app)
 SECRET="filemagik-archive-test-secret-"+"a"*40
-HEADERS={"Authorization":"Bearer "+SECRET}
+HEADERS={"Authorization":"Bearer "+SECRET,"X-Filemagik-Visitor":"a"*64}
 
 @pytest.fixture(autouse=True)
 def secret(monkeypatch):monkeypatch.setenv("FILEMAGIK_ARCHIVE_SECRET",SECRET)
+@pytest.fixture(autouse=True)
+def persistent_quota_db(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_ARCHIVE_QUOTA_DB",str(tmp_path/"quota.sqlite3"))
+
 
 def make_7z(tmp_path):
  source=tmp_path/"notes.txt"
