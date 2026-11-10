@@ -13,4 +13,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - run: node scripts/f1-live-rollout.mjs https://filemagik.vercel.app wave2
+      - run: node scripts/f1-live-rollout.mjs https://filemagik.vercel.app all
