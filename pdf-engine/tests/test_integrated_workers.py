@@ -117,3 +117,31 @@ def test_memory_headroom_for_small_real_conversions():
     peak_kb=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     # Conservative CI regression check, not a substitute for Railway load testing.
     assert peak_kb<700*1024
+
+def test_pdf_and_media_share_capacity_when_workers_enabled():
+    # The PDF job must not run at the same time as a costly media conversion.
+    with capacity():
+        response=client.post("/v1/jobs?operation=pdf-to-docx",
+            headers=HEADERS,files={"file":("draft.pdf",b"%PDF-1.5 fake","application/pdf")})
+        assert response.status_code==429
+
+def test_worker_memory_pressure_refuses_request(monkeypatch):
+    import worker_capacity
+    from fastapi import HTTPException
+    def simulated_exhausted_ram():
+        raise HTTPException(503,"Insufficient memory headroom")
+    monkeypatch.setattr(worker_capacity,"memory_headroom",simulated_exhausted_ram)
+    response=client.post("/workers/image/v1/convert?operation=gif-to-animated-webp",
+        headers=HEADERS,files={"file":("a.gif",gif_bytes(),"image/gif")})
+    assert response.status_code==503
+
+def test_ffprobe_rejects_excessive_video_dimensions(monkeypatch,tmp_path):
+    from fastapi import HTTPException
+    import media_worker
+    def fake_probe(command,timeout=35):
+        if "format=duration" in command:return b"3.0"
+        return b"4096x2160"
+    monkeypatch.setattr(media_worker,"run_command",fake_probe)
+    with pytest.raises(HTTPException) as rejected:
+        media_worker.inspect(tmp_path/"fake.mp4")
+    assert rejected.value.status_code==413
