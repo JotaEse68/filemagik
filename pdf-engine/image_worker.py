@@ -14,7 +14,7 @@ register_heif_opener()
 Image.MAX_IMAGE_PIXELS=12_000_000
 app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
 MAX_BYTES=12*1024*1024
-MAX_OUTPUT=24*1024*1024
+MAX_OUTPUT=12*1024*1024
 _LIMIT=threading.BoundedSemaphore(1)
 OPERATIONS={"heic-to-png":(".heic",".heif"),"gif-to-animated-webp":(".gif",)}
 
