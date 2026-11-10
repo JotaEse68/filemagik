@@ -130,6 +130,8 @@ async def verify():
                 "FILEMAGIK_IMAGE_QUOTA_DB",
                 "FILEMAGIK_MEDIA_QUOTA_DB",
                 "FILEMAGIK_ARCHIVE_QUOTA_DB",
+                "FILEMAGIK_MEDIA_HOURLY_VISITOR",
+                "FILEMAGIK_IMAGE_HOURLY_VISITOR",
             )}
             os.environ.update({
                 "FILEMAGIK_UNIFIED_WORKERS_ENABLED":"true",
@@ -137,6 +139,8 @@ async def verify():
                 "FILEMAGIK_IMAGE_QUOTA_DB":temp_dir+"/image.sqlite3",
                 "FILEMAGIK_MEDIA_QUOTA_DB":temp_dir+"/media.sqlite3",
                 "FILEMAGIK_ARCHIVE_QUOTA_DB":temp_dir+"/archive.sqlite3",
+                "FILEMAGIK_MEDIA_HOURLY_VISITOR":"10",
+                "FILEMAGIK_IMAGE_HOURLY_VISITOR":"10",
             })
             try:
                 start=time.perf_counter()
