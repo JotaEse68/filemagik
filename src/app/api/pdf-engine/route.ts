@@ -5,7 +5,7 @@ export const runtime='nodejs';
 const supported:Record<string,readonly string[]>={
  'pdf-to-docx':['.pdf'],'pdf-to-xlsx':['.pdf'],
  'office-to-pdf':['.docx','.xlsx','.pptx','.odt','.ods','.odp'],
- 'optimize-pdf':['.pdf'],'redact-pdf':['.pdf'],'ocr-pdf':['.pdf'],'replace-pdf-image':['.pdf'],
+ 'optimize-pdf':['.pdf'],'redact-pdf':['.pdf'],'ocr-pdf':['.pdf'],'replace-pdf-image':['.pdf'],'replace-pdf-text':['.pdf'],
 };
 const maxBytes=3*1024*1024;
 const maxResponseBytes=22*1024*1024;
@@ -13,7 +13,7 @@ const safeExt=(name:string)=>name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0]||'';
 const allowedMime:Record<string,string>={
  'pdf-to-docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
  'pdf-to-xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
- 'office-to-pdf':'application/pdf','optimize-pdf':'application/pdf','redact-pdf':'application/pdf','ocr-pdf':'application/pdf','replace-pdf-image':'application/pdf',
+ 'office-to-pdf':'application/pdf','optimize-pdf':'application/pdf','redact-pdf':'application/pdf','ocr-pdf':'application/pdf','replace-pdf-image':'application/pdf','replace-pdf-text':'application/pdf',
 };
 function configured(){
  const base=process.env.FILEMAGIK_PDF_ENGINE_URL||'';
@@ -65,6 +65,14 @@ export async function POST(request:NextRequest){
  }
  const payload=new FormData();
  payload.set('file',new File([await file.arrayBuffer()],file.name,{type:file.type||'application/octet-stream'}));
+ if(operation==='replace-pdf-text'){
+  const page=Number(data.get('page'));const original=data.get('source_text'),newText=data.get('new_text');
+  if(!Number.isInteger(page)||page<1||page>100||typeof original!=='string'||typeof newText!=='string'||
+    !original||original.length>120||original.length!==newText.length||
+    !/^[\\x20-\\x7E]+$/.test(original)||!/^[\\x20-\\x7E]+$/.test(newText)||original===newText)
+    return NextResponse.json({error:'Native text requires matching-length printable ASCII strings'},{status:400});
+  payload.set('page',String(page));payload.set('source_text',original);payload.set('new_text',newText);
+ }
  if(operation==='replace-pdf-image'){
   const image=data.get('replacement'),page=Number(data.get('page')),imageIndex=Number(data.get('image_index'));
   if(!(image instanceof File)||image.size<1||image.size>maxBytes||!/^image\\/(png|jpeg|webp)$/.test(image.type)||
