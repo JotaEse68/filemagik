@@ -13,7 +13,7 @@ import type {Dictionary} from '@/lib/i18n';
 export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictionary;locale?:Locale}){
  const abortController=useRef<AbortController|null>(null);
  const serverOnlyWorker=isWorkerSlug(slug);
- const tool=getTool(slug)!;const serverOnlyOffice=slug==='ods-to-pdf'||slug==='odp-to-pdf'||slug==='ocr-pdf-professional'||slug==='replace-pdf-image-native'||slug==='replace-pdf-text-native';const input=useRef<HTMLInputElement>(null);const [files,setFiles]=useState<File[]>([]);
+ const tool=getTool(slug)!;const serverOnlyOffice=slug==='ods-to-pdf'||slug==='odp-to-pdf'||slug==='ocr-pdf-professional'||slug==='replace-pdf-image-native'||slug==='replace-pdf-text-native'||slug==='unlock-pdf-professional';const input=useRef<HTMLInputElement>(null);const [files,setFiles]=useState<File[]>([]);
  const [drag,setDrag]=useState(false),[busy,setBusy]=useState(false);
  const [result,setResult]=useState<{name:string;url:string}|null>(null);
  const [downloadStarted,setDownloadStarted]=useState(false);
@@ -68,6 +68,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  if(['server-trim-audio','server-trim-video'].includes(slug)&&(audioEndSeconds===undefined||audioEndSeconds<=audioStartSeconds)){setError('El final del recorte debe ser mayor que el inicio.');return;}abortController.current=new AbortController();setBusy(true);setDownloadStarted(false);setError('');setOcrProgress('');try{
  if(serverOnlyOffice&&!engineReady)throw new Error(slug==='ods-to-pdf'||slug==='odp-to-pdf'?'Professional Office engine unavailable':'Professional PDF engine unavailable');
  if(slug==='replace-pdf-image-native'&&!replacementFile)throw new Error('Selecciona una imagen de sustitución.');
+ if(slug==='unlock-pdf-professional'&&!pdfPassword)throw new Error('Introduce la contraseña válida del documento PDF.');
  if(slug==='replace-pdf-text-native'&&(!pdfNativeOriginal||pdfNativeOriginal.length!==pdfNativeReplacement.length))throw new Error('El texto original y el nuevo deben tener la misma longitud.');
  if(serverOnlyWorker&&!workerReady)throw new Error('Private conversion engine not available; no insecure fallback');
  if(serverOnlyWorker&&!workerToken)throw new Error('Completa la verificación para convertir');
@@ -76,7 +77,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
   try{const m=await import('@/lib/batch-recovery');await m.saveBatch(files,batchPreset);setBatchRecovery(true);}catch{/* Conversion still works without local retention */}
  }
  const output=serverOnlyWorker?await runWorkerConversion(slug,files,workerToken,abortController.current.signal,{start: ['server-trim-audio','server-trim-video','server-video-frame'].includes(slug)?audioStartSeconds:undefined,end: ['server-trim-audio','server-trim-video'].includes(slug)?audioEndSeconds:undefined,preset:batchPreset,firstFrame:slug==='server-gif-edit'?firstFrame:undefined,lastFrame:slug==='server-gif-edit'?lastFrame:undefined,speed:slug==='server-gif-edit'?gifSpeed:undefined}):
- professional&&engineReady&&isProfessionalSlug(slug)?await runProfessionalConversion(slug,files[0],challengeToken,slug==='compress-pdf-raster'?compressionMode:'lossless',{replacement:replacementFile||undefined,page:pdfImagePage,imageIndex:pdfImageIndex,sourceText:pdfNativeOriginal,newText:pdfNativeReplacement}):
+ professional&&engineReady&&isProfessionalSlug(slug)?await runProfessionalConversion(slug,files[0],challengeToken,slug==='compress-pdf-raster'?compressionMode:'lossless',{replacement:replacementFile||undefined,page:pdfImagePage,imageIndex:pdfImageIndex,sourceText:pdfNativeOriginal,newText:pdfNativeReplacement,password:pdfPassword}):
  await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,signal:abortController.current.signal,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});if(!output.blob.size)throw new Error('El archivo generado está vacío. Prueba otro archivo.');
  if(slug==='server-mixed-batch'){
   try{const m=await import('@/lib/batch-recovery');await m.saveBatchResult(output.blob,output.name);}catch{/* File is still available for immediate download */}
@@ -130,6 +131,11 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  {files.length>0&&!result&&slug==='compress-pdf-raster'&&<p style={{color:'#edc58f',fontSize:12}}>{labels[5]}</p>}
  {files.length>0&&!result&&['ocr-pdf','ocr-image','ocr-pdf-searchable'].includes(slug)&&<div className="pdf-option-panel"><label>{labels[6]}<select value={ocrLang} onChange={e=>setOcrLang(e.target.value as 'eng'|'spa'|'por'|'fra')}><option value="eng">English</option><option value="spa">Español</option><option value="por">Português</option><option value="fra">Français</option></select></label></div>}
  {files.length>0&&!result&&(slug==='protect-pdf'||slug==='unlock-pdf')&&<div className="pdf-option-panel"><label>{({es:'Contraseña del PDF',en:'PDF password',pt:'Senha do PDF',fr:'Mot de passe PDF'} as const)[locale]}<input type="password" required minLength={slug==='protect-pdf'?8:1} maxLength={128} autoComplete="new-password" value={pdfPassword} onChange={e=>setPdfPassword(e.target.value)}/></label><p>{({es:'Se procesa localmente en tu navegador. Para proteger usa al menos 8 caracteres; para desbloquear necesitas conocer la contraseña.',en:'Processed locally in your browser. Use at least 8 characters to protect; to unlock you must know the password.',pt:'Processado localmente. Use 8 caracteres para proteger; para desbloquear é necessário saber a senha.',fr:'Traitement local. Utilisez au moins 8 caractères pour protéger; le déverrouillage exige le mot de passe.'} as const)[locale]}</p></div>}
+ {files.length>0&&!result&&slug==='unlock-pdf-professional'&&<div className="pdf-option-panel">
+  <label>{({es:'Contraseña actual del PDF',en:'Current PDF password',pt:'Senha atual do PDF',fr:'Mot de passe actuel du PDF'} as const)[locale]}
+  <input type="password" required minLength={1} maxLength={256} autoComplete="off" value={pdfPassword} onChange={e=>setPdfPassword(e.target.value)}/></label>
+  <p>{({es:'Solo para archivos que estás autorizado a desbloquear. La contraseña se envía mediante conexión segura al motor privado y no se guarda. No modifica firmas digitales ni conserva una firma que dejaría de ser válida.',en:'Only unlock PDFs you are authorized to access. The password is sent securely to the private engine, never stored. Digitally signed PDFs are refused.',pt:'Use apenas em PDF autorizados. A senha é transmitida com segurança ao motor privado e não fica guardada. PDFs assinados são recusados.',fr:'Seulement pour les PDF autorisés. Le mot de passe est envoyé au moteur privé et non conservé. PDF signés refusés.'} as const)[locale]}</p>
+ </div>}
  {files.length>0&&!result&&slug==='replace-pdf-text-native'&&<div className="pdf-option-panel">
  <label>{({es:'Página (desde 1)',en:'Page (from 1)',pt:'Página',fr:'Page'} as const)[locale]}<input type="number" min={1} max={100} value={pdfImagePage} onChange={e=>setPdfImagePage(Number(e.target.value))}/></label>
  <label>{({es:'Texto original exacto',en:'Exact original text',pt:'Texto original exato',fr:'Texte original exact'} as const)[locale]}<input maxLength={120} value={pdfNativeOriginal} onChange={e=>setPdfNativeOriginal(e.target.value)}/></label>
