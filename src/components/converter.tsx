@@ -66,7 +66,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const run=async()=>{if(!files.length)return;
  if(['server-join-audio','server-join-video'].includes(slug)&&files.length<2){setError('Selecciona al menos dos archivos para unir.');return;}
  if(['server-trim-audio','server-trim-video'].includes(slug)&&(audioEndSeconds===undefined||audioEndSeconds<=audioStartSeconds)){setError('El final del recorte debe ser mayor que el inicio.');return;}abortController.current=new AbortController();setBusy(true);setDownloadStarted(false);setError('');setOcrProgress('');try{
- if(serverOnlyOffice&&!engineReady)throw new Error('Professional document engine unavailable');
+ if(serverOnlyOffice&&!engineReady)throw new Error(slug==='ods-to-pdf'||slug==='odp-to-pdf'?'Professional Office engine unavailable':'Professional PDF engine unavailable');
  if(slug==='replace-pdf-image-native'&&!replacementFile)throw new Error('Selecciona una imagen de sustitución.');
  if(slug==='replace-pdf-text-native'&&(!pdfNativeOriginal||pdfNativeOriginal.length!==pdfNativeReplacement.length))throw new Error('El texto original y el nuevo deben tener la misma longitud.');
  if(serverOnlyWorker&&!workerReady)throw new Error('Private conversion engine not available; no insecure fallback');
