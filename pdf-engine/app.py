@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException, Query
 from fastapi.responses import Response
 from pypdf import PdfReader,PdfWriter
+from pypdf.generic import ContentStream,NameObject,TextStringObject
 from PIL import Image, ImageOps
 from pypdf.errors import PdfReadError
 import httpx
@@ -26,10 +27,10 @@ MAX=int(os.getenv("MAX_UPLOAD_MIB","12"))*1024*1024
 GOTENBERG=os.getenv("GOTENBERG_URL","http://gotenberg.railway.internal:3000").rstrip("/")
 MIMES={"pdf-to-docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 "pdf-to-xlsx":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-"office-to-pdf":"application/pdf","optimize-pdf":"application/pdf","redact-pdf":"application/pdf","ocr-pdf":"application/pdf","replace-pdf-image":"application/pdf"}
+"office-to-pdf":"application/pdf","optimize-pdf":"application/pdf","redact-pdf":"application/pdf","ocr-pdf":"application/pdf","replace-pdf-image":"application/pdf","replace-pdf-text":"application/pdf"}
 EXTENSIONS={"pdf-to-docx":".pdf","pdf-to-xlsx":".pdf",
 "office-to-pdf":(".docx",".xlsx",".pptx",".odt",".ods",".odp"),
-"optimize-pdf":".pdf","redact-pdf":".pdf","ocr-pdf":".pdf","replace-pdf-image":".pdf"}
+"optimize-pdf":".pdf","redact-pdf":".pdf","ocr-pdf":".pdf","replace-pdf-image":".pdf","replace-pdf-text":".pdf"}
 
 @app.middleware("http")
 async def reject_oversized_body(request, call_next):
@@ -179,6 +180,47 @@ def _redaction_regions(data,regions_json):
     return json.dumps(rectangles,separators=(",",":"))
 
 
+
+def replace_pdf_text(data:bytes,page_index:int,original:str,replacement:str)->bytes:
+    """Replace one simple text-show object without rasterizing the PDF."""
+    if not original or not replacement or len(original)>120 or len(original)!=len(replacement):
+        raise HTTPException(400,"Native text edits require equal-length strings")
+    if original==replacement or any(ord(char)<32 or ord(char)>126 for char in original+replacement):
+        raise HTTPException(400,"Only changed printable ASCII is supported")
+    reader=inspect_pdf(data)
+    if b"/ByteRange" in data or reader.get_fields():
+        raise HTTPException(422,"Native editing is unavailable for signed PDFs or forms")
+    if not 1<=page_index<=len(reader.pages):
+        raise HTTPException(400,"Invalid PDF page")
+    writer=PdfWriter();writer.append(reader)
+    page=writer.pages[page_index-1]
+    try:
+        stream=ContentStream(page.get_contents(),writer)
+        matched=0
+        for operands,operator in stream.operations:
+            if operator in (b"Tj",b"'",b'"'):
+                position=2 if operator==b'"' else 0
+                if len(operands)>position and isinstance(operands[position],TextStringObject) and str(operands[position])==original:
+                    operands[position]=TextStringObject(replacement);matched+=1
+            elif operator==b"TJ" and operands:
+                for idx,value in enumerate(operands[0]):
+                    if isinstance(value,TextStringObject) and str(value)==original:
+                        operands[0][idx]=TextStringObject(replacement);matched+=1
+        if matched!=1:
+            raise HTTPException(422,"Text must match exactly one native PDF text object")
+        page[NameObject("/Contents")]=writer._add_object(stream)
+        buffer=io.BytesIO();writer.write(buffer)
+        result=buffer.getvalue();verified=inspect_pdf(result)
+        if len(verified.pages)!=len(reader.pages):
+            raise HTTPException(422,"PDF page count changed")
+        text=verified.pages[page_index-1].extract_text() or ""
+        if replacement not in text or original in text:
+            raise HTTPException(422,"Font encoding prevents verifiable native replacement")
+        return result
+    except HTTPException:raise
+    except (ValueError,TypeError,KeyError,IndexError,AttributeError):
+        raise HTTPException(422,"Native PDF text objects cannot be modified safely")
+
 def replace_pdf_image(data:bytes,image_bytes:bytes,page_index:int,image_index:int)->bytes:
     """Replace an actual image XObject, not a visual overlay.
     Refuse shared signatures/forms; do not claim to edit unsupported inline art.
@@ -217,6 +259,7 @@ def replace_pdf_image(data:bytes,image_bytes:bytes,page_index:int,image_index:in
 @app.post("/v1/jobs")
 async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:UploadFile=File(...),regions:str|None=Form(None),
                   replacement:UploadFile|None=File(None),page:int|None=Form(None),image_index:int|None=Form(None),
+                  source_text:str|None=Form(None),new_text:str|None=Form(None),
                   authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
     expected=os.getenv("PDF_ENGINE_SECRET","")
     if len(expected)<32 or not authorization or not authorization.startswith("Bearer "):
@@ -233,7 +276,11 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
     if not data or len(data)>MAX:raise HTTPException(413,"File too large")
     with reserve(x_filemagik_visitor or ""):
       try:
-        if operation=="replace-pdf-image":
+        if operation=="replace-pdf-text":
+            if page is None or source_text is None or new_text is None:
+                raise HTTPException(400,"Page and original/replacement text are required")
+            result=await asyncio.to_thread(replace_pdf_text,data,page,source_text,new_text)
+        elif operation=="replace-pdf-image":
             if replacement is None or page is None or image_index is None:
                 raise HTTPException(400,"PDF, replacement image, page and image number are required")
             extension=Path(replacement.filename or "").suffix.lower()
