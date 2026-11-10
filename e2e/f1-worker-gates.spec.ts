@@ -2,11 +2,14 @@ import {test,expect} from '@playwright/test';
 
 test('all private workers remain fail-closed while not enabled',async({request})=>{
  for(const operation of ['server-heic-to-png','server-gif-to-webp','server-audio-to-mp3',
-  'server-video-to-mp4','server-extract-7z','server-extract-rar']){
+  'server-video-to-gif','server-video-to-mp4','server-gif-to-mp4',
+  'server-extract-7z','server-extract-rar']){
   const status=await request.get('/api/worker-engine?operation='+operation);
   expect(status.ok()).toBeTruthy();
   const payload=await status.json();
   expect(payload.available).toBe(false);
+  expect(payload.challengeRequired).toBe(false);
+  expect(status.headers()['cache-control']).toContain('no-store');
   expect(payload.siteKey).toBeNull();
   const post=await request.post('/api/worker-engine?operation='+operation,{
    multipart:{file:{name:operation.includes('rar')?'sample.rar':'sample.mp4',
