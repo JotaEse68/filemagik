@@ -148,7 +148,9 @@ def test_ffprobe_rejects_excessive_video_dimensions(monkeypatch,tmp_path):
 
 
 @pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="FFmpeg tools required")
-def test_new_media_formats_and_audio_trim():
+def test_new_media_formats_and_audio_trim(monkeypatch):
+    monkeypatch.setenv("FILEMAGIK_MEDIA_HOURLY_VISITOR","100")
+    monkeypatch.setenv("FILEMAGIK_MEDIA_DAILY_VISITOR","100")
     import media_worker
     payload=wav_bytes()
     base="/workers/media/v1/media?operation="
@@ -160,7 +162,7 @@ def test_new_media_formats_and_audio_trim():
     response=client.post(base+"trim-audio-mp3&start=0.1&end=0.6",headers=HEADERS,
         files={"file":("sample.wav",payload,"audio/wav")})
     assert response.status_code==200
-    assert response.content.startswith(b"ID3") or response.content[:1]==b"\\xff"
+    assert response.content.startswith(b"ID3") or response.content[:1]==bytes.fromhex("ff")
     for invalid in ("start=-1&end=0.5","start=0.8&end=0.2",
                     "start=0&end=120","start=nan&end=1"):
         rejected=client.post(base+"trim-audio-mp3&"+invalid,headers=HEADERS,
@@ -179,7 +181,7 @@ def test_new_video_trim_and_single_png_frame(tmp_path):
     frame=client.post(base+"video-frame-png&start=0.5",headers=HEADERS,
         files={"file":("moving.mp4",data,"video/mp4")})
     assert frame.status_code==200,frame.text[:150] if frame.status_code!=200 else ""
-    assert frame.content.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+    assert frame.content.startswith(bytes.fromhex("89504e470d0a1a0a"))
     trimmed=client.post(base+"trim-video-mp4&start=0.25&end=1.25",headers=HEADERS,
         files={"file":("moving.mp4",data,"video/mp4")})
     assert trimmed.status_code==200,trimmed.text[:150] if trimmed.status_code!=200 else ""
