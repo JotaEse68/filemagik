@@ -9,7 +9,7 @@ import PdfFormEditor from '@/components/pdf-form-editor';
 import ProfessionalPdfOption,{isProfessionalSlug,runProfessionalConversion} from '@/components/professional-pdf-option';
 import type {Dictionary} from '@/lib/i18n';
 export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictionary;locale?:Locale}){
- const tool=getTool(slug)!;const input=useRef<HTMLInputElement>(null);const [files,setFiles]=useState<File[]>([]);
+ const tool=getTool(slug)!;const serverOnlyOffice=slug==='ods-to-pdf'||slug==='odp-to-pdf';const input=useRef<HTMLInputElement>(null);const [files,setFiles]=useState<File[]>([]);
  const [drag,setDrag]=useState(false),[busy,setBusy]=useState(false);
  const [result,setResult]=useState<{name:string;url:string}|null>(null);
  const [error,setError]=useState(''),[quality,setQuality]=useState(88);
@@ -41,6 +41,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  useEffect(()=>()=>{if(result)URL.revokeObjectURL(result.url)},[result]);
  const choose=(incoming:File[])=>{if(busy)return;try{validateFiles(slug,incoming);setResult(null);setError('');setFiles(incoming)}catch(e){setError(e instanceof Error?e.message:d.error);}};
  const run=async()=>{if(!files.length)return;setBusy(true);setError('');setOcrProgress('');try{
+ if(serverOnlyOffice&&!engineReady)throw new Error('Professional Office engine unavailable; no local converter for ODS/ODP');
  if(professional&&engineReady&&challengeRequired&&!challengeToken)throw new Error('Completa la verificación para usar el motor profesional');
  const output=professional&&engineReady&&isProfessionalSlug(slug)?await runProfessionalConversion(slug,files[0],challengeToken,slug==='compress-pdf-raster'?compressionMode:'lossless'):
  await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});setResult({name:output.name,url:URL.createObjectURL(output.blob)});
@@ -97,11 +98,12 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  {files.length>0&&!result&&engineReady&&isProfessionalSlug(slug)&&<div className="fm-pro-engine-panel">
  <strong>Motor PDF profesional</strong>
  <label><input type="radio" name="filemagik-pdf-engine" checked={professional} onChange={()=>setProfessional(true)}/> Mayor fidelidad (procesamiento seguro en servidor)</label>
- <label><input type="radio" name="filemagik-pdf-engine" checked={!professional} onChange={()=>setProfessional(false)}/> Procesamiento local (archivo permanece en el navegador)</label>
+ {!serverOnlyOffice&&<label><input type="radio" name="filemagik-pdf-engine" checked={!professional} onChange={()=>setProfessional(false)}/> Procesamiento local (archivo permanece en el navegador)</label>}
  {professional&&<><p>El archivo se transmite temporalmente al servidor para procesarlo. Máximo 3 MB por operación. No se conserva después de generar el resultado.</p>
  {slug==='compress-pdf-raster'&&<label>Compresión <select value={compressionMode} onChange={e=>setCompressionMode(e.target.value as 'lossless'|'balanced'|'maximum')}><option value="lossless">Sin pérdida</option><option value="balanced">Equilibrada</option><option value="maximum">Máxima reducción</option></select></label>}
  {challengeRequired&&<ProfessionalPdfOption key={challengeVersion} siteKey={siteKey} ready={professional} onToken={setChallengeToken} onReset={()=>setChallengeToken('')}/>}</>}
  </div>}
+ {files.length>0&&!result&&serverOnlyOffice&&!engineReady&&<p role="status">Esta conversión necesita el motor Office profesional; no hay conversión local compatible.</p>}
  {files.length>0&&!result&&<div className="actions">{(tool.kind==='image'||slug==='images-to-pdf'||slug==='compress-pdf-raster')&&<label className="quality">{d.imageQuality}: {quality}% <input type="range" min="50" max="100" value={quality} onChange={e=>setQuality(Number(e.target.value))}/></label>}<button type="button" className="btn btn-primary" disabled={busy} onClick={run}>{busy?<LoaderCircle className="spin" size={18}/>:<ArrowRight size={18}/>} {busy?d.processing:d.convert}</button><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}>{d.reset}</button></div>}
  {result&&<div className="actions"><a className="btn btn-primary" href={result.url} download={result.name}><Download size={18}/>{d.download}</a><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}><RotateCcw size={17}/>{d.reset}</button></div>}
  <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{status}</p>
