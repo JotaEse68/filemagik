@@ -164,6 +164,30 @@ async def verify():
                 if result.status_code!=200 or not (result.content.startswith(b"ID3")
                                                     or result.content[:1]==b"\xff"):
                     raise RuntimeError("Railway FFmpeg WAV->MP3 failed: "+str(result.status_code))
+                # G3/G4 certification: exercise the actual FFmpeg and Pillow
+                # routes inside Railway before making this deployment live.
+                edited_gif=client.post(
+                    "/workers/image/v1/convert?operation=gif-edit-webp&start_frame=1&end_frame=2&speed=2",
+                    headers=headers,files={"file":("sample.gif",gif.getvalue(),"image/gif")})
+                if edited_gif.status_code!=200 or edited_gif.content[:4]!=b"RIFF":
+                    raise RuntimeError("Railway GIF animation edit failed: "+str(edited_gif.status_code))
+                with Image.open(io.BytesIO(edited_gif.content)) as animation:
+                    if animation.n_frames!=2:
+                        raise RuntimeError("Railway GIF edit lost animation frames")
+                trimmed=client.post(
+                    "/workers/media/v1/media?operation=trim-audio-mp3&start=0.1&end=0.5",
+                    headers=headers,files={"file":("sample.wav",wav.getvalue(),"audio/wav")})
+                if trimmed.status_code!=200 or not (
+                    trimmed.content[:3]==b"ID3" or trimmed.content[:1]==b"\\xff"):
+                    raise RuntimeError("Railway FFmpeg audio trimming failed: "+str(trimmed.status_code))
+                joined=client.post(
+                    "/workers/media/v1/join?operation=join-audio-mp3",
+                    headers=headers,files=[
+                        ("files",("first.wav",wav.getvalue(),"audio/wav")),
+                        ("files",("second.wav",wav.getvalue(),"audio/wav"))])
+                if joined.status_code!=200 or not (
+                    joined.content[:3]==b"ID3" or joined.content[:1]==b"\\xff"):
+                    raise RuntimeError("Railway FFmpeg audio joining failed: "+str(joined.status_code))
                 rar_data=b"".join(binascii.a2b_uu(line.encode("ascii"))
                                   for line in UU.splitlines()[1:-1])
                 result=client.post("/workers/archive/v1/extract",headers=headers,
