@@ -4,7 +4,7 @@ from odf.opendocument import OpenDocumentSpreadsheet,OpenDocumentPresentation
 from odf.table import Table,TableRow,TableCell
 from odf.text import P
 from odf.draw import Page,Frame,TextBox
-from odf.style import MasterPage
+from odf.style import MasterPage,PageLayout,PageLayoutProperties
 
 
 def ods_fixture():
@@ -23,7 +23,10 @@ def ods_fixture():
 
 def odp_fixture():
     doc=OpenDocumentPresentation()
-    doc.masterstyles.addElement(MasterPage(name="Default"))
+    layout=PageLayout(name="DefaultLayout")
+    layout.addElement(PageLayoutProperties(pagewidth="28cm",pageheight="21cm",printorientation="landscape"))
+    doc.automaticstyles.addElement(layout)
+    doc.masterstyles.addElement(MasterPage(name="Default",pagelayoutname="DefaultLayout"))
     slide=Page(name="FileMagik slide",masterpagename="Default")
     frame=Frame(x="1cm",y="1cm",width="23cm",height="3cm")
     box=TextBox()
