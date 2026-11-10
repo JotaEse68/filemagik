@@ -36,6 +36,25 @@ test('unsupported compressed TIFF fails closed instead of producing a fake PNG',
   name:'compressed.tif',mimeType:'image/tiff',buffer:tiffRGB({compression:5}),
  });
  await page.getByRole('button',{name:/convertir ahora/i}).click();
- await expect(page.locator('p[role="alert"]').first()).toContainText('Only uncompressed');
+ await expect(page.locator('p[role="alert"]').first()).toContainText('Only baseline grayscale');
  await expect(page.locator('a[download]')).toHaveCount(0);
+});
+
+test('PackBits compressed TIFF converts to a real PNG and preserves pixels',async({page})=>{
+ await page.goto('/es/tiff-to-png');
+ const original=tiffRGB({compression:32773});
+ // Replace the raw 6 RGB bytes with one PackBits literal run (control=5)
+ const header=original.subarray(0,original.length-6);
+ const packed=Buffer.concat([header,Buffer.from([5,255,0,0,0,255,0])]);
+ const stripSizeTag=8+2+8*12;
+ packed.writeUInt32LE(7,stripSizeTag+8);
+ await page.locator('input[type=file]').setInputFiles({
+  name:'packed.tiff',mimeType:'image/tiff',buffer:packed,
+ });
+ await page.getByRole('button',{name:/convertir ahora/i}).click();
+ const link=page.locator('a[download]');
+ await expect(link).toHaveAttribute('download','packed.png');
+ const download=page.waitForEvent('download');await link.click();
+ const data=await readFile(await (await download).path());
+ expect([...data.subarray(0,8)]).toEqual([137,80,78,71,13,10,26,10]);
 });
