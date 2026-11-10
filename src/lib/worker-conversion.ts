@@ -17,6 +17,7 @@ const outputExtensions:Record<string,string>={
  'server-trim-video':'.mp4',
  'server-video-frame':'.png',
  'server-gif-frames-zip':'.zip',
+ 'server-gif-edit':'.webp',
  'server-mixed-batch':'.zip',
  'server-join-audio':'.mp3',
  'server-join-video':'.mp4',
@@ -26,7 +27,7 @@ export function isWorkerSlug(slug:string):boolean{
 }
 export async function runWorkerConversion(
  slug:string,files:File[],token:string,signal?:AbortSignal,
- options:{start?:number;end?:number;preset?:'web-friendly'|'extract'}={},
+ options:{start?:number;end?:number;preset?:'web-friendly'|'extract';firstFrame?:number;lastFrame?:number;speed?:number}={},
 ):Promise<OutputFile>{
  if(!isWorkerSlug(slug))throw new Error('Unsupported server conversion');
  if(!token)throw new Error('Human verification is required');
@@ -40,6 +41,9 @@ export async function runWorkerConversion(
  if(options.start!==undefined)params.set('start',String(options.start));
  if(options.end!==undefined)params.set('end',String(options.end));
  if(batch)params.set('preset',options.preset||'web-friendly');
+ if(options.firstFrame!==undefined)params.set('startFrame',String(options.firstFrame));
+ if(options.lastFrame!==undefined)params.set('endFrame',String(options.lastFrame));
+ if(options.speed!==undefined)params.set('speed',String(options.speed));
  const response=await fetch('/api/worker-engine?'+params,{
   method:'POST',body:form,cache:'no-store',signal,
  });
