@@ -13,6 +13,7 @@ export function limitsFor(slug:ToolSlug):FileLimits{
  if(imageBatch.has(slug))return {perFile:40*MIB,total:120*MIB,maxFiles:30};
  if(slug==='replace-pdf-text-native')return {perFile:3*MIB,total:3*MIB,maxFiles:1};
  if(slug==='replace-pdf-image-native')return {perFile:3*MIB,total:3*MIB,maxFiles:1};
+ if(slug==='unlock-pdf-professional')return {perFile:3*MIB,total:3*MIB,maxFiles:1};
  if(slug==='ocr-pdf-professional')return {perFile:3*MIB,total:3*MIB,maxFiles:1};
  if(slug==='ods-to-pdf'||slug==='odp-to-pdf')return {perFile:3*MIB,total:3*MIB,maxFiles:1};
  if(slug==='heic-to-png')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
