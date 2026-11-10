@@ -10,6 +10,7 @@ declare global {
  }; }
 }
 export const professionalOperations={
+ 'ods-to-pdf':'office-to-pdf','odp-to-pdf':'office-to-pdf',
  'pdf-to-word-text':'pdf-to-docx','pdf-to-excel-text':'pdf-to-xlsx',
  'word-to-layout-pdf':'office-to-pdf','xlsx-to-layout-pdf':'office-to-pdf',
  'pptx-to-pdf-layout':'office-to-pdf','compress-pdf-lossless':'optimize-pdf',
