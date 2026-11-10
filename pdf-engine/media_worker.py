@@ -39,6 +39,16 @@ def inspect(path):
  try:seconds=float(output.decode().strip())
  except (ValueError,UnicodeError):raise HTTPException(422,"Media duration unavailable")
  if not (0<seconds<=MAX_DURATION):raise HTTPException(413,"Maximum 120 seconds per operation")
+ dimensions=run_command(["ffprobe","-v","error","-protocol_whitelist","file,pipe",
+  "-select_streams","v:0","-show_entries","stream=width,height",
+  "-of","csv=p=0:s=x",str(path)],timeout=8).decode().strip()
+ if dimensions:
+  try:
+   width,height=(int(n) for n in dimensions.split("x",1))
+  except (ValueError,TypeError):
+   raise HTTPException(422,"Invalid media frame dimensions")
+  if width<=0 or height<=0 or width*height>2_100_000:
+   raise HTTPException(413,"Maximum source video resolution is 2.1 megapixels")
  return seconds
 
 @app.get("/healthz")
@@ -56,11 +66,13 @@ def convert(operation:str=Query(...),file:UploadFile=File(...),authorization:str
  try:
   with reserve(x_filemagik_visitor):
    data=file.file.read(MAX_INPUT+1)
-   if not data or len(data)>MAX_INPUT:raise HTTPException(413,"Maximum 25 MB per upload")
+   if not data or len(data)>MAX_INPUT:raise HTTPException(413,"Maximum 12 MB per upload")
    out_ext,mime,_=OPERATIONS[operation]
    with tempfile.TemporaryDirectory(prefix="fm-media-") as temp:
     src=Path(temp)/("input"+extension);src.write_bytes(data)
-    inspect(src)
+    duration=inspect(src)
+    if operation=="video-to-gif" and duration>20:
+     raise HTTPException(413,"Animated GIF exports are limited to 20 seconds")
     dest=Path(temp)/("output"+out_ext)
     common=["ffmpeg","-hide_banner","-nostdin","-loglevel","error","-y","-threads","1","-protocol_whitelist","file,pipe","-i",str(src),"-t",str(MAX_DURATION)]
     if operation in ("audio-to-mp3","extract-audio-mp3"):
@@ -75,7 +87,7 @@ def convert(operation:str=Query(...),file:UploadFile=File(...),authorization:str
      args=["-map","0:v:0","-vf","fps=10,scale=480:-1:flags=lanczos","-loop","0"]
     run_command([*common,*args,str(dest)],timeout=65)
     if not dest.exists() or dest.stat().st_size==0:raise HTTPException(422,"No usable output generated")
-    if dest.stat().st_size>MAX_OUTPUT:raise HTTPException(413,"Output exceeds 35 MB")
+    if dest.stat().st_size>MAX_OUTPUT:raise HTTPException(413,"Output exceeds 12 MB")
     result=dest.read_bytes()
     return Response(result,media_type=mime,headers={"Cache-Control":"private, no-store",
       "X-Content-Type-Options":"nosniff","Content-Disposition":'attachment; filename="filemagik'+out_ext+'"'})
