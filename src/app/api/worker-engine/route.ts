@@ -19,13 +19,19 @@ const config=(engine:Engine)=>{
  // All three engines live behind the existing FileMagik PDF API on Railway.
  const base=process.env.FILEMAGIK_PDF_ENGINE_URL||'';
  const secret=process.env.FILEMAGIK_PDF_ENGINE_SECRET||'';
+ // Activation is two-stage: deployment AND explicit post-QA certification.
+ // Merely adding Cloudflare keys must never open expensive conversions.
  const flag=process.env.FILEMAGIK_WORKER_ENGINES_PUBLIC_ENABLED==='true';
- return {base,secret,ready:flag&&/^https:\/\/[^\s/?#]+/i.test(base)&&secret.length>=32};
+ const certified=process.env.FILEMAGIK_WORKER_ENGINES_CERTIFIED==='true';
+ const challengeSecret=process.env.FILEMAGIK_TURNSTILE_SECRET||'';
+ const siteKey=process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY||'';
+ return {base,secret,ready:flag&&certified&&/^https:\/\/[^\s/?#]+/i.test(base)
+  &&secret.length>=32&&challengeSecret.length>=16&&siteKey.length>=6};
 };
 const json=(error:string,status:number)=>NextResponse.json({error},{status,headers:{'Cache-Control':'no-store'}});
 export async function GET(request:NextRequest){
  const op=operations[request.nextUrl.searchParams.get('operation')||''];
- const ready=!!op&&config(op.engine).ready&&!!process.env.FILEMAGIK_TURNSTILE_SECRET&&!!process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY;
+ const ready=!!op&&config(op.engine).ready;
  return NextResponse.json({available:ready,challengeRequired:ready,
   siteKey:ready?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null},
   {headers:{'Cache-Control':'no-store'}});
