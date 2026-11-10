@@ -8,6 +8,8 @@ const archives=new Set<ToolSlug>(['create-zip','extract-zip','create-tar','extra
 export type FileLimits={perFile:number;total:number;maxFiles:number};
 export function limitsFor(slug:ToolSlug):FileLimits{
  if(imageBatch.has(slug))return {perFile:40*MIB,total:120*MIB,maxFiles:30};
+ if(slug==='gif-to-png')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
+ if(slug==='markdown-to-docx')return {perFile:3*MIB,total:3*MIB,maxFiles:1};
  if(slug==='avif-to-png')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
  if(slug==='rtf-to-text')return {perFile:5*MIB,total:5*MIB,maxFiles:1};
  if(slug==='epub-to-text')return {perFile:60*MIB,total:60*MIB,maxFiles:1};
