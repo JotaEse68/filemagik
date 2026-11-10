@@ -1,6 +1,7 @@
 'use client';
 import {useRef,useState,useEffect} from 'react';
-import {ArrowRight,Check,Download,FileUp,RotateCcw,LoaderCircle} from 'lucide-react';
+import {ArrowRight,Check,Download,FileUp,RotateCcw,LoaderCircle,Info,CheckCircle2} from 'lucide-react';
+import {getConversionBenefit} from '@/lib/conversion-benefits';
 import {convertFiles} from '@/lib/convert';
 import {isWorkerSlug,runWorkerConversion} from '@/lib/worker-conversion';
 import {validateFiles,sizeLimitLabel} from '@/lib/file-limits';
@@ -15,6 +16,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const tool=getTool(slug)!;const serverOnlyOffice=slug==='ods-to-pdf'||slug==='odp-to-pdf';const input=useRef<HTMLInputElement>(null);const [files,setFiles]=useState<File[]>([]);
  const [drag,setDrag]=useState(false),[busy,setBusy]=useState(false);
  const [result,setResult]=useState<{name:string;url:string}|null>(null);
+ const [downloadStarted,setDownloadStarted]=useState(false);
  const [error,setError]=useState(''),[quality,setQuality]=useState(88);
  const [prefix,setPrefix]=useState('FileMagik'),[width,setWidth]=useState(1200);
  const [cropPercent,setCropPercent]=useState(0),[rotation,setRotation]=useState<0|90|180|270>(0),[format,setFormat]=useState<'png'|'jpeg'|'webp'>('webp');
@@ -51,25 +53,35 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [pages,setPages]=useState('1-2'),[groupSize,setGroupSize]=useState(2),[watermark,setWatermark]=useState('CONFIDENTIAL'),[opacity,setOpacity]=useState(25);
  const labels={"en":["Pages (e.g. 1,3,5-8)","Pages per file","Watermark text","Opacity","Visible signature","Lossy conversion: pages become images. Text, links and forms will no longer be searchable.","OCR language"],"es":["Páginas (ej. 1,3,5-8)","Páginas por archivo","Texto de marca","Opacidad","Firma visible","Compresión con pérdida: las páginas pasan a ser imágenes. Texto, enlaces y formularios dejan de ser buscables.","Idioma del OCR"],"pt":["Páginas (ex. 1,3,5-8)","Páginas por arquivo","Texto da marca","Opacidade","Assinatura visível","Compressão com perda: páginas viram imagens; textos, links e formulários deixam de ser pesquisáveis.","Idioma do OCR"],"fr":["Pages (ex. 1,3,5-8)","Pages par fichier","Texte du filigrane","Opacité","Signature visible","Compression avec perte : les pages deviennent des images et le texte, les liens et les formulaires ne seront plus recherchables.","Langue de l’OCR"]}[locale];
  useEffect(()=>()=>{if(result)URL.revokeObjectURL(result.url)},[result]);
- const choose=(incoming:File[])=>{if(busy)return;try{validateFiles(slug,incoming);setResult(null);setError('');setFiles(incoming)}catch(e){setError(e instanceof Error?e.message:d.error);}};
- const run=async()=>{if(!files.length)return;abortController.current=new AbortController();setBusy(true);setError('');setOcrProgress('');try{
+ const choose=(incoming:File[])=>{if(busy)return;try{validateFiles(slug,incoming);setResult(null);setDownloadStarted(false);setError('');setFiles(incoming)}catch(e){setError(e instanceof Error?e.message:d.error);}};
+ const run=async()=>{if(!files.length)return;abortController.current=new AbortController();setBusy(true);setDownloadStarted(false);setError('');setOcrProgress('');try{
  if(serverOnlyOffice&&!engineReady)throw new Error('Professional Office engine unavailable; no local converter for ODS/ODP');
  if(serverOnlyWorker&&!workerReady)throw new Error('Private conversion engine not available; no insecure fallback');
  if(serverOnlyWorker&&!workerToken)throw new Error('Completa la verificación para convertir');
  if(professional&&engineReady&&challengeRequired&&!challengeToken)throw new Error('Completa la verificación para usar el motor profesional');
  const output=serverOnlyWorker?await runWorkerConversion(slug,files[0],workerToken,abortController.current.signal):
  professional&&engineReady&&isProfessionalSlug(slug)?await runProfessionalConversion(slug,files[0],challengeToken,slug==='compress-pdf-raster'?compressionMode:'lossless'):
- await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,signal:abortController.current.signal,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});setResult({name:output.name,url:URL.createObjectURL(output.blob)});
+ await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,signal:abortController.current.signal,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});if(!output.blob.size)throw new Error('El archivo generado está vacío. Prueba otro archivo.');setResult({name:output.name,url:URL.createObjectURL(output.blob)});
  }catch(e){setError(e instanceof Error?(e.name==='AbortError'?'Conversión cancelada':e.message):d.error)}finally{abortController.current=null;setBusy(false);if(serverOnlyWorker){setWorkerToken('');setWorkerVersion(v=>v+1);}if(professional){setChallengeToken('');setChallengeVersion(v=>v+1);}}};
  const moveFile=(index:number,direction:number)=>setFiles(current=>{const target=index+direction;if(target<0||target>=current.length)return current;const next=[...current];[next[index],next[target]]=[next[target],next[index]];return next;});
- const reset=()=>{setResult(null);setFiles([]);setError('');if(input.current)input.current.value=''};
+ const reset=()=>{setResult(null);setDownloadStarted(false);setFiles([]);setError('');if(input.current)input.current.value=''};
+ const messages=({
+  es:{why:'¿Por qué hacer esta conversión?',finished:'¡Conversión completada!',ready:'El archivo está listo. Descárgalo cuando quieras.',file:'Archivo generado',downloadStarted:'Descarga solicitada. Consulta las descargas de tu navegador.',start:'Descargar archivo'},
+  en:{why:'Why make this conversion?',finished:'Conversion complete!',ready:'Your file is ready. Download it whenever you like.',file:'Generated file',downloadStarted:'Download requested. Check your browser downloads.',start:'Download file'},
+  pt:{why:'Por que fazer esta conversão?',finished:'Conversão concluída!',ready:'O ficheiro está pronto para descarregar.',file:'Ficheiro gerado',downloadStarted:'Transferência iniciada. Verifique as transferências do navegador.',start:'Descarregar ficheiro'},
+  fr:{why:'Pourquoi faire cette conversion ?',finished:'Conversion terminée !',ready:'Votre fichier est prêt à être téléchargé.',file:'Fichier généré',downloadStarted:'Téléchargement demandé. Vérifiez les téléchargements du navigateur.',start:'Télécharger le fichier'}
+ } as const)[locale];
  const status=busy?(ocrProgress?`${d.processing} · ${ocrProgress}`:d.processing):result?result.name+" · "+d.download:files.length?String(files.length)+" "+d.selected:"";
  return <section className="converter" aria-busy={busy}>
+ <aside className="conversion-benefit" aria-label={messages.why}>
+  <Info size={19} aria-hidden="true"/>
+  <div><h3>{messages.why}</h3><p>{getConversionBenefit(slug,locale)}</p></div>
+ </aside>
  <input ref={input} className="visually-hidden" type="file" aria-label={d.browse} multiple={slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'||slug==='create-tar'||slug==='rename-batch'||slug==='batch-images-to-webp'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
  <div className={`dropzone ${drag?'dragging':''}`} role="group" aria-label={d.dropTitle} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);choose(Array.from(e.dataTransfer.files))}}>
  <div className="upload-icon"><FileUp size={36} strokeWidth={1.6}/></div>
  <h2>{result?<><Check size={25}/>{result.name}</>:files.length?files.map(f=>f.name).join(', '):d.dropTitle}</h2>
- <p>{files.length?`${files.length} ${d.selected.toLowerCase()}`:d.dropSub}</p><small className="upload-limit">{sizeLimitLabel(slug)}</small>
+ <p>{files.length?`${files.length} ${d.selected.toLowerCase()}`:d.dropSub}</p>{!result&&<small className="upload-limit">{sizeLimitLabel(slug)}</small>}
  {!files.length&&<button type="button" className="btn btn-primary" onClick={()=>input.current?.click()}>{d.browse}<ArrowRight size={17}/></button>}
  {files.length>1&&!result&&(slug==='merge-pdf'||slug==='images-to-pdf')&&<ol className="file-order-list">{files.map((file,index)=><li key={file.name+'-'+index}><span>{file.name}</span><div><button type="button" disabled={index===0||busy} onClick={()=>moveFile(index,-1)} aria-label={`Move ${file.name} up`}>↑</button><button type="button" disabled={index===files.length-1||busy} onClick={()=>moveFile(index,1)} aria-label={`Move ${file.name} down`}>↓</button></div></li>)}</ol>}
  {files.length>0&&!result&&['extract-pdf-pages','delete-pdf-pages','split-pdf-by-count','watermark-pdf','reorder-pdf-pages','sign-pdf-visual'].includes(slug)&&<div className="pdf-option-panel">
@@ -125,7 +137,12 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  </div>}
  {files.length>0&&!result&&serverOnlyOffice&&!engineReady&&<p role="status">Esta conversión necesita el motor Office profesional; no hay conversión local compatible.</p>}
  {files.length>0&&!result&&<div className="actions">{(tool.kind==='image'||slug==='images-to-pdf'||slug==='compress-pdf-raster')&&<label className="quality">{d.imageQuality}: {quality}% <input type="range" min="50" max="100" value={quality} onChange={e=>setQuality(Number(e.target.value))}/></label>}<button type="button" className="btn btn-primary" disabled={busy} onClick={run}>{busy?<LoaderCircle className="spin" size={18}/>:<ArrowRight size={18}/>} {busy?d.processing:d.convert}</button><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}>{d.reset}</button>{busy&&slug==='batch-images-to-webp'&&<button type="button" className="btn btn-ghost" onClick={()=>abortController.current?.abort()}>{({es:'Cancelar lote',en:'Cancel batch',pt:'Cancelar lote',fr:'Annuler le lot'} as const)[locale]}</button>}</div>}
- {result&&<div className="actions"><a className="btn btn-primary" href={result.url} download={result.name}><Download size={18}/>{d.download}</a><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}><RotateCcw size={17}/>{d.reset}</button></div>}
+ {result&&<div className="conversion-complete" role="status" aria-live="polite" data-testid="conversion-success">
+   <div className="conversion-complete-heading"><CheckCircle2 size={25} aria-hidden="true"/><div><h3>{messages.finished}</h3><p>{messages.ready}</p></div></div>
+   <p className="conversion-complete-file"><strong>{messages.file}:</strong> <span>{result.name}</span></p>
+   {downloadStarted&&<p className="conversion-download-notice" data-testid="download-notice"><Check size={17} aria-hidden="true"/>{messages.downloadStarted}</p>}
+  </div>}
+ {result&&<div className="actions"><a className="btn btn-primary" href={result.url} download={result.name} onClick={()=>setDownloadStarted(true)}><Download size={18}/>{messages.start}</a><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}><RotateCcw size={17}/>{d.reset}</button></div>}
  <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{status}</p>
  {error&&<p role="alert" className="error">{error}</p>}
  </div></section>;

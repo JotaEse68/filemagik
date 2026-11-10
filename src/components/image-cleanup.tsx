@@ -19,6 +19,7 @@ export default function ImageCleanup({locale}:{locale:Locale}){
  const [selection,setSelection]=useState<Area|null>(null),[loaded,setLoaded]=useState(false),[error,setError]=useState('');
  const [historySize,setHistorySize]=useState(0),[redoSize,setRedoSize]=useState(0),[zoom,setZoom]=useState(100);
  const [name,setName]=useState('cleaned-image');
+ const [downloadName,setDownloadName]=useState('');
  const [format,setFormat]=useState<'png'|'jpeg'|'webp'>('png'),[showOriginal,setShowOriginal]=useState(false);
  const coords=(e:React.PointerEvent<HTMLCanvasElement>):Point=>{
   const el=canvas.current!,rect=el.getBoundingClientRect();
@@ -57,7 +58,7 @@ export default function ImageCleanup({locale}:{locale:Locale}){
  function undo(){ensureEditedPreview();const ctx=canvas.current?.getContext('2d',{willReadFrequently:true});const previous=history.current.pop();if(previous&&ctx&&canvas.current){future.current=[...future.current.slice(-9),ctx.getImageData(0,0,canvas.current.width,canvas.current.height)];ctx.putImageData(previous,0,0);setHistorySize(history.current.length);setRedoSize(future.current.length);base.current=null;setSelection(null);}}
  function redo(){ensureEditedPreview();const ctx=canvas.current?.getContext('2d',{willReadFrequently:true});const next=future.current.pop();if(next&&ctx&&canvas.current){history.current=[...history.current.slice(-9),ctx.getImageData(0,0,canvas.current.width,canvas.current.height)];ctx.putImageData(next,0,0);setHistorySize(history.current.length);setRedoSize(future.current.length);base.current=null;setSelection(null);}}
  function reset(){ensureEditedPreview();const initial=original.current;if(initial){canvas.current?.getContext('2d')?.putImageData(initial,0,0);history.current=[];future.current=[];setHistorySize(0);setRedoSize(0);base.current=null;setSelection(null);}}
- function download(){const el=canvas.current;if(!el)return;if(base.current)el.getContext('2d')?.putImageData(base.current,0,0);const type=format==='jpeg'?'image/jpeg':format==='webp'?'image/webp':'image/png';const url=el.toDataURL(type,.9);const anchor=document.createElement('a');anchor.href=url;anchor.download=name+'.'+(format==='jpeg'?'jpg':format);anchor.click();}
+ function download(){const el=canvas.current;if(!el)return;if(base.current)el.getContext('2d')?.putImageData(base.current,0,0);const type=format==='jpeg'?'image/jpeg':format==='webp'?'image/webp':'image/png';const url=el.toDataURL(type,.9);const anchor=document.createElement('a');anchor.href=url;anchor.download=name+'.'+(format==='jpeg'?'jpg':format);anchor.click();setDownloadName(anchor.download);}
  function toggleOriginal(){const el=canvas.current,ctx=el?.getContext('2d',{willReadFrequently:true});if(!el||!ctx||!original.current)return;if(!showOriginal){const current=base.current??ctx.getImageData(0,0,el.width,el.height);preview.current=current;ctx.putImageData(original.current,0,0);setShowOriginal(true);}else{if(preview.current)ctx.putImageData(preview.current,0,0);setShowOriginal(false);preview.current=null;}}
  function ensureEditedPreview(){if(showOriginal){const ctx=canvas.current?.getContext('2d');if(ctx&&preview.current)ctx.putImageData(preview.current,0,0);setShowOriginal(false);preview.current=null;}}
 
@@ -77,6 +78,7 @@ export default function ImageCleanup({locale}:{locale:Locale}){
   </div>
   <p>{copy.select}</p>
   <div className="image-cleanup-stage" style={zoom>100?{justifyContent:'flex-start'}:undefined}><canvas ref={canvas} className={loaded?'image-cleanup-canvas':'image-cleanup-empty'} style={{display:loaded?'block':'none',maxWidth:zoom===100?'100%':'none',width:zoom+'%',flexShrink:0}} onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish}/>{!loaded&&<span>{copy.load}</span>}</div>
+  {downloadName&&<div className="conversion-complete" role="status" data-testid="conversion-success"><div className="conversion-complete-heading"><Download size={22} aria-hidden="true"/><div><h3>{({es:'¡Imagen exportada!',en:'Image export requested!',pt:'Imagem exportada!',fr:'Image exportée !'} as const)[locale]}</h3><p>{({es:'La descarga se ha solicitado. Comprueba la carpeta de descargas de tu navegador.',en:'Download requested. Check your browser downloads.',pt:'Transferência solicitada. Consulte as transferências do navegador.',fr:'Téléchargement demandé. Vérifiez les téléchargements du navigateur.'} as const)[locale]}</p></div></div><p className="conversion-complete-file">{downloadName}</p></div>}
   {error&&<p role="alert" className="error">{error}</p>}
   <p className="image-cleanup-note">{copy.tip} {copy.authorized}</p>
  </section>;

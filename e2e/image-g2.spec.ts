@@ -19,6 +19,9 @@ test('Image Cleanup keeps undo/redo history while zooming on desktop and mobile'
  expect(initialBounds).not.toBeNull();
  await zoom.selectOption('150');
  await expect(zoom).toHaveValue('150');
+ // The new benefit explainer shifts the editor lower: scroll the canvas into
+ // view before using absolute mouse coordinates in this pointer regression.
+ await canvas.scrollIntoViewIfNeeded();
  const bounds=await canvas.boundingBox();
  expect(bounds?.width).toBeGreaterThan((initialBounds?.width||0)*1.3);
  expect(bounds).not.toBeNull();

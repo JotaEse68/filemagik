@@ -16,6 +16,7 @@ const words={
 export default function PdfVisualEditor({locale}:{locale:Locale}){
  const t=words[locale];
  const [file,setFile]=useState<File|null>(null),[page,setPage]=useState(1),[total,setTotal]=useState(0),[tool,setTool]=useState<Tool>('text'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[zoom,setZoom]=useState(100);
+ const [exportName,setExportName]=useState('');
  const [content,setContent]=useState('Example'),[color,setColor]=useState('#f7d154'),[selected,setSelected]=useState<string|null>(null);
  const [history,setHistory]=useState<VisualAnnotation[][]>([[]]),[cursor,setCursor]=useState(0),[draft,setDraft]=useState<VisualAnnotation[]|null>(null);
  const [nativeText,setNativeText]=useState<NativeText[]>([]);
@@ -112,7 +113,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  function end(){if(!drag.current)return;drag.current=null;if(draft)commit(draft);}
  async function download(){if(!file||busy)return;
   if(hasRedactions&&!window.confirm('Esta acción borrará permanentemente el contenido seleccionado de la copia exportada. ¿Continuar?'))return;
-  setBusy(true);setMessage('');
+  setBusy(true);setMessage('');setExportName('');
   try{
    let input=file;
    if(hasRedactions){
@@ -126,6 +127,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
    const out=await exportVisualPdf(input,source.filter(a=>a.kind!=='redact'));
    const url=URL.createObjectURL(out.blob);
    const a=document.createElement('a');a.href=url;a.download=out.name;a.click();
+   setExportName(out.name);
    setTimeout(()=>URL.revokeObjectURL(url),30000);
   }catch(e){setMessage(e instanceof Error?e.message:t.error)}
   finally{setBusy(false);if(hasRedactions){setChallengeToken('');setChallengeVersion(v=>v+1);}}
@@ -157,5 +159,6 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
 
  {items.filter(a=>a.page===page).map(a=><div key={a.id} data-pdf-overlay="true" role="button" tabIndex={0} aria-label={a.kind+' annotation'} className={'fm-editor-overlay '+(selected===a.id?'is-selected':'')} style={{left:(a.x*100)+'%',top:(a.y*100)+'%',width:(a.width*100)+'%',height:(a.height*100)+'%',borderColor:a.color,background:a.kind==='redact'?'#181818d9':a.kind==='highlight'?a.color+'66':'transparent',color:a.color}} onPointerDown={e=>begin(e,a)} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onKeyDown={e=>{if(e.key==='Delete'||e.key==='Backspace'){commit(source.filter(x=>x.id!==a.id));setSelected(null);}}}>{a.kind==='text'||a.kind==='form-text'?a.text:a.kind==='form-checkbox'?'☐':a.kind==='redact'?'BORRAR':null}</div>)}
  </div></div>{hasRedactions&&engineReady&&<div className="fm-pro-engine-panel"><strong>Eliminación permanente verificada</strong><p>Selecciona regiones de contenido original. No se puede deshacer después de descargar el resultado; se verifica el acceso antes de enviar el documento al motor.</p>{challengeRequired&&<ProfessionalPdfOption key={challengeVersion} siteKey={siteKey} ready={engineReady} onToken={setChallengeToken} onReset={()=>setChallengeToken('')}/>}</div>}<div className="fm-editor-actions"><button className="btn btn-primary" onClick={download} disabled={busy}><Download size={18}/>{busy?'…':t.save}</button><span>{source.length} annotations</span></div></>}
+ {exportName&&<div className="conversion-complete" role="status" data-testid="conversion-success"><div className="conversion-complete-heading"><Download size={22} aria-hidden="true"/><div><h3>{({es:'¡PDF exportado!',en:'PDF export requested!',pt:'PDF exportado!',fr:'PDF exporté !'} as const)[locale]}</h3><p>{({es:'Se ha solicitado la descarga. Comprueba las descargas de tu navegador.',en:'The download was requested. Check your browser downloads.',pt:'A transferência foi pedida. Consulte as transferências do navegador.',fr:'Le téléchargement a été demandé. Consultez les téléchargements du navigateur.'} as const)[locale]}</p></div></div><p className="conversion-complete-file">{exportName}</p></div>}
  <p className="fm-editor-note">{t.note}</p>{message&&<p role="alert" className="error">{message}</p>}</section>;
 }
