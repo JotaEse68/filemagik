@@ -38,6 +38,9 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,option
  if(slug==='heic-to-png'){
   const {heicToPng}=await import('./heic-to-png');return heicToPng(files[0]);
  }
+ if(slug==='tiff-pages-to-zip'){
+  const {tiffPagesToZip}=await import('./tiff-pages');return tiffPagesToZip(files[0]);
+ }
  if(slug==='tiff-to-png'){
   const {tiffToPng}=await import('./tiff-to-png');return tiffToPng(files[0]);
  }
