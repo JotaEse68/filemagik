@@ -67,7 +67,7 @@ async def convert(operation:str=Query(...),file:UploadFile=File(...),authorizati
     args=["-vn","-map","0:a:0","-codec:a","pcm_s16le","-ar","44100","-ac","2"]
    elif operation in ("video-to-mp4","animated-gif-to-mp4"):
     args=["-map","0:v:0","-map","0:a:0?","-vf","scale=w='min(1280,iw)':h=-2:flags=lanczos",
-          "-codec:v","libx264","-preset","veryfast","-crf","27",
+          "-codec:v","libx264","-pix_fmt","yuv420p","-preset","veryfast","-crf","27",
           "-codec:a","aac","-b:a","96k","-movflags","+faststart"]
    else:
     args=["-map","0:v:0","-vf","fps=10,scale=480:-1:flags=lanczos","-loop","0"]
