@@ -288,3 +288,47 @@ def test_pdf_unlock_requires_private_authorization(monkeypatch):
       files={"file":("secure.pdf",stream.getvalue(),"application/pdf")},
       data={"pdf_password":"known"})
     assert response.status_code==401
+
+
+def test_smart_mixed_pdf_ocr_preserves_searchable_page_and_recognizes_scan(monkeypatch):
+    import shutil
+    from PIL import Image,ImageDraw,ImageFont
+    from reportlab.lib.utils import ImageReader
+    from pypdf import PdfReader
+    if not shutil.which("tesseract"):
+        pytest.skip("Tesseract not installed")
+    secret="k"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    output=io.BytesIO()
+    paper=canvas.Canvas(output)
+    paper.drawString(65,760,"Original digital searchable page")
+    paper.showPage()
+    image=Image.new("RGB",(900,250),"white")
+    draw=ImageDraw.Draw(image)
+    fontpath="/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    font=ImageFont.truetype(fontpath,48) if os.path.exists(fontpath) else ImageFont.load_default()
+    draw.text((45,75),"SCANNED CONTENT",fill="black",font=font)
+    paper.drawImage(ImageReader(image),50,500,width=480,height=135)
+    paper.save()
+    before=PdfReader(io.BytesIO(output.getvalue()))
+    assert len(before.pages)==2
+    assert not (before.pages[1].extract_text() or "").strip()
+    response=client.post("/v1/jobs?operation=ocr-pdf",headers={
+     "Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+     files={"file":("mixed.pdf",output.getvalue(),"application/pdf")})
+    assert response.status_code==200,response.text[:200] if response.status_code!=200 else ""
+    after=PdfReader(io.BytesIO(response.content))
+    assert len(after.pages)==2
+    assert "Original digital searchable page" in (after.pages[0].extract_text() or "")
+    assert after.pages[0].get_contents().get_data()==before.pages[0].get_contents().get_data()
+    assert "SCANNED" in (after.pages[1].extract_text() or "").upper()
+
+def test_smart_ocr_returns_digital_only_pdf_byte_identical(monkeypatch):
+    secret="d"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    original=make_pdf()
+    result=client.post("/v1/jobs?operation=ocr-pdf",headers={
+      "Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+      files={"file":("digital.pdf",original,"application/pdf")})
+    assert result.status_code==200
+    assert result.content==original
