@@ -163,7 +163,7 @@ def join_media(operation:str=Query(...),files:list[UploadFile]=File(...),
        "-threads","1","-protocol_whitelist","file,pipe","-i",str(source),*options,str(part)],timeout=45)
      if not part.exists() or not part.stat().st_size:raise HTTPException(422,"Input cannot be normalized")
      pieces.append(part)
-    playlist=root/"list.txt";playlist.write_text("".join(f"file '{p.name}'\\n" for p in pieces),encoding="utf8")
+    playlist=root/"list.txt";playlist.write_text("".join(f"file '{p.name}'\n" for p in pieces),encoding="utf8")
     suffix=".mp3" if operation=="join-audio-mp3" else ".mp4"
     result_path=root/("joined"+suffix)
     output_args=["-vn","-c:a","libmp3lame","-b:a","128k"] if operation=="join-audio-mp3" else ["-c","copy","-movflags","+faststart"]
