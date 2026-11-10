@@ -18,6 +18,8 @@ export const tools=[
  {slug:'inspect-pdf-form',from:'PDF form',to:'Field list JSON',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'fill-pdf-form',from:'PDF form',to:'Completed PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'flatten-pdf-form',from:'PDF form',to:'Fixed PDF',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'gif-to-png',from:'GIF animation',to:'First frame PNG',kind:'image',accept:'.gif,image/gif'},
+ {slug:'markdown-to-docx',from:'Markdown',to:'Editable Word DOCX',kind:'document',accept:'.md,.markdown,text/markdown,text/plain'},
  {slug:'avif-to-png',from:'AVIF still image',to:'PNG image',kind:'image',accept:'.avif,image/avif'},
  {slug:'rtf-to-text',from:'Rich Text RTF',to:'Plain text TXT',kind:'document',accept:'.rtf,application/rtf,text/rtf'},
  {slug:'epub-to-text',from:'EPUB ebook',to:'Text TXT',kind:'document',accept:'.epub,application/epub+zip'},
