@@ -43,7 +43,11 @@ def test_gif_to_animated_webp_preserves_frames_and_timing(monkeypatch):
  with Image.open(io.BytesIO(r.content)) as image:
   assert image.n_frames==2
   assert image.info.get("loop")==0
-  durations=[frame.info.get("duration",0) for frame in ImageSequence.Iterator(image)]
+ # Pillow does not expose animated WebP duration through frame.info.
+  # Inspect ANMF timing directly: 24-bit milliseconds at payload offset 12.
+  positions=[i for i in range(len(r.content)-24) if r.content[i:i+4]==b"ANMF"]
+  assert len(positions)==2
+  durations=[int.from_bytes(r.content[pos+20:pos+23],"little") for pos in positions]
   assert durations[0]>=100 and durations[1]>=200
 
 def test_rejects_invalid_and_large_files(monkeypatch):
