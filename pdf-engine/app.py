@@ -13,6 +13,11 @@ from pypdf.errors import PdfReadError
 import httpx
 from document import pdf_to_docx, pdf_to_xlsx
 from quota import reserve
+from worker_capacity import capacity
+from image_worker import app as image_api
+from media_worker import app as media_api
+from archive_worker import app as archive_api
+
 
 app=FastAPI(title="FileMagik PDF Engine",docs_url=None,redoc_url=None,openapi_url=None)
 MAX=int(os.getenv("MAX_UPLOAD_MIB","12"))*1024*1024
@@ -33,6 +38,18 @@ async def reject_oversized_body(request, call_next):
             except ValueError:return Response("Invalid content length",status_code=400)
             if size>MAX+131072:return Response("Upload exceeds configured limit",status_code=413)
     return await call_next(request)
+
+@app.middleware("http")
+async def integrated_worker_gate(request, call_next):
+    """Private workers stay disabled until explicit server-side activation.
+    Capacity is shared across every engine and Uvicorn worker process.
+    """
+    if not request.url.path.startswith("/workers/"):
+        return await call_next(request)
+    if os.getenv("FILEMAGIK_UNIFIED_WORKERS_ENABLED","false").lower()!="true":
+        return Response("Integrated conversion engines are disabled",status_code=503)
+    with capacity():
+        return await call_next(request)
 
 @app.get("/healthz")
 def health():
@@ -194,3 +211,9 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
       if not result:raise HTTPException(422,"Empty converted document")
       return Response(result,media_type=MIMES[operation],headers={"Cache-Control":"private, no-store",
         "X-Content-Type-Options":"nosniff","Content-Disposition":"attachment"})
+
+# These are sub-applications of the *existing* FileMagik PDF API.
+# Gotenberg continues as its only separate Railway dependency.
+app.mount("/workers/image",image_api)
+app.mount("/workers/media",media_api)
+app.mount("/workers/archive",archive_api)
