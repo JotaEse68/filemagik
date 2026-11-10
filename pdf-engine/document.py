@@ -15,18 +15,40 @@ def _validate(data):
     if len(reader.pages)>80: raise ValueError("Maximum 80 pages")
     return reader
 
+def _expand_multiline_table_rows(rows):
+    """Recover logical rows collapsed into multiline cells by a borderless
+    horizontal grid. Expand ONLY when at least two occupied columns share
+    an identical line count, protecting genuinely merged/paragraph cells.
+    """
+    expanded=[]
+    for row in rows:
+        occupied=[str(value).splitlines() for value in row if value is not None and str(value).strip()]
+        if len(occupied)<2:
+            expanded.append(row);continue
+        counts={len(lines) for lines in occupied}
+        if len(counts)!=1 or next(iter(counts))<2:
+            expanded.append(row);continue
+        count=next(iter(counts))
+        per_cell=[str(value).splitlines() if value is not None and str(value).strip()
+                  else [""]*count for value in row]
+        expanded.extend([
+            [lines[index].strip() for lines in per_cell]
+            for index in range(count)
+        ])
+    return expanded
+
 def _tables(page):
     out=[]
     for t in page.find_tables(table_settings={"vertical_strategy":"lines","horizontal_strategy":"lines"}):
         rows=t.extract()
-        if rows: out.append((t.bbox,rows))
+        if rows: out.append((t.bbox,_expand_multiline_table_rows(rows)))
     if not out:
         try:
             for t in page.find_tables(table_settings={"vertical_strategy":"text","horizontal_strategy":"text",
                     "min_words_vertical":3,"min_words_horizontal":2,"intersection_tolerance":4}):
                 rows=t.extract()
                 if len(rows)>=3 and len(rows[0])>=2:
-                    out.append((t.bbox,rows))
+                    out.append((t.bbox,_expand_multiline_table_rows(rows)))
         except (TypeError,ValueError):
             pass
     return out
