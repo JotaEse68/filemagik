@@ -4,6 +4,7 @@ import hmac
 import io
 import os
 import threading
+from quota import reserve
 from fastapi import FastAPI,File,Header,HTTPException,Query,UploadFile
 from fastapi.responses import Response
 from PIL import Image,ImageOps,ImageSequence,UnidentifiedImageError
@@ -49,7 +50,7 @@ def convert_image(data:bytes,operation:str)->bytes:
 def health():return {"status":"ok","engine":"filemagik-image"}
 
 @app.post("/v1/convert")
-async def convert(operation:str=Query(...),file:UploadFile=File(...),authorization:str|None=Header(None)):
+async def convert(operation:str=Query(...),file:UploadFile=File(...),authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
  secret=os.environ.get("FILEMAGIK_IMAGE_SECRET","")
  if len(secret)<32 or not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(authorization[7:],secret):
   raise HTTPException(401,"Not authorized")
@@ -58,10 +59,11 @@ async def convert(operation:str=Query(...),file:UploadFile=File(...),authorizati
   raise HTTPException(415,"Unsupported image extension")
  if not _LIMIT.acquire(blocking=False):raise HTTPException(429,"Image engine busy")
  try:
-  data=await file.read(MAX_BYTES+1)
-  if not data or len(data)>MAX_BYTES:raise HTTPException(413,"Input exceeds 30 MB")
-  content=await asyncio.to_thread(convert_image,data,operation)
-  mime="image/png" if operation=="heic-to-png" else "image/webp"
-  return Response(content,media_type=mime,headers={"Cache-Control":"private, no-store",
-    "X-Content-Type-Options":"nosniff","Content-Disposition":"attachment"})
+  with reserve(x_filemagik_visitor):
+   data=await file.read(MAX_BYTES+1)
+   if not data or len(data)>MAX_BYTES:raise HTTPException(413,"Input exceeds 30 MB")
+   content=await asyncio.to_thread(convert_image,data,operation)
+   mime="image/png" if operation=="heic-to-png" else "image/webp"
+   return Response(content,media_type=mime,headers={"Cache-Control":"private, no-store",
+     "X-Content-Type-Options":"nosniff","Content-Disposition":"attachment"})
  finally:_LIMIT.release()
