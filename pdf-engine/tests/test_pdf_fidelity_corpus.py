@@ -81,3 +81,38 @@ def test_multiline_table_expansion_does_not_split_uneven_merged_cells():
     assert recovered==[["ID","Name"],["00012","Notebook"],["00013","Pen"]]
     unequal=[["paragraph\nwith details","single heading"]]
     assert _expand_multiline_table_rows(unequal)==unequal
+
+
+def test_pdf_image_compression_preserves_visible_text_band_at_rendered_pixel_level():
+    import pypdfium2 as pdfium
+    from PIL import ImageChops,ImageStat
+    original=_complex_sample()
+    for quality in ("balanced","maximum"):
+        compressed=lossy_optimize(original,quality)
+        left=pdfium.PdfDocument(original)
+        right=pdfium.PdfDocument(compressed)
+        assert len(left)==len(right)==2
+        for page_number in range(2):
+            base=left[page_number].render(scale=1.2).to_pil().convert("RGB")
+            rendered=right[page_number].render(scale=1.2).to_pil().convert("RGB")
+            assert rendered.size==base.size
+            # The heading/table area is outside the embedded raster image; no
+            # native text, vector, glyph or layout pixels should be changed.
+            text_region=(25,25,base.width-25,int(base.height*.38))
+            difference=ImageChops.difference(base.crop(text_region),rendered.crop(text_region))
+            assert max(ImageStat.Stat(difference).mean)<1.5
+
+def test_compression_rejects_annotations_without_destroying_link_content():
+    from reportlab.pdfgen import canvas
+    from fastapi import HTTPException
+    output=io.BytesIO()
+    pdf=canvas.Canvas(output)
+    pdf.drawString(50,750,"External link and important readable text")
+    pdf.linkURL("https://example.org",rect=(50,730,230,770),relative=0)
+    pdf.save()
+    for quality in ("balanced","maximum"):
+        try:lossy_optimize(output.getvalue(),quality)
+        except HTTPException as error:
+            assert error.status_code==422
+        else:
+            raise AssertionError("Annotated PDF must not undergo lossy optimization")

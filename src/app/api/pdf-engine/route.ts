@@ -81,9 +81,10 @@ export async function POST(request:NextRequest){
  if(operation==='replace-pdf-text'){
   const page=Number(data.get('page'));const original=data.get('source_text'),newText=data.get('new_text');
   if(!Number.isInteger(page)||page<1||page>100||typeof original!=='string'||typeof newText!=='string'||
-    !original||original.length>120||original.length!==newText.length||
-    !/^[\x20-\x7E]+$/.test(original)||!/^[\x20-\x7E]+$/.test(newText)||original===newText)
-    return NextResponse.json({error:'Native text requires matching-length printable ASCII strings'},{status:400});
+    !original||!newText||original.length>120||newText.length>120||
+    /[\x00-\x1F\x7F]/.test(original+newText)||original.normalize('NFC')!==original||
+    newText.normalize('NFC')!==newText||original===newText)
+    return NextResponse.json({error:'Native text must use 1–120 printable normalized characters'},{status:400});
   payload.set('page',String(page));payload.set('source_text',original);payload.set('new_text',newText);
  }
  if(operation==='replace-pdf-image'){

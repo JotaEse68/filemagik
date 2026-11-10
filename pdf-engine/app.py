@@ -213,45 +213,105 @@ def unlock_pdf(data:bytes,password:str)->bytes:
     except (ValueError,TypeError,KeyError,IndexError,AttributeError,PdfReadError):
         raise HTTPException(422,"Unable to unlock PDF safely")
 
+def _native_font_width(font_name:str,text:str)->float:
+    """Use built-in Type1 metrics; never guess widths for embedded fonts."""
+    from reportlab.pdfbase import pdfmetrics
+    return pdfmetrics.stringWidth(text,font_name,1000)
+
+_NATIVE_TYPE1={
+    "Helvetica","Helvetica-Bold","Helvetica-Oblique","Helvetica-BoldOblique",
+    "Times-Roman","Times-Bold","Times-Italic","Times-BoldItalic",
+    "Courier","Courier-Bold","Courier-Oblique","Courier-BoldOblique",
+}
+
 def replace_pdf_text(data:bytes,page_index:int,original:str,replacement:str)->bytes:
-    """Replace one simple text-show object without rasterizing the PDF."""
-    if not original or not replacement or len(original)>120 or len(original)!=len(replacement):
-        raise HTTPException(400,"Native text edits require equal-length strings")
-    if original==replacement or any(ord(char)<32 or ord(char)>126 for char in original+replacement):
-        raise HTTPException(400,"Only changed printable ASCII is supported")
+    """Change one original simple-font PDF text-show operator, without overlay.
+
+    Allows variable character counts only when the replacement occupies no more
+    horizontal space than the original using the *actual PDF Type1 font metrics*.
+    Encodings or fonts that cannot be certified are refused rather than silently
+    rendering garbage, rearranging nearby objects or pretending Unicode support.
+    """
+    import unicodedata
+    from pypdf.generic import ByteStringObject
+    if not original or not replacement or max(len(original),len(replacement))>120:
+        raise HTTPException(400,"Source and replacement must be between 1 and 120 characters")
+    if original==replacement or any(ord(c)<32 or ord(c)==127 for c in original+replacement):
+        raise HTTPException(400,"Text must be changed and may not contain controls")
+    if unicodedata.normalize("NFC",original)!=original or unicodedata.normalize("NFC",replacement)!=replacement:
+        raise HTTPException(400,"Use normalized characters rather than combining marks")
+    try:
+        # WinAnsi Type1 font encodes accented Latin characters in Windows-1252.
+        replacement_bytes=replacement.encode("cp1252",errors="strict")
+        original.encode("cp1252",errors="strict")
+    except UnicodeEncodeError:
+        raise HTTPException(422,"PDF standard fonts cannot encode the requested characters")
     reader=inspect_pdf(data)
-    if b"/ByteRange" in data or reader.get_fields():
-        raise HTTPException(422,"Native editing is unavailable for signed PDFs or forms")
+    if b"/ByteRange" in data or reader.get_fields() or any("/Annots" in p for p in reader.pages):
+        raise HTTPException(422,"Signed documents, PDF forms and annotations require a separate editor")
     if not 1<=page_index<=len(reader.pages):
         raise HTTPException(400,"Invalid PDF page")
     writer=PdfWriter();writer.append(reader)
     page=writer.pages[page_index-1]
+    fonts=page.get("/Resources",{}).get("/Font",{})
+    fonts=fonts.get_object() if hasattr(fonts,"get_object") else fonts
+    if not fonts:raise HTTPException(422,"Native page has no supported font resources")
     try:
         stream=ContentStream(page.get_contents(),writer)
-        matched=0
+        found=[]
+        active_font=None
         for operands,operator in stream.operations:
+            if operator==b"Tf" and len(operands)>=2:
+                active_font=str(operands[0])
+            text_locations=[]
             if operator in (b"Tj",b"'",b'"'):
-                position=2 if operator==b'"' else 0
-                if len(operands)>position and isinstance(operands[position],TextStringObject) and str(operands[position])==original:
-                    operands[position]=TextStringObject(replacement);matched+=1
+                idx=2 if operator==b'"' else 0
+                if len(operands)>idx and isinstance(operands[idx],TextStringObject) and str(operands[idx])==original:
+                    text_locations=[(operands,idx)]
             elif operator==b"TJ" and operands:
-                for idx,value in enumerate(operands[0]):
-                    if isinstance(value,TextStringObject) and str(value)==original:
-                        operands[0][idx]=TextStringObject(replacement);matched+=1
-        if matched!=1:
-            raise HTTPException(422,"Text must match exactly one native PDF text object")
+                text_locations=[(operands[0],index) for index,part in enumerate(operands[0])
+                    if isinstance(part,TextStringObject) and str(part)==original]
+            for container,index in text_locations:
+                if not active_font or active_font not in fonts:
+                    raise HTTPException(422,"Cannot resolve text font")
+                font=fonts[active_font].get_object()
+                base=str(font.get("/BaseFont","")).lstrip("/")
+                if (str(font.get("/Subtype"))!="/Type1" or
+                    str(font.get("/Encoding"))!="/WinAnsiEncoding" or
+                    base not in _NATIVE_TYPE1 or "/ToUnicode" in font):
+                    raise HTTPException(422,"Embedded or custom font encoding is not safely editable")
+                old_width=_native_font_width(base,original)
+                new_width=_native_font_width(base,replacement)
+                if old_width<=0 or new_width>old_width+0.01:
+                    raise HTTPException(422,"New text is wider than the available original text run")
+                found.append((container,index))
+        if len(found)!=1:
+            raise HTTPException(422,"Original text must match exactly one PDF text object")
+        container,index=found[0]
+        # Raw WinAnsi bytes preserve the actual PDF font encoding even for á/ñ.
+        container[index]=ByteStringObject(replacement_bytes)
         page[NameObject("/Contents")]=writer._add_object(stream)
-        buffer=io.BytesIO();writer.write(buffer)
-        result=buffer.getvalue();verified=inspect_pdf(result)
-        if len(verified.pages)!=len(reader.pages):
+        result_io=io.BytesIO();writer.write(result_io)
+        result=result_io.getvalue()
+        after=inspect_pdf(result)
+        if len(after.pages)!=len(reader.pages):
             raise HTTPException(422,"PDF page count changed")
-        text=verified.pages[page_index-1].extract_text() or ""
-        if replacement not in text or original in text:
-            raise HTTPException(422,"Font encoding prevents verifiable native replacement")
+        actual_text=after.pages[page_index-1].extract_text() or ""
+        before_text=reader.pages[page_index-1].extract_text() or ""
+        if replacement not in actual_text or original in actual_text:
+            raise HTTPException(422,"Font encoding prevents verifiable replacement")
+        # Non-target page text and the target page's surrounding text survive.
+        if any((left.extract_text() or "")!=(right.extract_text() or "")
+               for index2,(left,right) in enumerate(zip(reader.pages,after.pages))
+               if index2!=page_index-1):
+            raise HTTPException(422,"Other PDF pages changed unexpectedly")
+        if before_text.replace(original,replacement,1)!=actual_text:
+            raise HTTPException(422,"Other text changed during native edit")
         return result
-    except HTTPException:raise
+    except HTTPException:
+        raise
     except (ValueError,TypeError,KeyError,IndexError,AttributeError):
-        raise HTTPException(422,"Native PDF text objects cannot be modified safely")
+        raise HTTPException(422,"PDF text objects cannot be safely modified")
 
 def replace_pdf_image(data:bytes,image_bytes:bytes,page_index:int,image_index:int)->bytes:
     """Replace an actual image XObject, not a visual overlay.

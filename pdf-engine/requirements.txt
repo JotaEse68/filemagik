@@ -12,3 +12,4 @@ odfpy==1.4.1
 pillow-heif==1.8.1
 libarchive-c==5.1
 pypdfium2==5.15.2
+reportlab==4.4.9
