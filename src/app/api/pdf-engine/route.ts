@@ -5,7 +5,7 @@ export const runtime='nodejs';
 const supported:Record<string,readonly string[]>={
  'pdf-to-docx':['.pdf'],'pdf-to-xlsx':['.pdf'],
  'office-to-pdf':['.docx','.xlsx','.pptx','.odt','.ods','.odp'],
- 'optimize-pdf':['.pdf'],'redact-pdf':['.pdf'],'ocr-pdf':['.pdf'],'replace-pdf-image':['.pdf'],'replace-pdf-text':['.pdf'],
+ 'optimize-pdf':['.pdf'],'redact-pdf':['.pdf'],'ocr-pdf':['.pdf'],'replace-pdf-image':['.pdf'],'replace-pdf-text':['.pdf'],'unlock-pdf':['.pdf'],
 };
 const maxBytes=3*1024*1024;
 const maxResponseBytes=22*1024*1024;
@@ -13,7 +13,7 @@ const safeExt=(name:string)=>name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0]||'';
 const allowedMime:Record<string,string>={
  'pdf-to-docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
  'pdf-to-xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
- 'office-to-pdf':'application/pdf','optimize-pdf':'application/pdf','redact-pdf':'application/pdf','ocr-pdf':'application/pdf','replace-pdf-image':'application/pdf','replace-pdf-text':'application/pdf',
+ 'office-to-pdf':'application/pdf','optimize-pdf':'application/pdf','redact-pdf':'application/pdf','ocr-pdf':'application/pdf','replace-pdf-image':'application/pdf','replace-pdf-text':'application/pdf','unlock-pdf':'application/pdf',
 };
 function configured(){
  const base=process.env.FILEMAGIK_PDF_ENGINE_URL||'';
@@ -25,7 +25,7 @@ function requiresChallenge(){
  return !!process.env.FILEMAGIK_TURNSTILE_SECRET&&process.env.FILEMAGIK_TURNSTILE_SECRET.length>=16&&
   !!process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY&&process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY.length>5;
 }
-const advanced=new Set(['ocr-pdf','replace-pdf-image','replace-pdf-text']);
+const advanced=new Set(['ocr-pdf','replace-pdf-image','replace-pdf-text','unlock-pdf']);
 function operationEnabled(operation:string):boolean{
  if(!advanced.has(operation))return true;
  return (process.env.FILEMAGIK_PDF_ADVANCED_ENABLED_OPERATIONS||'').split(',').map(x=>x.trim()).includes(operation);
@@ -72,6 +72,12 @@ export async function POST(request:NextRequest){
  }
  const payload=new FormData();
  payload.set('file',new File([await file.arrayBuffer()],file.name,{type:file.type||'application/octet-stream'}));
+ if(operation==='unlock-pdf'){
+  const password=data.get('pdf_password');
+  if(typeof password!=='string'||!password||password.length>256||/[\\x00-\\x1F]/.test(password))
+   return NextResponse.json({error:'A valid PDF password is required'},{status:400});
+  payload.set('pdf_password',password);
+ }
  if(operation==='replace-pdf-text'){
   const page=Number(data.get('page'));const original=data.get('source_text'),newText=data.get('new_text');
   if(!Number.isInteger(page)||page<1||page>100||typeof original!=='string'||typeof newText!=='string'||
