@@ -7,6 +7,7 @@ const images=new Set<ToolSlug>(['jpg-to-png','jpg-to-webp','png-to-jpg','png-to-
 const archives=new Set<ToolSlug>(['create-zip','extract-zip','create-tar','extract-tar','rename-batch']);
 export type FileLimits={perFile:number;total:number;maxFiles:number};
 export function limitsFor(slug:ToolSlug):FileLimits{
+ if(slug==='server-join-audio'||slug==='server-join-video')return {perFile:3*MIB,total:12*MIB,maxFiles:4};
  if(slug==='server-mixed-batch')return {perFile:3*MIB,total:12*MIB,maxFiles:6};
  if(slug.startsWith('server-'))return {perFile:3*MIB,total:3*MIB,maxFiles:1};
  if(imageBatch.has(slug))return {perFile:40*MIB,total:120*MIB,maxFiles:30};
