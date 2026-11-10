@@ -8,6 +8,8 @@ const MiB=1024*1024;
 const operations:Record<string,Operation>={
  'server-heic-to-png':{engine:'image',endpoint:'heic-to-png',extension:['.heic','.heif'],mime:'image/png',max:3*MiB},
  'server-gif-to-webp':{engine:'image',endpoint:'gif-to-animated-webp',extension:['.gif'],mime:'image/webp',max:3*MiB},
+ 'server-video-extract-mp3':{engine:'media',endpoint:'extract-audio-mp3',extension:['.mp4','.webm','.mov'],mime:'audio/mpeg',max:3*MiB},
+ 'server-audio-to-wav':{engine:'media',endpoint:'audio-to-wav',extension:['.mp3','.m4a','.ogg','.flac','.wav'],mime:'audio/wav',max:3*MiB},
  'server-audio-to-mp3':{engine:'media',endpoint:'audio-to-mp3',extension:['.wav','.mp3','.m4a','.ogg','.flac'],mime:'audio/mpeg',max:3*MiB},
  'server-video-to-gif':{engine:'media',endpoint:'video-to-gif',extension:['.mp4','.webm','.mov'],mime:'image/gif',max:3*MiB},
  'server-video-to-mp4':{engine:'media',endpoint:'video-to-mp4',extension:['.mov','.webm','.mp4'],mime:'video/mp4',max:3*MiB},
@@ -97,7 +99,8 @@ export async function POST(request:NextRequest){
  const valid=op.mime==='application/zip'?ascii.startsWith('PK'):op.mime==='image/png'?header[0]===137&&ascii.slice(1,4)==='PNG':
   op.mime==='image/webp'?ascii.slice(0,4)==='RIFF'&&ascii.slice(8,12)==='WEBP':
   op.mime==='image/gif'?ascii.startsWith('GIF8'):op.mime==='video/mp4'?ascii.slice(4,8)==='ftyp':
-  op.mime==='audio/mpeg'?ascii.startsWith('ID3')||header[0]===255:true;
+  op.mime==='audio/mpeg'?ascii.startsWith('ID3')||header[0]===255:
+  op.mime==='audio/wav'?ascii.startsWith('RIFF')&&ascii.slice(8,12)==='WAVE':true;
  if(!valid)return json('Invalid engine output',502);
  return new NextResponse(output,{headers:{'Content-Type':op.mime,'Cache-Control':'private, no-store',
   'X-Content-Type-Options':'nosniff','Content-Disposition':'attachment; filename="filemagik-result"'}});
