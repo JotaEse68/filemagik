@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import threading
 from pathlib import Path
+from quota import reserve
 from fastapi import FastAPI, UploadFile, File, Header, Query, HTTPException
 from fastapi.responses import Response
 
@@ -44,7 +45,7 @@ def inspect(path):
 def health():return {"status":"ok","engine":"filemagik-media"}
 
 @app.post("/v1/media")
-async def convert(operation:str=Query(...),file:UploadFile=File(...),authorization:str|None=Header(None)):
+async def convert(operation:str=Query(...),file:UploadFile=File(...),authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
  secret=os.environ.get("FILEMAGIK_MEDIA_SECRET","")
  if len(secret)<32 or not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(authorization[7:],secret):
   raise HTTPException(401,"Not authorized")
@@ -53,28 +54,29 @@ async def convert(operation:str=Query(...),file:UploadFile=File(...),authorizati
  if extension not in ALLOWED:raise HTTPException(415,"Unsupported media type")
  if not _LIMIT.acquire(blocking=False):raise HTTPException(429,"Media engine busy")
  try:
-  data=await file.read(MAX_INPUT+1)
-  if not data or len(data)>MAX_INPUT:raise HTTPException(413,"Maximum 25 MB per upload")
-  out_ext,mime,_=OPERATIONS[operation]
-  with tempfile.TemporaryDirectory(prefix="fm-media-") as temp:
-   src=Path(temp)/("input"+extension);src.write_bytes(data)
-   inspect(src)
-   dest=Path(temp)/("output"+out_ext)
-   common=["ffmpeg","-hide_banner","-nostdin","-loglevel","error","-y","-threads","1","-protocol_whitelist","file,pipe","-i",str(src),"-t",str(MAX_DURATION)]
-   if operation in ("audio-to-mp3","extract-audio-mp3"):
-    args=["-vn","-map","0:a:0","-codec:a","libmp3lame","-b:a","128k"]
-   elif operation=="audio-to-wav":
-    args=["-vn","-map","0:a:0","-codec:a","pcm_s16le","-ar","44100","-ac","2"]
-   elif operation in ("video-to-mp4","animated-gif-to-mp4"):
-    args=["-map","0:v:0","-map","0:a:0?","-vf","scale=w='min(1280,iw)':h=-2:flags=lanczos",
-          "-codec:v","libx264","-pix_fmt","yuv420p","-preset","veryfast","-crf","27",
-          "-codec:a","aac","-b:a","96k","-movflags","+faststart"]
-   else:
-    args=["-map","0:v:0","-vf","fps=10,scale=480:-1:flags=lanczos","-loop","0"]
-   run_command([*common,*args,str(dest)],timeout=65)
-   if not dest.exists() or dest.stat().st_size==0:raise HTTPException(422,"No usable output generated")
-   if dest.stat().st_size>MAX_OUTPUT:raise HTTPException(413,"Output exceeds 35 MB")
-   result=dest.read_bytes()
-   return Response(result,media_type=mime,headers={"Cache-Control":"private, no-store",
-     "X-Content-Type-Options":"nosniff","Content-Disposition":'attachment; filename="filemagik'+out_ext+'"'})
+  with reserve(x_filemagik_visitor):
+   data=await file.read(MAX_INPUT+1)
+   if not data or len(data)>MAX_INPUT:raise HTTPException(413,"Maximum 25 MB per upload")
+   out_ext,mime,_=OPERATIONS[operation]
+   with tempfile.TemporaryDirectory(prefix="fm-media-") as temp:
+    src=Path(temp)/("input"+extension);src.write_bytes(data)
+    inspect(src)
+    dest=Path(temp)/("output"+out_ext)
+    common=["ffmpeg","-hide_banner","-nostdin","-loglevel","error","-y","-threads","1","-protocol_whitelist","file,pipe","-i",str(src),"-t",str(MAX_DURATION)]
+    if operation in ("audio-to-mp3","extract-audio-mp3"):
+     args=["-vn","-map","0:a:0","-codec:a","libmp3lame","-b:a","128k"]
+    elif operation=="audio-to-wav":
+     args=["-vn","-map","0:a:0","-codec:a","pcm_s16le","-ar","44100","-ac","2"]
+    elif operation in ("video-to-mp4","animated-gif-to-mp4"):
+     args=["-map","0:v:0","-map","0:a:0?","-vf","scale=w='min(1280,iw)':h=-2:flags=lanczos",
+           "-codec:v","libx264","-pix_fmt","yuv420p","-preset","veryfast","-crf","27",
+           "-codec:a","aac","-b:a","96k","-movflags","+faststart"]
+    else:
+     args=["-map","0:v:0","-vf","fps=10,scale=480:-1:flags=lanczos","-loop","0"]
+    run_command([*common,*args,str(dest)],timeout=65)
+    if not dest.exists() or dest.stat().st_size==0:raise HTTPException(422,"No usable output generated")
+    if dest.stat().st_size>MAX_OUTPUT:raise HTTPException(413,"Output exceeds 35 MB")
+    result=dest.read_bytes()
+    return Response(result,media_type=mime,headers={"Cache-Control":"private, no-store",
+      "X-Content-Type-Options":"nosniff","Content-Disposition":'attachment; filename="filemagik'+out_ext+'"'})
  finally:_LIMIT.release()
