@@ -33,6 +33,7 @@ export const tools=[
  {slug:'pdf-to-word-visual',from:'PDF',to:'Word layout (image pages)',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'replace-pdf-text-native',from:'PDF text object',to:'Native edited PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'replace-pdf-image-native',from:'PDF with embedded image',to:'PDF with replaced image',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'unlock-pdf-professional',from:'Password-protected PDF',to:'Unlocked PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'ocr-pdf-professional',from:'Scanned PDF',to:'OCR searchable PDF (server)',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'ocr-pdf-searchable',from:'Scanned PDF',to:'Searchable PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'compress-pdf-lossless',from:'PDF',to:'Optimized PDF',kind:'pdf',accept:'.pdf,application/pdf'},

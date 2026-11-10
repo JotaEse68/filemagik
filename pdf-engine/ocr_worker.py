@@ -31,11 +31,20 @@ def raster_ocr_pdf(data:bytes)->bytes:
             raise HTTPException(422,"OCR will not rasterize signed PDFs or interactive forms")
         document=pdfium.PdfDocument(data)
         writer=PdfWriter()
+        scanned_pages=0
         pixels=0
         started=time.monotonic()
         with tempfile.TemporaryDirectory(prefix="fm-ocr-") as dirname:
             root=Path(dirname)
             for index in range(len(document)):
+                # Preserve existing PDF text, graphics, vectors, fonts and links
+                # for pages that already provide a useful searchable text layer.
+                # OCR only raster/scan pages, not the whole mixed PDF.
+                searchable=(original.pages[index].extract_text() or '').strip()
+                if searchable:
+                    writer.add_page(original.pages[index])
+                    continue
+                scanned_pages+=1
                 page=document[index]
                 width,height=page.get_size()
                 page_pixels=int(width*2)*int(height*2)
@@ -65,6 +74,8 @@ def raster_ocr_pdf(data:bytes)->bytes:
                 if len(extracted.pages)!=1:
                     raise HTTPException(502,"OCR engine produced an invalid page")
                 writer.add_page(extracted.pages[0])
+        if not scanned_pages:
+            return data  # No rasterization when every page is already searchable
         stream=io.BytesIO()
         writer.write(stream)
         output=stream.getvalue()

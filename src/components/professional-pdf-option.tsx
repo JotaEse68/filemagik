@@ -14,7 +14,7 @@ export const professionalOperations={
  'pdf-to-word-text':'pdf-to-docx','pdf-to-excel-text':'pdf-to-xlsx',
  'word-to-layout-pdf':'office-to-pdf','xlsx-to-layout-pdf':'office-to-pdf',
  'pptx-to-pdf-layout':'office-to-pdf','compress-pdf-lossless':'optimize-pdf',
- 'compress-pdf-raster':'optimize-pdf','ocr-pdf-professional':'ocr-pdf','replace-pdf-image-native':'replace-pdf-image','replace-pdf-text-native':'replace-pdf-text',
+ 'compress-pdf-raster':'optimize-pdf','ocr-pdf-professional':'ocr-pdf','unlock-pdf-professional':'unlock-pdf','replace-pdf-image-native':'replace-pdf-image','replace-pdf-text-native':'replace-pdf-text',
 } as const;
 export type ProfessionalSlug=keyof typeof professionalOperations;
 export function isProfessionalSlug(slug:string):slug is ProfessionalSlug{
@@ -22,9 +22,10 @@ export function isProfessionalSlug(slug:string):slug is ProfessionalSlug{
 }
 export async function runProfessionalConversion(slug:ProfessionalSlug,file:File,token:string,
  quality:'lossless'|'balanced'|'maximum'='lossless',
- options:{replacement?:File;page?:number;imageIndex?:number;sourceText?:string;newText?:string}={}){
+ options:{replacement?:File;page?:number;imageIndex?:number;sourceText?:string;newText?:string;password?:string}={}){
  const form=new FormData();
  form.set('file',file,file.name);form.set('turnstile',token);
+ if(slug==='unlock-pdf-professional')form.set('pdf_password',options.password||'');
  if(slug==='replace-pdf-text-native'){form.set('page',String(options.page||1));form.set('source_text',options.sourceText||'');form.set('new_text',options.newText||'');}
  if(slug==='replace-pdf-image-native'&&options.replacement){form.set('replacement',options.replacement,options.replacement.name);form.set('page',String(options.page||1));form.set('image_index',String(options.imageIndex||1));}
  const response=await fetch('/api/pdf-engine?operation='+professionalOperations[slug]+'&quality='+quality,{
