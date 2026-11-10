@@ -145,3 +145,42 @@ def test_ffprobe_rejects_excessive_video_dimensions(monkeypatch,tmp_path):
     with pytest.raises(HTTPException) as rejected:
         media_worker.inspect(tmp_path/"fake.mp4")
     assert rejected.value.status_code==413
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="FFmpeg tools required")
+def test_new_media_formats_and_audio_trim():
+    import media_worker
+    payload=wav_bytes()
+    base="/workers/media/v1/media?operation="
+    for op,magic in [("audio-to-flac",b"fLaC"),("audio-to-ogg",b"OggS")]:
+        response=client.post(base+op,headers=HEADERS,
+            files={"file":("sample.wav",payload,"audio/wav")})
+        assert response.status_code==200,response.text[:150] if response.status_code!=200 else ""
+        assert response.content.startswith(magic)
+    response=client.post(base+"trim-audio-mp3&start=0.1&end=0.6",headers=HEADERS,
+        files={"file":("sample.wav",payload,"audio/wav")})
+    assert response.status_code==200
+    assert response.content.startswith(b"ID3") or response.content[:1]==b"\\xff"
+    for invalid in ("start=-1&end=0.5","start=0.8&end=0.2",
+                    "start=0&end=120","start=nan&end=1"):
+        rejected=client.post(base+"trim-audio-mp3&"+invalid,headers=HEADERS,
+            files={"file":("sample.wav",payload,"audio/wav")})
+        assert rejected.status_code in (400,422)
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="FFmpeg tools required")
+def test_new_video_trim_and_single_png_frame(tmp_path):
+    source=tmp_path/"moving.mp4"
+    subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-f","lavfi",
+        "-i","testsrc=size=128x96:rate=10","-t","2","-threads","1",
+        "-c:v","mpeg4","-y",str(source)],check=True)
+    data=source.read_bytes()
+    base="/workers/media/v1/media?operation="
+    frame=client.post(base+"video-frame-png&start=0.5",headers=HEADERS,
+        files={"file":("moving.mp4",data,"video/mp4")})
+    assert frame.status_code==200,frame.text[:150] if frame.status_code!=200 else ""
+    assert frame.content.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+    trimmed=client.post(base+"trim-video-mp4&start=0.25&end=1.25",headers=HEADERS,
+        files={"file":("moving.mp4",data,"video/mp4")})
+    assert trimmed.status_code==200,trimmed.text[:150] if trimmed.status_code!=200 else ""
+    assert b"ftyp" in trimmed.content[:64]
