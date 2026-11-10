@@ -1,12 +1,22 @@
 import {test,expect} from '@playwright/test';
 import JSZip from 'jszip';
 import {readFile} from 'node:fs/promises';
-const PNG=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO/aX8cAAAAASUVORK5CYII=','base64');
+// Build a browser-encoded PNG; the previous 1×1 fixture had invalid image data
+// in Chromium despite passing MIME/extension validation.
+async function validPng(page:import('@playwright/test').Page):Promise<Buffer>{
+ const encoded=await page.evaluate(()=>{
+  const canvas=document.createElement('canvas');canvas.width=16;canvas.height=16;
+  const ctx=canvas.getContext('2d')!;ctx.fillStyle='#1888cc';ctx.fillRect(0,0,16,16);
+  return canvas.toDataURL('image/png').split(',')[1];
+ });
+ return Buffer.from(encoded,'base64');
+}
 test('Batch image conversion produces ZIP, displays progress and preserves every output',async({page})=>{
  await page.goto('/es/batch-images-to-webp');
+ const png=await validPng(page);
  await page.locator('input[type=file]').setInputFiles([
-  {name:'first.png',mimeType:'image/png',buffer:PNG},
-  {name:'second.png',mimeType:'image/png',buffer:PNG},
+  {name:'first.png',mimeType:'image/png',buffer:png},
+  {name:'second.png',mimeType:'image/png',buffer:png},
  ]);
  await page.getByRole('button',{name:/convertir ahora/i}).click();
  const link=page.locator('a[download]');
@@ -30,9 +40,10 @@ test('Batch cancellation stops processing without a fake download',async({page})
    }) as typeof createImageBitmap;
  });
  await page.goto('/es/batch-images-to-webp');
+ const png=await validPng(page);
  await page.locator('input[type=file]').setInputFiles([
-  {name:'first.png',mimeType:'image/png',buffer:PNG},
-  {name:'second.png',mimeType:'image/png',buffer:PNG},
+  {name:'first.png',mimeType:'image/png',buffer:png},
+  {name:'second.png',mimeType:'image/png',buffer:png},
  ]);
  await page.getByRole('button',{name:/convertir ahora/i}).click();
  const cancel=page.getByRole('button',{name:'Cancelar lote'});
