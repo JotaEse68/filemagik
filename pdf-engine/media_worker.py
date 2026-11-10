@@ -1,5 +1,6 @@
 """Private bounded FFmpeg conversion API for FileMagik. Never a public upload endpoint."""
 import hmac
+import math
 import os
 import shutil
 import subprocess
@@ -22,6 +23,11 @@ OPERATIONS={
  "animated-gif-to-mp4":(".mp4","video/mp4",{"video"}),
  "extract-audio-mp3":(".mp3","audio/mpeg",{"video"}),
  "video-to-gif":(".gif","image/gif",{"video"}),
+ "trim-audio-mp3":(".mp3","audio/mpeg",{"audio"}),
+ "trim-video-mp4":(".mp4","video/mp4",{"video"}),
+ "video-frame-png":(".png","image/png",{"video"}),
+ "audio-to-flac":(".flac","audio/flac",{"audio"}),
+ "audio-to-ogg":(".ogg","audio/ogg",{"audio"}),
 }
 ALLOWED={".mp3",".mp4",".wav",".webm",".mov",".m4a",".ogg",".flac",".gif"}
 def run_command(arguments,timeout=35):
@@ -55,7 +61,7 @@ def inspect(path):
 def health():return {"status":"ok","engine":"filemagik-media"}
 
 @app.post("/v1/media")
-def convert(operation:str=Query(...),file:UploadFile=File(...),authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
+def convert(operation:str=Query(...),file:UploadFile=File(...),start:float|None=Query(None),end:float|None=Query(None),authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
  secret=os.environ.get("PDF_ENGINE_SECRET","")
  if len(secret)<32 or not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(authorization[7:],secret):
   raise HTTPException(401,"Not authorized")
@@ -73,18 +79,39 @@ def convert(operation:str=Query(...),file:UploadFile=File(...),authorization:str
     duration=inspect(src)
     if operation=="video-to-gif" and duration>20:
      raise HTTPException(413,"Animated GIF exports are limited to 20 seconds")
+    # Trims are validated against the actual probed duration; no arbitrary
+    # FFmpeg arguments, negative seeks or zero-length outputs are accepted.
+    clip_operations={"trim-audio-mp3","trim-video-mp4"}
+    if operation in clip_operations:
+     if start is None or end is None or not all(math.isfinite(v) for v in (start,end)):
+      raise HTTPException(400,"Trim requires finite start and end times")
+     if start<0 or end<=start or end>duration+.05 or end-start>MAX_DURATION:
+      raise HTTPException(400,"Trim range must be within the source duration")
+    elif start is not None or end is not None:
+     if operation!="video-frame-png" or end is not None or start is None or not math.isfinite(start) or start<0 or start>=duration:
+      raise HTTPException(400,"Unsupported media time range")
     dest=Path(temp)/("output"+out_ext)
     common=["ffmpeg","-hide_banner","-nostdin","-loglevel","error","-y","-threads","1","-protocol_whitelist","file,pipe","-i",str(src),"-t",str(MAX_DURATION)]
-    if operation in ("audio-to-mp3","extract-audio-mp3"):
+    if operation in ("audio-to-mp3","extract-audio-mp3","trim-audio-mp3"):
      args=["-vn","-map","0:a:0","-codec:a","libmp3lame","-b:a","128k"]
+    elif operation=="audio-to-flac":
+     args=["-vn","-map","0:a:0","-codec:a","flac","-ar","44100","-ac","2"]
+    elif operation=="audio-to-ogg":
+     args=["-vn","-map","0:a:0","-codec:a","libvorbis","-q:a","4"]
     elif operation=="audio-to-wav":
      args=["-vn","-map","0:a:0","-codec:a","pcm_s16le","-ar","44100","-ac","2"]
-    elif operation in ("video-to-mp4","animated-gif-to-mp4"):
+    elif operation in ("video-to-mp4","animated-gif-to-mp4","trim-video-mp4"):
      args=["-map","0:v:0","-map","0:a:0?","-vf","scale=w='min(1280,iw)':h=-2:flags=lanczos",
            "-codec:v","libx264","-pix_fmt","yuv420p","-preset","veryfast","-crf","27",
            "-codec:a","aac","-b:a","96k","-movflags","+faststart"]
+    elif operation=="video-frame-png":
+     args=["-map","0:v:0","-frames:v","1","-vf","scale=w='min(1280,iw)':h=-2:flags=lanczos","-update","1"]
     else:
      args=["-map","0:v:0","-vf","fps=10,scale=480:-1:flags=lanczos","-loop","0"]
+    if operation in clip_operations:
+     args=["-ss",str(start),"-t",str(end-start),*args]
+    elif operation=="video-frame-png":
+     args=["-ss",str(start if start is not None else 0),*args]
     run_command([*common,*args,str(dest)],timeout=65)
     if not dest.exists() or dest.stat().st_size==0:raise HTTPException(422,"No usable output generated")
     if dest.stat().st_size>MAX_OUTPUT:raise HTTPException(413,"Output exceeds 12 MB")
