@@ -23,6 +23,7 @@ const operations:Record<string,Operation>={
  'server-trim-audio':{engine:'media',endpoint:'trim-audio-mp3',extension:['.mp3','.wav','.m4a','.ogg','.flac'],mime:'audio/mpeg',max:3*MiB},
  'server-trim-video':{engine:'media',endpoint:'trim-video-mp4',extension:['.mp4','.webm','.mov'],mime:'video/mp4',max:3*MiB},
  'server-video-frame':{engine:'media',endpoint:'video-frame-png',extension:['.mp4','.webm','.mov'],mime:'image/png',max:3*MiB},
+ 'server-gif-edit':{engine:'image',endpoint:'gif-edit-webp',extension:['.gif'],mime:'image/webp',max:3*MiB},
  'server-gif-frames-zip':{engine:'image',endpoint:'gif-to-frames-zip',extension:['.gif'],mime:'application/zip',max:3*MiB},
  'server-mixed-batch':{engine:'batch',endpoint:'batch',extension:['.heic','.heif','.gif','.mp3','.wav','.flac','.ogg','.m4a','.mov','.webm','.mp4'],mime:'application/zip',max:12*MiB},
 };
@@ -93,6 +94,14 @@ export async function POST(request:NextRequest){
    return json('Invalid end time',400);
   if(name==='server-video-frame'&&timeEnd!==null)return json('Unexpected end time',400);
  }
+ const editingGif=name==='server-gif-edit';
+ const firstFrame=request.nextUrl.searchParams.get('startFrame');
+ const lastFrame=request.nextUrl.searchParams.get('endFrame');
+ const speedText=request.nextUrl.searchParams.get('speed');
+ if(!editingGif&&(firstFrame!==null||lastFrame!==null||speedText!==null))return json('Unexpected animation parameters',400);
+ const first=firstFrame===null?1:Number(firstFrame),last=lastFrame===null?null:Number(lastFrame),speed=speedText===null?1:Number(speedText);
+ if(editingGif&&(!Number.isInteger(first)||first<1||first>60||(last!==null&&(!Number.isInteger(last)||last<first||last>60))||!Number.isFinite(speed)||speed<.5||speed>2))
+  return json('Invalid GIF frame range or speed',400);
  const preset=request.nextUrl.searchParams.get('preset')||'web-friendly';
  if(batch&&!['web-friendly','extract'].includes(preset))return json('Invalid batch preset',400);
  if(typeof token!=='string'||token.length<1||token.length>2048)return json('Human verification required',403);
@@ -115,6 +124,7 @@ export async function POST(request:NextRequest){
  const url=base.replace(/\/+$/,'')+workerPath+
   (batch?'?preset='+encodeURIComponent(preset):op.engine==='archive'?'':
    '?operation='+encodeURIComponent(op.endpoint)+
+   (editingGif?'&start_frame='+first+(last===null?'':'&end_frame='+last)+'&speed='+speed:'')+
    (timed?'&start='+encodeURIComponent(String(startSeconds))+
       (timeEnd===null?'':'&end='+encodeURIComponent(String(endSeconds))):''));
  let response:Response;
