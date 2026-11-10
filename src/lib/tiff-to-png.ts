@@ -54,7 +54,7 @@ export async function tiffToPng(file:File):Promise<OutputFile>{
  const image=decodeBaselineTiff(new Uint8Array(await file.arrayBuffer()));
  const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
  const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Canvas unavailable');
- ctx.putImageData(new ImageData(image.rgba,image.width,image.height),0,0);
+ ctx.putImageData(new ImageData(new Uint8ClampedArray(image.rgba),image.width,image.height),0,0);
  const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Cannot export PNG')),'image/png'));
  if(blob.type!=='image/png')throw new Error('PNG export unavailable');
  return {name:file.name.replace(/\.tiff?$/i,'')+'.png',blob};
