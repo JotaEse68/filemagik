@@ -45,11 +45,16 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
    }).catch(()=>{if(active){setWorkerReady(false);setWorkerSiteKey('');}});
   return()=>{active=false;};
  },[slug,serverOnlyWorker]);
+ useEffect(()=>{if(slug!=='server-mixed-batch')return;let active=true;
+  void import('@/lib/batch-recovery').then(m=>m.loadBatch()).then(d=>{if(active)setBatchRecovery(!!d)}).catch(()=>{});
+  return()=>{active=false;};
+ },[slug]);
  const [formValues,setFormValues]=useState('{}');
  const [subtitleOffsetMs,setSubtitleOffsetMs]=useState(0),[annotationText,setAnnotationText]=useState('');
  const [annotationPages,setAnnotationPages]=useState(''),[annotationPlacement,setAnnotationPlacement]=useState<'top-left'|'bottom-left'|'top-right'>('bottom-left');
  const [audioStartSeconds,setAudioStartSeconds]=useState(0),[audioEndSeconds,setAudioEndSeconds]=useState<number|undefined>();
  const [batchPreset,setBatchPreset]=useState<'web-friendly'|'extract'>('web-friendly');
+ const [batchRecovery,setBatchRecovery]=useState(false);
  const [firstFrame,setFirstFrame]=useState(1),[lastFrame,setLastFrame]=useState<number|undefined>(),[gifSpeed,setGifSpeed]=useState(1);
  const [ocrLang,setOcrLang]=useState<'eng'|'spa'|'por'|'fra'>('eng');
  const [pages,setPages]=useState('1-2'),[groupSize,setGroupSize]=useState(2),[watermark,setWatermark]=useState('CONFIDENTIAL'),[opacity,setOpacity]=useState(25);
@@ -63,10 +68,28 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  if(serverOnlyWorker&&!workerReady)throw new Error('Private conversion engine not available; no insecure fallback');
  if(serverOnlyWorker&&!workerToken)throw new Error('Completa la verificación para convertir');
  if(professional&&engineReady&&challengeRequired&&!challengeToken)throw new Error('Completa la verificación para usar el motor profesional');
+ if(slug==='server-mixed-batch'){
+  try{const m=await import('@/lib/batch-recovery');await m.saveBatch(files,batchPreset);setBatchRecovery(true);}catch{/* Conversion still works without local retention */}
+ }
  const output=serverOnlyWorker?await runWorkerConversion(slug,files,workerToken,abortController.current.signal,{start: ['server-trim-audio','server-trim-video','server-video-frame'].includes(slug)?audioStartSeconds:undefined,end: ['server-trim-audio','server-trim-video'].includes(slug)?audioEndSeconds:undefined,preset:batchPreset,firstFrame:slug==='server-gif-edit'?firstFrame:undefined,lastFrame:slug==='server-gif-edit'?lastFrame:undefined,speed:slug==='server-gif-edit'?gifSpeed:undefined}):
  professional&&engineReady&&isProfessionalSlug(slug)?await runProfessionalConversion(slug,files[0],challengeToken,slug==='compress-pdf-raster'?compressionMode:'lossless'):
- await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,signal:abortController.current.signal,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});if(!output.blob.size)throw new Error('El archivo generado está vacío. Prueba otro archivo.');setResult({name:output.name,url:URL.createObjectURL(output.blob)});
+ await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,signal:abortController.current.signal,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});if(!output.blob.size)throw new Error('El archivo generado está vacío. Prueba otro archivo.');
+ if(slug==='server-mixed-batch'){
+  try{const m=await import('@/lib/batch-recovery');await m.saveBatchResult(output.blob,output.name);}catch{/* File is still available for immediate download */}
+ }
+ setResult({name:output.name,url:URL.createObjectURL(output.blob)});
  }catch(e){setError(e instanceof Error?(e.name==='AbortError'?'Conversión cancelada':e.message):d.error)}finally{abortController.current=null;setBusy(false);if(serverOnlyWorker){setWorkerToken('');setWorkerVersion(v=>v+1);}if(professional){setChallengeToken('');setChallengeVersion(v=>v+1);}}};
+ const restoreBatch=async()=>{
+  try{const m=await import('@/lib/batch-recovery');const draft=await m.loadBatch();
+   if(!draft){setBatchRecovery(false);setError('No hay ningún lote guardado en este navegador.');return;}
+   validateFiles(slug,draft.files);setFiles(draft.files);setBatchPreset(draft.preset);
+   setDownloadStarted(false);setError('');
+   if(draft.result&&draft.resultName){setResult({name:draft.resultName,url:URL.createObjectURL(draft.result)});}
+   else{setResult(null);setError('Archivos restaurados. Completa una nueva verificación para reintentar. Un procesamiento anterior puede haber consumido cuota.');}
+  }catch(e){setError(e instanceof Error?e.message:'No se pudo recuperar el lote');}
+ };
+ const forgetBatch=async()=>{try{const m=await import('@/lib/batch-recovery');await m.clearBatch();setBatchRecovery(false);}
+  catch(e){setError(e instanceof Error?e.message:'No se pudo borrar el lote local');}};
  const moveFile=(index:number,direction:number)=>setFiles(current=>{const target=index+direction;if(target<0||target>=current.length)return current;const next=[...current];[next[index],next[target]]=[next[target],next[index]];return next;});
  const reset=()=>{setResult(null);setDownloadStarted(false);setFiles([]);setError('');if(input.current)input.current.value=''};
  const messages=({
@@ -82,6 +105,11 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
   <div><h3>{messages.why}</h3><p>{getConversionBenefit(slug,locale)}</p></div>
  </aside>
  <input ref={input} className="visually-hidden" type="file" aria-label={d.browse} multiple={slug==='merge-pdf'||slug==='images-to-pdf'||slug==='create-zip'||slug==='create-tar'||slug==='rename-batch'||slug==='batch-images-to-webp'||slug==='server-mixed-batch'||slug==='server-join-audio'||slug==='server-join-video'} accept={tool.accept} onChange={e=>choose(Array.from(e.target.files||[]))}/>
+ {slug==='server-mixed-batch'&&batchRecovery&&<div className="pdf-option-panel" role="group" aria-label="Recuperación local de lotes">
+  <p>{({es:'Este navegador conserva durante 24 horas una copia local de los archivos y, si se completó, el ZIP. Reintentar un lote interrumpido puede volver a consumir cuota.',en:'This browser keeps files and any completed ZIP locally for 24 hours. Retrying interrupted processing may consume quota again.',pt:'O navegador conserva ficheiros e ZIP concluído por 24 horas. Repetir pode consumir quota novamente.',fr:'Le navigateur garde les fichiers et le ZIP terminé pendant 24 heures. Un nouvel essai peut consommer du quota.'} as const)[locale]}</p>
+  <button type="button" className="btn btn-ghost" disabled={busy} onClick={()=>void restoreBatch()}>{({es:'Recuperar último lote',en:'Restore last batch',pt:'Recuperar último lote',fr:'Récupérer le dernier lot'} as const)[locale]}</button>
+  <button type="button" className="btn btn-ghost" disabled={busy} onClick={()=>void forgetBatch()}>{({es:'Borrar copia local',en:'Delete local copy',pt:'Apagar cópia local',fr:'Effacer la copie locale'} as const)[locale]}</button>
+ </div>}
  <div className={`dropzone ${drag?'dragging':''}`} role="group" aria-label={d.dropTitle} onDragOver={e=>{e.preventDefault();setDrag(true)}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);choose(Array.from(e.dataTransfer.files))}}>
  <div className="upload-icon"><FileUp size={36} strokeWidth={1.6}/></div>
  <h2>{result?<><Check size={25}/>{result.name}</>:files.length?files.map(f=>f.name).join(', '):d.dropTitle}</h2>
