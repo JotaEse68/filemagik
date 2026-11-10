@@ -45,8 +45,13 @@ async def verify():
     # the bearer externally or consuming production users' usage counters.
     from app import app
     original_path=os.environ.get("PDF_ENGINE_QUOTA_DB")
+    original_unified=os.environ.get("FILEMAGIK_UNIFIED_WORKERS_ENABLED")
     with tempfile.TemporaryDirectory(prefix="filemagik-railway-qa-") as temp_dir:
         os.environ["PDF_ENGINE_QUOTA_DB"]=temp_dir+"/quota.sqlite3"
+        # Predeploy has no production /data mount yet. Keep the legacy PDF smoke
+        # independent of the unified capacity DB, then test workers with a
+        # separate temporary DB later in this same predeploy verification.
+        os.environ["FILEMAGIK_UNIFIED_WORKERS_ENABLED"]="false"
         try:
             headers={"Authorization":"Bearer "+os.environ["PDF_ENGINE_SECRET"],
                      "X-Filemagik-Visitor":"e"*64}
@@ -179,6 +184,8 @@ async def verify():
         finally:
             if original_path is None:os.environ.pop("PDF_ENGINE_QUOTA_DB",None)
             else:os.environ["PDF_ENGINE_QUOTA_DB"]=original_path
+            if original_unified is None:os.environ.pop("FILEMAGIK_UNIFIED_WORKERS_ENABLED",None)
+            else:os.environ["FILEMAGIK_UNIFIED_WORKERS_ENABLED"]=original_unified
     print("PASS: private Gotenberg, authenticated FastAPI Office/PDF, DOCX/XLSX, irreversible redaction, ODS/ODP Office fidelity and denial checks")
 if __name__=="__main__":
     asyncio.run(verify())
