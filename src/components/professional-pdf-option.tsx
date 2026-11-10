@@ -14,7 +14,7 @@ export const professionalOperations={
  'pdf-to-word-text':'pdf-to-docx','pdf-to-excel-text':'pdf-to-xlsx',
  'word-to-layout-pdf':'office-to-pdf','xlsx-to-layout-pdf':'office-to-pdf',
  'pptx-to-pdf-layout':'office-to-pdf','compress-pdf-lossless':'optimize-pdf',
- 'compress-pdf-raster':'optimize-pdf',
+ 'compress-pdf-raster':'optimize-pdf','ocr-pdf-professional':'ocr-pdf',
 } as const;
 export type ProfessionalSlug=keyof typeof professionalOperations;
 export function isProfessionalSlug(slug:string):slug is ProfessionalSlug{
