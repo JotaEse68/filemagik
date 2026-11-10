@@ -10,8 +10,8 @@
  * conversions still require a human Turnstile token from an interactive browser.
  */
 const url=process.argv[2],mode=process.argv[3]||'off';
-if(!url||!/^https:\/\//.test(url)||!['on','off'].includes(mode)){
- console.error('Usage: node scripts/f1-production-gates.mjs https://<host> off|on');
+if(!url||!/^https:\/\//.test(url)||!['on','off','wave'].includes(mode)){
+ console.error('Usage: node scripts/f1-production-gates.mjs https://<host> off|on|wave');
  process.exit(2);
 }
 const operations=['server-heic-to-png','server-gif-to-webp','server-audio-to-mp3',
@@ -28,21 +28,22 @@ for(const op of operations){
  try{
   const path='/api/worker-engine?operation='+op;
   const {status,payload,cache}=await get(path);
-  const ready=mode==='on';
+  const ready=mode==='on'||(mode==='wave'&&op==='server-gif-to-webp');
   if(status!==200||payload.available!==ready||payload.challengeRequired!==ready||
       (ready?typeof payload.siteKey!=='string'||payload.siteKey.length<6:payload.siteKey!==null)||
       !cache.includes('no-store'))throw Error('Unexpected capability/verification status');
   console.log('PASS '+op+' ('+(ready?'verified private engine':'fail closed')+')');
  }catch(e){failed=true;console.error('FAIL '+op+': '+e.message);}
 }
-if(mode==='off'){
+if(mode==='off'||mode==='wave'){
  const form=new FormData();
  form.set('file',new File([new Uint8Array([1,2,3])],'sample.gif'));
  try{
   const response=await fetch(new URL('/api/worker-engine?operation=server-gif-to-webp',url),
    {method:'POST',body:form,signal:AbortSignal.timeout(12000)});
-  if(response.status!==503)throw Error('Expected HTTP 503, got '+response.status);
-  console.log('PASS unauthorized conversion remains blocked (503)');
+  const expected=mode==='wave'?403:503;
+  if(response.status!==expected)throw Error('Expected HTTP '+expected+', got '+response.status);
+  console.log('PASS unauthorized conversion remains blocked');
  }catch(e){failed=true;console.error('FAIL fail-closed POST: '+e.message);}
 }
 if(failed)process.exit(1);
