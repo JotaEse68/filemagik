@@ -283,7 +283,16 @@ def test_gif_editor_trims_frames_and_updates_duration():
     assert response.status_code==200,response.text[:150] if response.status_code!=200 else ""
     with Image.open(io.BytesIO(response.content)) as result:
         assert result.n_frames==1
-        assert 100<=result.info.get("duration",0)<=160
+        assert result.getpixel((0,0))[2]>result.getpixel((0,0))[0]  # kept blue second frame
+    two=client.post("/workers/image/v1/convert?operation=gif-edit-webp&start_frame=1&end_frame=2&speed=2",
+      headers=HEADERS,files={"file":("animation.gif",gif_bytes(),"image/gif")})
+    assert two.status_code==200
+    with Image.open(io.BytesIO(two.content)) as edited:
+        assert edited.n_frames==2
+        edited.seek(0);first_duration=edited.info.get("duration",0)
+        edited.seek(1);second_duration=edited.info.get("duration",0)
+        assert 40<=first_duration<=90
+        assert 100<=second_duration<=160
     bad=client.post("/workers/image/v1/convert?operation=gif-edit-webp&start_frame=3&end_frame=4&speed=1",
       headers=HEADERS,files={"file":("animation.gif",gif_bytes(),"image/gif")})
     assert bad.status_code==400
