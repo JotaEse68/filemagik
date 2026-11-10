@@ -1,0 +1,33 @@
+name: Archive Engine quality
+on:
+  pull_request:
+    paths:
+      - 'archive-engine/**'
+      - '.github/workflows/archive-engine.yml'
+  workflow_dispatch:
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: archive-engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: sudo apt-get update && sudo apt-get install -y libarchive13 p7zip-full
+      - run: pip install -r requirements.txt pytest
+      - run: python -m compileall -q app.py
+      - run: python -m pytest -q tests
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./archive-engine
+          file: ./archive-engine/Dockerfile
+          push: false
+          tags: filemagik-archive-engine:test

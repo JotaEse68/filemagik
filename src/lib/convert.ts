@@ -2,9 +2,12 @@ import {csvToJson,jsonToCsv} from './csv';
 import type {ToolSlug} from '@/config/site';
 import {validateFiles} from './file-limits';
 export type OutputFile={name:string;blob:Blob};
-export type ConversionOptions={formValues?:string;subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;annotationPages?:string;annotationPlacement?:'top-left'|'bottom-left'|'top-right';cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra';pdfPassword?:string;onProgress?:(done:number,total:number)=>void};
+export type ConversionOptions={formValues?:string;subtitleOffsetMs?:number;audioStartSeconds?:number;audioEndSeconds?:number;annotationText?:string;annotationPages?:string;annotationPlacement?:'top-left'|'bottom-left'|'top-right';cropPercent?:number;rotation?:0|90|180|270;format?:'png'|'jpeg'|'webp';pages?:string;groupSize?:number;watermark?:string;opacity?:number;angle?:number;prefix?:string;width?:number;signature?:string;ocrLang?:'eng'|'spa'|'por'|'fra';pdfPassword?:string;onProgress?:(done:number,total:number)=>void;signal?:AbortSignal};
 export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,options:ConversionOptions={}):Promise<OutputFile>{
  validateFiles(slug,files);
+ if(slug==='ods-to-pdf'||slug==='odp-to-pdf'){
+  throw new Error('Professional Office engine required for OpenDocument PDF conversion');
+ }
  if(slug==='pptx-to-pdf-layout'){
   const {pptxToLayoutPdf}=await import('./pptx-pdf');return pptxToLayoutPdf(files[0]);
  }
@@ -32,6 +35,36 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,option
  if(slug==='inspect-pdf-form'||slug==='fill-pdf-form'||slug==='flatten-pdf-form'){
   const {handlePdfForm}=await import('./pdf-form-tools');return handlePdfForm(files[0],slug==='inspect-pdf-form'?'list':slug==='fill-pdf-form'?'fill':'flatten',options.formValues);
  }
+ if(slug==='heic-to-png'){
+  const {heicToPng}=await import('./heic-to-png');return heicToPng(files[0]);
+ }
+ if(slug==='tiff-pages-to-zip'){
+  const {tiffPagesToZip}=await import('./tiff-pages');return tiffPagesToZip(files[0]);
+ }
+ if(slug==='tiff-to-png'){
+  const {tiffToPng}=await import('./tiff-to-png');return tiffToPng(files[0]);
+ }
+ if(slug==='gif-frames-to-zip'){
+  const {gifFramesToZip}=await import('./gif-frames');return gifFramesToZip(files[0],{signal:options.signal,onProgress:options.onProgress});
+ }
+ if(slug==='gif-to-png'){
+  const {gifToPng}=await import('./gif-to-png');return gifToPng(files[0]);
+ }
+ if(slug==='markdown-to-docx'){
+  const {markdownToDocx}=await import('./markdown-to-docx');return markdownToDocx(files[0]);
+ }
+ if(slug==='avif-to-png'){
+  const {avifToPng}=await import('./avif-to-png');return avifToPng(files[0]);
+ }
+ if(slug==='rtf-to-text'){
+  const {rtfToText}=await import('./rtf-to-text');return rtfToText(files[0]);
+ }
+ if(slug==='epub-to-text'){
+  const {epubToText}=await import('./epub-to-text');return epubToText(files[0]);
+ }
+ if(slug==='create-tar'||slug==='extract-tar'){
+  const tar=await import('./tar-tools');return slug==='create-tar'?tar.createTar(files):tar.extractTar(files[0]);
+ }
  if(slug==='create-gzip'||slug==='extract-gzip'){
   const {gzipFile}=await import('./gzip-tools');return gzipFile(files[0],slug==='create-gzip'?'compress':'decompress');
  }
@@ -45,7 +78,7 @@ export async function convertFiles(slug:ToolSlug,files:File[],quality=.88,option
   const {adjustImage}=await import('./image-adjust');return adjustImage(files[0],options,quality);
  }
  if(slug==='batch-images-to-webp'){
-  const {imagesToWebpZip}=await import('./image-batch');return imagesToWebpZip(files,quality);
+  const {imagesToWebpZip}=await import('./image-batch');return imagesToWebpZip(files,quality,{signal:options.signal,onProgress:options.onProgress});
  }
  if(['split-pdf-by-count','extract-pdf-pages','delete-pdf-pages','watermark-pdf','reorder-pdf-pages','sign-pdf-visual','crop-pdf','annotate-pdf-text'].includes(slug)){
   const {pdfAction}=await import('./pdf-operations');return pdfAction(slug as import('./pdf-operations').PdfAction,files[0],options);

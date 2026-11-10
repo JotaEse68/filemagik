@@ -1,4 +1,5 @@
 import {NextRequest,NextResponse} from 'next/server';
+import {createHmac} from 'node:crypto';
 
 export const runtime='nodejs';
 const supported:Record<string,readonly string[]>={
@@ -17,13 +18,17 @@ const allowedMime:Record<string,string>={
 function configured(){
  const base=process.env.FILEMAGIK_PDF_ENGINE_URL||'';
  const secret=process.env.FILEMAGIK_PDF_ENGINE_SECRET||'';
- const siteKey=process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY||'';
- const challenge=process.env.FILEMAGIK_TURNSTILE_SECRET||'';
  return process.env.FILEMAGIK_PDF_ENGINE_PUBLIC_ENABLED==='true'&&
-  /^https:\/\/[^\s]+$/i.test(base)&&secret.length>=32&&challenge.length>=16&&siteKey.length>5;
+  /^https:\/\/[^\s]+$/i.test(base)&&secret.length>=32;
+}
+function requiresChallenge(){
+ return !!process.env.FILEMAGIK_TURNSTILE_SECRET&&process.env.FILEMAGIK_TURNSTILE_SECRET.length>=16&&
+  !!process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY&&process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY.length>5;
 }
 export async function GET(){
- return NextResponse.json({available:configured(),siteKey:configured()?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null}, {headers:{'Cache-Control':'no-store'}});
+ return NextResponse.json({available:configured(),challengeRequired:configured()&&requiresChallenge(),
+  siteKey:configured()&&requiresChallenge()?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null},
+  {headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(request:NextRequest){
  const operation=request.nextUrl.searchParams.get('operation')||'';
@@ -34,16 +39,20 @@ export async function POST(request:NextRequest){
  const origin=request.headers.get('origin');
  if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:'Origin not allowed'},{status:403});
  const length=Number(request.headers.get('content-length')||0);
+ if(!Number.isSafeInteger(length)||length<0)return NextResponse.json({error:'Invalid request size'},{status:400});
  if(length>maxBytes+4096)return NextResponse.json({error:'Maximum 3 MB upload'},{status:413});
  let data:FormData;
  try{data=await request.formData();}catch{return NextResponse.json({error:'Invalid upload'},{status:400});}
  const token=data.get('turnstile');
  const file=data.get('file');
- if(typeof token!=='string'||token.length>2048||!(file instanceof File))
-  return NextResponse.json({error:'Verification and file required'},{status:400});
+ if(!(file instanceof File)||typeof token==='string'&&token.length>2048)
+  return NextResponse.json({error:'Invalid verification token or file'},{status:400});
  if(file.size<1||file.size>maxBytes||!supported[operation].includes(safeExt(file.name)))
   return NextResponse.json({error:'File type or size not allowed'},{status:413});
- // A valid CAPTCHA token is required on EVERY paid-compute request. Never trust the browser alone.
+ // Challenge is extra protection. Persisted daily/global quotas remain mandatory
+ // even when the site owner has not configured a CAPTCHA provider.
+ if(requiresChallenge()){
+ if(typeof token!=='string'||!token)return NextResponse.json({error:'Verification required'},{status:403});
  try{
   const body=new URLSearchParams({secret:process.env.FILEMAGIK_TURNSTILE_SECRET!,response:token,
    remoteip:request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()||''});
@@ -53,6 +62,7 @@ export async function POST(request:NextRequest){
   if(!answer.success||answer.hostname!==request.nextUrl.hostname||answer.action!=='filemagik_pdf')
    return NextResponse.json({error:'Human verification failed'},{status:403});
  }catch{return NextResponse.json({error:'Verification unavailable'},{status:503});}
+ }
  const payload=new FormData();
  payload.set('file',new File([await file.arrayBuffer()],file.name,{type:file.type||'application/octet-stream'}));
  if(operation==='redact-pdf'){
@@ -61,15 +71,32 @@ export async function POST(request:NextRequest){
   payload.set('regions',regions);
  }
  const base=process.env.FILEMAGIK_PDF_ENGINE_URL!.replace(/\/+$/,'');
+ // Only the trusted Vercel server can derive the privacy-preserving quota identity.
+ const ip=(request.headers.get('x-forwarded-for')||request.headers.get('x-real-ip')||'unknown').split(',')[0].trim().slice(0,90);
+ const visitor=createHmac('sha256',process.env.FILEMAGIK_PDF_ENGINE_SECRET!).update(ip||'unknown').digest('hex');
  let answer:Response;
  try{
   answer=await fetch(base+'/v1/jobs?operation='+encodeURIComponent(operation)+'&quality='+encodeURIComponent(quality),
-   {method:'POST',headers:{Authorization:'Bearer '+process.env.FILEMAGIK_PDF_ENGINE_SECRET!},
+   {method:'POST',headers:{Authorization:'Bearer '+process.env.FILEMAGIK_PDF_ENGINE_SECRET!,'X-Filemagik-Visitor':visitor},
     body:payload,cache:'no-store',signal:AbortSignal.timeout(85000)});
  }catch{return NextResponse.json({error:'Advanced conversion engine unavailable'},{status:503});}
  if(!answer.ok){
-  return NextResponse.json({error:answer.status===422?'Document cannot be converted reliably':'Professional processing failed'},
-    {status:answer.status===413?413:answer.status===422?422:502});
+  // Preserve actionable refusal statuses instead of hiding quota and availability
+  // errors as generic 502 responses. Never expose upstream response bodies.
+  const failures:Record<number,{status:number;error:string}>={
+   401:{status:503,error:'Professional engine authentication unavailable'},
+   403:{status:503,error:'Professional processing configuration unavailable'},
+   413:{status:413,error:'File exceeds professional processing limits'},
+   422:{status:422,error:'Document cannot be converted reliably'},
+   429:{status:429,error:'Professional processing quota exceeded. Try again later'},
+   503:{status:503,error:'Advanced conversion engine unavailable'},
+  };
+  const failure=failures[answer.status]||{status:502,error:'Professional processing failed'};
+  const headers:Record<string,string>={'Cache-Control':'no-store'};
+  const retryAfter=answer.headers.get('retry-after');
+  if(failure.status===429&&retryAfter&&/^[0-9]{1,6}$/.test(retryAfter))
+   headers['Retry-After']=retryAfter;
+  return NextResponse.json({error:failure.error},{status:failure.status,headers});
  }
  const bytes=await answer.arrayBuffer();
  if(bytes.byteLength===0||bytes.byteLength>maxResponseBytes)

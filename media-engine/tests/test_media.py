@@ -1,0 +1,102 @@
+import pytest
+import io
+import os
+import subprocess
+from fastapi.testclient import TestClient
+from app import app
+from pathlib import Path
+
+client=TestClient(app)
+TOKEN="test-filemagik-private-media-secret-"+"a"*35
+HEADERS={"Authorization":"Bearer "+TOKEN,"X-Filemagik-Visitor":"a"*64}
+@pytest.fixture(autouse=True)
+def persistent_quota_db(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_MEDIA_QUOTA_DB",str(tmp_path/"quota.sqlite3"))
+
+
+def sample_audio(tmp_path):
+ path=tmp_path/"sample.wav"
+ subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-f","lavfi",
+                 "-i","sine=frequency=440:duration=1","-ar","44100","-y",str(path)],check=True)
+ return path.read_bytes()
+
+def sample_video(tmp_path):
+ path=tmp_path/"sample.mp4"
+ subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-f","lavfi",
+                 "-i","color=c=red:s=160x120:d=1","-c:v","mpeg4","-y",str(path)],check=True)
+ return path.read_bytes()
+
+def test_denies_missing_bearer(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_MEDIA_SECRET",TOKEN)
+ result=client.post("/v1/media?operation=audio-to-mp3",files={"file":("a.wav",sample_audio(tmp_path),"audio/wav")})
+ assert result.status_code==401
+
+def test_audio_transcodes_real_mp3_and_wav(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_MEDIA_SECRET",TOKEN)
+ source=sample_audio(tmp_path)
+ result=client.post("/v1/media?operation=audio-to-mp3",headers=HEADERS,
+                    files={"file":("sound.wav",source,"audio/wav")})
+ assert result.status_code==200,result.text[:180] if result.status_code!=200 else ""
+ assert result.content[:3]==b"ID3" or result.content[:2] in (bytes.fromhex("fffb"),bytes.fromhex("fff3"))
+ result2=client.post("/v1/media?operation=audio-to-wav",headers=HEADERS,
+                    files={"file":("sound.wav",source,"audio/wav")})
+ assert result2.status_code==200
+ assert result2.content[:4]==b"RIFF"
+
+def test_video_transcodes_and_generates_real_gif(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_MEDIA_SECRET",TOKEN)
+ data=sample_video(tmp_path)
+ for op,magic in (("video-to-gif",b"GIF89a"),("video-to-mp4",b"ftyp")):
+  result=client.post("/v1/media?operation="+op,headers=HEADERS,
+                     files={"file":("video.mp4",data,"video/mp4")})
+  assert result.status_code==200,(op,result.status_code,result.text[:200] if result.status_code!=200 else "")
+  assert magic in result.content[:24]
+
+def test_rejects_invalid_media_and_oversize(monkeypatch):
+ monkeypatch.setenv("FILEMAGIK_MEDIA_SECRET",TOKEN)
+ result=client.post("/v1/media?operation=audio-to-mp3",headers=HEADERS,
+                    files={"file":("sound.wav",b"not valid wav","audio/wav")})
+ assert result.status_code==422
+ result=client.post("/v1/media?operation=audio-to-mp3",headers=HEADERS,
+                    files={"file":("sound.txt",b"bad","text/plain")})
+ assert result.status_code==415
+ result=client.post("/v1/media?operation=audio-to-mp3",headers=HEADERS,
+                    files={"file":("sound.wav",b"x"*(25*1024*1024+1),"audio/wav")})
+ assert result.status_code==413
+
+def test_animated_gif_to_mp4_retains_multiple_frames(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_MEDIA_SECRET",TOKEN)
+ sample=tmp_path/"original.mp4"
+ sample.write_bytes(sample_video(tmp_path))
+ animated=tmp_path/"animated.gif"
+ subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-i",str(sample),
+                 "-vf","fps=4","-loop","0","-y",str(animated)],check=True)
+ result=client.post("/v1/media?operation=animated-gif-to-mp4",headers=HEADERS,
+                    files={"file":("animated.gif",animated.read_bytes(),"image/gif")})
+ assert result.status_code==200,result.text[:200] if result.status_code!=200 else ""
+ assert b"ftyp" in result.content[:16]
+ output=tmp_path/"converted.mp4"
+ output.write_bytes(result.content)
+ probe=subprocess.check_output(["ffprobe","-v","error","-count_frames",
+    "-select_streams","v:0","-show_entries","stream=nb_read_frames",
+    "-of","default=noprint_wrappers=1:nokey=1",str(output)])
+ assert int(probe.strip())>=2
+
+def test_concurrency_limit_returns_busy_without_processing(monkeypatch,tmp_path):
+ import app as module
+ monkeypatch.setenv("FILEMAGIK_MEDIA_SECRET",TOKEN)
+ class Busy:
+  def acquire(self,blocking=False):return False
+ monkeypatch.setattr(module,"_LIMIT",Busy())
+ result=client.post("/v1/media?operation=audio-to-mp3",headers=HEADERS,
+                    files={"file":("sample.wav",sample_audio(tmp_path),"audio/wav")})
+ assert result.status_code==429
+
+def test_refuses_media_over_120_seconds(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_MEDIA_SECRET",TOKEN)
+ path=tmp_path/"long.wav"
+ subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-f","lavfi",
+                 "-i","sine=frequency=440:duration=121","-ar","8000","-y",str(path)],check=True)
+ result=client.post("/v1/media?operation=audio-to-mp3",headers=HEADERS,
+                    files={"file":("long.wav",path.read_bytes(),"audio/wav")})
+ assert result.status_code==413

@@ -12,20 +12,67 @@ from PIL import Image
 from pypdf.errors import PdfReadError
 import httpx
 from document import pdf_to_docx, pdf_to_xlsx
+from quota import reserve
+from worker_capacity import capacity
+from image_worker import app as image_api
+from media_worker import app as media_api
+from archive_worker import app as archive_api
+
 
 app=FastAPI(title="FileMagik PDF Engine",docs_url=None,redoc_url=None,openapi_url=None)
 MAX=int(os.getenv("MAX_UPLOAD_MIB","12"))*1024*1024
 GOTENBERG=os.getenv("GOTENBERG_URL","http://gotenberg.railway.internal:3000").rstrip("/")
 MIMES={"pdf-to-docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 "pdf-to-xlsx":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-"office-to-pdf":"application/pdf","optimize-pdf":"application/pdf"}
+"office-to-pdf":"application/pdf","optimize-pdf":"application/pdf","redact-pdf":"application/pdf"}
 EXTENSIONS={"pdf-to-docx":".pdf","pdf-to-xlsx":".pdf",
 "office-to-pdf":(".docx",".xlsx",".pptx",".odt",".ods",".odp"),
 "optimize-pdf":".pdf","redact-pdf":".pdf"}
 
+@app.middleware("http")
+async def reject_oversized_body(request, call_next):
+    if request.url.path=="/v1/jobs":
+        declared=request.headers.get("content-length")
+        if declared:
+            try: size=int(declared)
+            except ValueError:return Response("Invalid content length",status_code=400)
+            if size>MAX+131072:return Response("Upload exceeds configured limit",status_code=413)
+    return await call_next(request)
+
+@app.middleware("http")
+async def integrated_worker_gate(request, call_next):
+    """Private workers stay disabled until explicit server-side activation.
+    Capacity is shared across every engine and Uvicorn worker process.
+    """
+    enabled=os.getenv("FILEMAGIK_UNIFIED_WORKERS_ENABLED","false").lower()=="true"
+    worker=request.url.path.startswith("/workers/")
+    pdf_job=request.url.path=="/v1/jobs"
+    if not worker and not (enabled and pdf_job):
+        return await call_next(request)
+    if worker and not enabled:
+        return Response("Integrated conversion engines are disabled",status_code=503)
+    try:
+        with capacity():
+            return await call_next(request)
+    except HTTPException as exc:
+        # Middleware exceptions bypass FastAPI's route exception handlers;
+        # return an explicit safe HTTP response instead of an unhandled 500.
+        return Response(str(exc.detail),status_code=exc.status_code,
+                        headers={"Cache-Control":"no-store"})
+
 @app.get("/healthz")
 def health():
     return {"status":"ok","engine":"filemagik-pdf-engine"}
+
+@app.get("/readyz")
+async def ready():
+    """Railway-to-Gotenberg private DNS, port and health verified live."""
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(4,connect=2)) as client:
+            response=await client.get(GOTENBERG+"/health")
+        if response.status_code==200:return {"status":"ready","gotenberg":"reachable"}
+    except httpx.RequestError:pass
+    raise HTTPException(503,"Gotenberg private dependency unavailable")
 
 async def call_gotenberg(path,data,name,fields=None):
     form={"files":(name,data,"application/octet-stream")}
@@ -108,7 +155,11 @@ def _redaction_regions(data,regions_json):
     for region in regions:
         if not isinstance(region,dict):raise HTTPException(400,"Invalid redaction region")
         try:
-            page_index=int(region["page"])-1
+            # A fractional or coerced page number must never redirect a destructive
+            # redaction to a different page. JSON page indices are exact integers.
+            raw_page=region["page"]
+            if type(raw_page) is not int:raise ValueError("Invalid page index")
+            page_index=raw_page-1
             x=float(region["x"]);y=float(region["y"])
             width=float(region["width"]);height=float(region["height"])
         except (KeyError,TypeError,ValueError):
@@ -127,7 +178,7 @@ def _redaction_regions(data,regions_json):
 
 @app.post("/v1/jobs")
 async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:UploadFile=File(...),regions:str|None=Form(None),
-                  authorization:str|None=Header(None)):
+                  authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
     expected=os.getenv("PDF_ENGINE_SECRET","")
     if len(expected)<32 or not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401,"Not authorized")
@@ -141,7 +192,8 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
     if not filename.endswith(extensions):raise HTTPException(415,"Unsupported file extension")
     data=await file.read(MAX+1)
     if not data or len(data)>MAX:raise HTTPException(413,"File too large")
-    try:
+    with reserve(x_filemagik_visitor or ""):
+      try:
         if operation=="pdf-to-docx":result=await asyncio.to_thread(pdf_to_docx,data)
         elif operation=="pdf-to-xlsx":result=await asyncio.to_thread(pdf_to_xlsx,data)
         elif operation=="redact-pdf":
@@ -152,13 +204,25 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
                                        {"stages":'[{"op":"optimize"}]'})
         else:
             if quality=="lossless":
-                inspect_pdf(data)
-                result=await call_gotenberg("/forms/pdf/optimize",data,filename)
-                if len(result)>len(data):result=data
+                original=inspect_pdf(data)
+                # Rewrite of any PDF byte stream invalidates digital signatures.
+                # Interactive forms and annotations are also left untouched.
+                if (b"/ByteRange" in data or original.get_fields()
+                    or any("/Annots" in page for page in original.pages)):
+                    result=data
+                else:
+                    result=await call_gotenberg("/forms/pdf/optimize",data,filename)
+                    if len(result)>len(data):result=data
             else:result=await asyncio.to_thread(lossy_optimize,data,quality)
-    except HTTPException:raise
-    except (ValueError,KeyError,PdfReadError):
+      except HTTPException:raise
+      except (ValueError,KeyError,PdfReadError):
         raise HTTPException(422,"Document could not be reconstructed reliably")
-    if not result:raise HTTPException(422,"Empty converted document")
-    return Response(result,media_type=MIMES[operation],headers={"Cache-Control":"private, no-store",
-      "X-Content-Type-Options":"nosniff","Content-Disposition":"attachment"})
+      if not result:raise HTTPException(422,"Empty converted document")
+      return Response(result,media_type=MIMES[operation],headers={"Cache-Control":"private, no-store",
+        "X-Content-Type-Options":"nosniff","Content-Disposition":"attachment"})
+
+# These are sub-applications of the *existing* FileMagik PDF API.
+# Gotenberg continues as its only separate Railway dependency.
+app.mount("/workers/image",image_api)
+app.mount("/workers/media",media_api)
+app.mount("/workers/archive",archive_api)
