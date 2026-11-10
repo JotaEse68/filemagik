@@ -42,3 +42,11 @@ PY
 GOTENBERG_URL=http://127.0.0.1:3000 \
 PDF_ENGINE_SECRET=ci-filemagik-integration-secret-long-enough-2026 \
 python predeploy_smoke.py
+
+# Regression: Railway predeploy runs BEFORE the persistent /data volume is
+# mounted. Releasing with workers enabled must still validate the existing
+# PDF routes, then exercise the new workers with temporary SQLite files.
+GOTENBERG_URL=http://127.0.0.1:3000 \
+PDF_ENGINE_SECRET=ci-filemagik-integration-secret-long-enough-2026 \
+FILEMAGIK_UNIFIED_WORKERS_ENABLED=true \
+python predeploy_smoke.py
