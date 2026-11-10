@@ -48,8 +48,14 @@ async def integrated_worker_gate(request, call_next):
         return await call_next(request)
     if os.getenv("FILEMAGIK_UNIFIED_WORKERS_ENABLED","false").lower()!="true":
         return Response("Integrated conversion engines are disabled",status_code=503)
-    with capacity():
-        return await call_next(request)
+    try:
+        with capacity():
+            return await call_next(request)
+    except HTTPException as exc:
+        # Middleware exceptions bypass FastAPI's route exception handlers;
+        # return an explicit safe HTTP response instead of an unhandled 500.
+        return Response(str(exc.detail),status_code=exc.status_code,
+                        headers={"Cache-Control":"no-store"})
 
 @app.get("/healthz")
 def health():
