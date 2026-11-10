@@ -18,6 +18,7 @@ export const tools=[
  {slug:'inspect-pdf-form',from:'PDF form',to:'Field list JSON',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'fill-pdf-form',from:'PDF form',to:'Completed PDF',kind:'pdf',accept:'.pdf,application/pdf'},
  {slug:'flatten-pdf-form',from:'PDF form',to:'Fixed PDF',kind:'pdf',accept:'.pdf,application/pdf'},
+ {slug:'heic-to-png',from:'HEIC/HEIF image',to:'PNG image',kind:'image',accept:'.heic,.heif,image/heic,image/heif'},
  {slug:'tiff-to-png',from:'TIFF image',to:'PNG image',kind:'image',accept:'.tif,.tiff,image/tiff'},
  {slug:'gif-to-png',from:'GIF animation',to:'First frame PNG',kind:'image',accept:'.gif,image/gif'},
  {slug:'markdown-to-docx',from:'Markdown',to:'Editable Word DOCX',kind:'document',accept:'.md,.markdown,text/markdown,text/plain'},
