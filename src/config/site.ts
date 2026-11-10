@@ -20,6 +20,7 @@ export const tools=[
  {slug:'server-trim-audio',from:'Audio',to:'Trimmed MP3',kind:'audio',accept:'.mp3,.wav,.m4a,.ogg,.flac,audio/*'},
  {slug:'server-trim-video',from:'Video',to:'Trimmed MP4',kind:'video',accept:'.mp4,.webm,.mov,video/*'},
  {slug:'server-video-frame',from:'Video',to:'PNG frame',kind:'video',accept:'.mp4,.webm,.mov,video/*'},
+ {slug:'server-gif-edit',from:'Animated GIF',to:'Edited animated WebP',kind:'image',accept:'.gif,image/gif'},
  {slug:'server-gif-frames-zip',from:'Animated GIF',to:'PNG frames ZIP',kind:'image',accept:'.gif,image/gif'},
  {slug:'server-mixed-batch',from:'Mixed media',to:'Converted files ZIP',kind:'utility',accept:'.heic,.heif,.gif,.mp3,.wav,.flac,.ogg,.m4a,.mov,.webm,.mp4'},
  {slug:'server-extract-rar',from:'RAR archive',to:'Extracted ZIP',kind:'archive',accept:'.rar,application/x-rar-compressed'},
