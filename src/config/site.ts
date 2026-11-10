@@ -6,6 +6,8 @@ export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
  {slug:'server-heic-to-png',from:'HEIC/HEIF',to:'Server PNG',kind:'image',accept:'.heic,.heif,image/heic,image/heif'},
  {slug:'server-gif-to-webp',from:'Animated GIF',to:'Animated WebP',kind:'image',accept:'.gif,image/gif'},
+ {slug:'server-video-extract-mp3',from:'Video with audio',to:'Extracted MP3',kind:'audio',accept:'.mp4,.webm,.mov,video/*'},
+ {slug:'server-audio-to-wav',from:'Audio',to:'PCM WAV',kind:'audio',accept:'.mp3,.m4a,.ogg,.flac,.wav,audio/*'},
  {slug:'server-audio-to-mp3',from:'Audio',to:'MP3',kind:'audio',accept:'.wav,.mp3,.m4a,.ogg,.flac,audio/*'},
  {slug:'server-video-to-gif',from:'Video',to:'Animated GIF',kind:'video',accept:'.mp4,.webm,.mov,video/*'},
  {slug:'server-video-to-mp4',from:'Video',to:'MP4',kind:'video',accept:'.mp4,.webm,.mov,video/*'},

@@ -17,6 +17,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  const t=words[locale];
  const [file,setFile]=useState<File|null>(null),[page,setPage]=useState(1),[total,setTotal]=useState(0),[tool,setTool]=useState<Tool>('text'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false),[zoom,setZoom]=useState(100);
  const [exportName,setExportName]=useState('');
+ const [removeDocumentInfo,setRemoveDocumentInfo]=useState(false);
  const [content,setContent]=useState('Example'),[color,setColor]=useState('#f7d154'),[selected,setSelected]=useState<string|null>(null);
  const [history,setHistory]=useState<VisualAnnotation[][]>([[]]),[cursor,setCursor]=useState(0),[draft,setDraft]=useState<VisualAnnotation[]|null>(null);
  const [nativeText,setNativeText]=useState<NativeText[]>([]);
@@ -124,7 +125,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
     if(!response.ok){const reason=await response.json().catch(()=>({error:'Error al borrar contenido'}));throw new Error(reason.error||'Error al borrar contenido');}
     input=new File([await response.blob()],file.name,{type:'application/pdf'});
    }
-   const out=await exportVisualPdf(input,source.filter(a=>a.kind!=='redact'));
+   const out=await exportVisualPdf(input,source.filter(a=>a.kind!=='redact'),{removeDocumentInfo});
    const url=URL.createObjectURL(out.blob);
    const a=document.createElement('a');a.href=url;a.download=out.name;a.click();
    setExportName(out.name);
@@ -149,6 +150,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  <button type="button" onClick={duplicateSelected}>Duplicar objeto</button>
  <button type="button" onClick={()=>{setSelected(null);}}>Deseleccionar</button>
  </div>}
+ <label className="fm-editor-file"><input type="checkbox" checked={removeDocumentInfo} onChange={e=>setRemoveDocumentInfo(e.target.checked)}/>{({es:'Quitar propiedades comunes (autor, título, asunto, palabras clave) al exportar. No elimina archivos adjuntos ni todo el historial interno.',en:'Clear common properties (author, title, subject, keywords) on export. Does not remove attachments or all internal history.',pt:'Limpar propriedades comuns (autor, título, assunto, palavras-chave) ao exportar. Não remove anexos nem todo o histórico interno.',fr:'Effacer les propriétés courantes (auteur, titre, sujet, mots-clés) lors de l’export. Ne supprime pas les pièces jointes ni tout l’historique interne.'} as const)[locale]}</label>
  <div className="fm-editor-pages"><button disabled={page<=1} onClick={()=>{setPage(p=>p-1);setSelected(null)}} aria-label="Previous page"><ChevronLeft/></button>{t.page} {page} / {total}<button disabled={page>=total} onClick={()=>{setPage(p=>p+1);setSelected(null)}} aria-label="Next page"><ChevronRight/></button></div>
  <div className="fm-editor-scroll"><div className="fm-editor-sheet" style={{width:`${zoom}%`}} onClick={insert}>
  <canvas ref={canvas} aria-label="PDF page preview"/>

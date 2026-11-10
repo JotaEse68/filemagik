@@ -3,6 +3,8 @@ import type {OutputFile} from './convert';
 const outputExtensions:Record<string,string>={
  'server-heic-to-png':'.png',
  'server-gif-to-webp':'.webp',
+ 'server-video-extract-mp3':'.mp3',
+ 'server-audio-to-wav':'.wav',
  'server-audio-to-mp3':'.mp3',
  'server-video-to-gif':'.gif',
  'server-video-to-mp4':'.mp4',

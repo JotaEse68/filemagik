@@ -20,7 +20,28 @@ export async function pptxToLayoutPdf(file:File):Promise<OutputFile>{
  const size=first(pdoc,'p:sldSz');
  const sx=Number(size?.getAttribute('cx')||12192000),sy=Number(size?.getAttribute('cy')||6858000);
  if(sx<=0||sy<=0)throw new Error('Invalid slide dimensions');
- const pages=Object.keys(zip.files).filter(p=>/^ppt\/slides\/slide\d+\.xml$/.test(p)).sort((a,b)=>Number(a.match(/slide(\d+)/)?.[1])-Number(b.match(/slide(\d+)/)?.[1]));
+ // Presentation order is defined by p:sldIdLst and its relationships.
+ // Numbered slide XML filenames are not presentation order after rearranging.
+ const numbered=Object.keys(zip.files).filter(p=>/^ppt\/slides\/slide\d+\.xml$/.test(p))
+  .sort((a,b)=>Number(a.match(/slide(\d+)/)?.[1])-Number(b.match(/slide(\d+)/)?.[1]));
+ const relsFile=zip.file('ppt/_rels/presentation.xml.rels');
+ let pages=numbered;
+ if(relsFile){
+  const relDoc=parser.parseFromString(await relsFile.async('text'),'text/xml');
+  const byId=new Map<string,string>();
+  for(const rel of elements(relDoc,'Relationship')){
+   const id=rel.getAttribute('Id'),target=rel.getAttribute('Target')||'';
+   if(id&&!/^([a-z]+:|\/)/i.test(target)){
+    const resolved=normalizePath('ppt/presentation.xml',target);
+    if(numbered.includes(resolved))byId.set(id,resolved);
+   }
+  }
+  const listed=elements(pdoc,'p:sldId').map(el=>byId.get(el.getAttribute('r:id')||'')).filter((p):p is string=>!!p);
+  // Refuse ambiguous PPTX rather than silently changing slide order.
+  if(listed.length!==numbered.length||new Set(listed).size!==numbered.length)
+   throw new Error('PPTX slide order is incomplete or inconsistent');
+  pages=listed;
+ }
  if(!pages.length||pages.length>80)throw new Error('PPTX must contain 1–80 slides');
  const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica),bold=await pdf.embedFont(StandardFonts.HelveticaBold);
  const PW=960,PH=Math.round(PW*sy/sx),scale=PW/sx;

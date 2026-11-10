@@ -1,7 +1,7 @@
 import type {OutputFile} from './convert';
 
 export type VisualAnnotation={id:string;page:number;kind:'text'|'highlight'|'rectangle'|'form-text'|'form-checkbox'|'redact';x:number;y:number;width:number;height:number;text:string;color:string;fontSize:number};
-export async function exportVisualPdf(source:File,annotations:VisualAnnotation[]):Promise<OutputFile>{
+export async function exportVisualPdf(source:File,annotations:VisualAnnotation[],options:{removeDocumentInfo?:boolean}={}):Promise<OutputFile>{
  if(annotations.length>300)throw new Error('Maximum 300 annotations per document');
  const {PDFDocument,StandardFonts,rgb}=await import('pdf-lib');
  const pdf=await PDFDocument.load(await source.arrayBuffer());
@@ -40,6 +40,13 @@ export async function exportVisualPdf(source:File,annotations:VisualAnnotation[]
    if(font.widthOfTextAtSize(plain,size)>width-x+originX)throw new Error('Text is wider than the remaining page. Move or shorten it.');
    page.drawText(plain,{x,y:y-size,size,font,color});
   }
+ }
+ // Remove common PDF document-information properties on request.
+ // This is NOT full forensic sanitization: embedded attachments, signatures,
+ // annotations and other content must be reviewed independently.
+ if(options.removeDocumentInfo){
+  pdf.setTitle('');pdf.setAuthor('');pdf.setSubject('');
+  pdf.setKeywords([]);pdf.setCreator('');pdf.setProducer('');
  }
  const bytes=await pdf.save();
  return {name:source.name.replace(/\.pdf$/i,'')+'-edited.pdf',blob:new Blob([new Uint8Array(bytes)],{type:'application/pdf'})};

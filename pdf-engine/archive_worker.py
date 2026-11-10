@@ -22,14 +22,14 @@ def health():return {"status":"ok","engine":"filemagik-archive"}
 
 def safe_extract(data:bytes,filename:str)->bytes:
  if not filename.lower().endswith((".7z",".rar")):raise HTTPException(415,"Only 7Z and RAR are supported")
- if len(data)>MAX_ARCHIVE:raise HTTPException(413,"Archive exceeds 25 MB")
+ if len(data)>MAX_ARCHIVE:raise HTTPException(413,"Archive exceeds 12 MiB")
  try:
   with tempfile.TemporaryDirectory(prefix="fm-archive-") as tmp:
    input_path=Path(tmp)/("source.7z" if filename.lower().endswith(".7z") else "source.rar")
    input_path.write_bytes(data)
    out=io.BytesIO()
    with zipfile.ZipFile(out,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=4,allowZip64=False) as zipout:
-    total=0;count=0
+    total=0;count=0;seen=set()
     with libarchive.file_reader(str(input_path)) as reader:
      for entry in reader:
       if not entry.isfile:
@@ -37,11 +37,17 @@ def safe_extract(data:bytes,filename:str)->bytes:
        if entry.isdir:continue
        raise HTTPException(422,"Archive contains unsupported link or special entry")
       count+=1
-      if count>MAX_FILES:raise HTTPException(413,"Maximum 100 files")
+      if count>MAX_FILES:raise HTTPException(413,"Maximum 40 files")
       raw=entry.pathname.replace("\\","/")
       basename=raw.split("/")[-1]
-      if not basename or any(ord(c)<32 for c in basename) or raw.startswith("/") or ".." in raw.split("/"):
+      segments=raw.split("/")
+      if (not basename or any(ord(c)<32 or ord(c)==127 for c in raw)
+          or raw.startswith("/") or any(segment in ("", ".", "..") for segment in segments)
+          or ":" in raw or len(raw)>512):
        raise HTTPException(422,"Unsafe archive filename")
+      canonical=raw.casefold()
+      if canonical in seen:raise HTTPException(422,"Duplicate archive path")
+      seen.add(canonical)
       declared=entry.size
       if declared is None or declared<0 or declared>MAX_EXPANDED-total:
        raise HTTPException(413,"Archive expanded size exceeds 100 MB")
@@ -52,6 +58,7 @@ def safe_extract(data:bytes,filename:str)->bytes:
         raise HTTPException(413,"Archive expanded data exceeds limits")
       if filebuf.tell()!=declared:raise HTTPException(422,"Inconsistent archive file length")
       zipout.writestr(f"{count:03d}-"+basename[:100],filebuf.getvalue())
+      if out.tell()>12*1024*1024:raise HTTPException(413,"ZIP output exceeds size limit")
    return out.getvalue()
  except HTTPException:raise
  except (libarchive.exception.ArchiveError,ValueError,EOFError,RuntimeError):
@@ -66,7 +73,7 @@ def extract(file:UploadFile=File(...),authorization:str|None=Header(None),x_file
  try:
   with reserve(x_filemagik_visitor):
    data=file.file.read(MAX_ARCHIVE+1)
-   if not data or len(data)>MAX_ARCHIVE:raise HTTPException(413,"Archive exceeds 25 MB")
+   if not data or len(data)>MAX_ARCHIVE:raise HTTPException(413,"Archive exceeds 12 MiB")
    zipped=safe_extract(data,file.filename or "")
    if len(zipped)>12*1024*1024:raise HTTPException(413,"ZIP output exceeds size limit")
    return Response(zipped,media_type="application/zip",headers={

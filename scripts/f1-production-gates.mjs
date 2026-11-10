@@ -35,13 +35,13 @@ for(const op of operations){
   console.log('PASS '+op+' ('+(ready?'verified private engine':'fail closed')+')');
  }catch(e){failed=true;console.error('FAIL '+op+': '+e.message);}
 }
-if(mode==='off'||mode==='wave'){
+if(mode==='off'||mode==='wave'||mode==='on'){
  const form=new FormData();
  form.set('file',new File([new Uint8Array([1,2,3])],'sample.gif'));
  try{
   const response=await fetch(new URL('/api/worker-engine?operation=server-gif-to-webp',url),
    {method:'POST',body:form,signal:AbortSignal.timeout(12000)});
-  const expected=mode==='wave'?403:503;
+  const expected=mode==='off'?503:403;
   if(response.status!==expected)throw Error('Expected HTTP '+expected+', got '+response.status);
   console.log('PASS unauthorized conversion remains blocked');
  }catch(e){failed=true;console.error('FAIL fail-closed POST: '+e.message);}
