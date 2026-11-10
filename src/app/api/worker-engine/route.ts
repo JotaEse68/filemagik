@@ -16,9 +16,9 @@ const operations:Record<string,Operation>={
  'server-extract-rar':{engine:'archive',endpoint:'extract',extension:['.rar'],mime:'application/zip',max:3*MiB},
 };
 const config=(engine:Engine)=>{
- const upper=engine.toUpperCase();
- const base=process.env['FILEMAGIK_'+upper+'_ENGINE_URL']||'';
- const secret=process.env['FILEMAGIK_'+upper+'_SECRET']||'';
+ // All three engines live behind the existing FileMagik PDF API on Railway.
+ const base=process.env.FILEMAGIK_PDF_ENGINE_URL||'';
+ const secret=process.env.FILEMAGIK_PDF_ENGINE_SECRET||'';
  const flag=process.env.FILEMAGIK_WORKER_ENGINES_PUBLIC_ENABLED==='true';
  return {base,secret,ready:flag&&/^https:\/\/[^\s/?#]+/i.test(base)&&secret.length>=32};
 };
@@ -64,7 +64,10 @@ export async function POST(request:NextRequest){
  payload.set('file',new File([await file.arrayBuffer()],file.name,{type:file.type||'application/octet-stream'}));
  const ip=(request.headers.get('x-forwarded-for')||request.headers.get('x-real-ip')||'unknown').split(',')[0].trim().slice(0,90);
  const visitor=createHmac('sha256',secret).update(ip||'unknown').digest('hex');
- const url=base.replace(/\/+$/,'')+(op.engine==='archive'?'/v1/extract':'/v1/'+(op.engine==='image'?'convert':'media')+'?operation='+encodeURIComponent(op.endpoint));
+ const workerPath=op.engine==='archive'?'/workers/archive/v1/extract':
+  '/workers/'+op.engine+'/v1/'+(op.engine==='image'?'convert':'media');
+ const url=base.replace(/\/+$/,'')+workerPath+
+  (op.engine==='archive'?'':'?operation='+encodeURIComponent(op.endpoint));
  let response:Response;
  try{
   response=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+secret,'X-Filemagik-Visitor':visitor},
@@ -81,7 +84,7 @@ export async function POST(request:NextRequest){
  if(output.byteLength<8||output.byteLength>12*MiB)return json('Output exceeds secure response limits',502);
  const header=new Uint8Array(output.slice(0,16));
  const ascii=new TextDecoder().decode(header);
- const valid=op.mime==='application/zip'?ascii.startsWith('PK'):op.mime==='image/png'?ascii.startsWith('\x89PNG'):
+ const valid=op.mime==='application/zip'?ascii.startsWith('PK'):op.mime==='image/png'?header[0]===137&&ascii.slice(1,4)==='PNG':
   op.mime==='image/webp'?ascii.slice(0,4)==='RIFF'&&ascii.slice(8,12)==='WEBP':
   op.mime==='image/gif'?ascii.startsWith('GIF8'):op.mime==='video/mp4'?ascii.slice(4,8)==='ftyp':
   op.mime==='audio/mpeg'?ascii.startsWith('ID3')||header[0]===255:true;
