@@ -199,3 +199,34 @@ def test_gif_frame_zip_contains_real_pngs_and_timing():
         meta=json.loads(archive.read("frames.json"))
         assert meta["frames"]==2
         assert meta["durations_ms"]==[120,240]
+
+
+def test_private_mixed_batch_zip_manifest_and_presets(monkeypatch):
+    import json
+    monkeypatch.setenv("FILEMAGIK_MEDIA_HOURLY_VISITOR","100")
+    monkeypatch.setenv("FILEMAGIK_IMAGE_HOURLY_VISITOR","100")
+    url="/workers/batch/v1/convert?preset=web-friendly"
+    mixed=[
+        ("files",("animation.gif",gif_bytes(),"image/gif")),
+        ("files",("sound.wav",wav_bytes(),"audio/wav")),
+        ("files",("unknown.xyz",b"bad","application/octet-stream"))]
+    assert client.post(url,files=mixed).status_code==401
+    result=client.post(url,headers=HEADERS,files=mixed)
+    assert result.status_code==200,result.text[:180] if result.status_code!=200 else ""
+    with zipfile.ZipFile(io.BytesIO(result.content)) as archive:
+        names=archive.namelist()
+        assert "01-animation.webp" in names
+        assert "02-sound.mp3" in names
+        assert archive.read("01-animation.webp")[:4]==b"RIFF"
+        assert archive.read("02-sound.mp3")[:3]==b"ID3"
+        manifest=json.loads(archive.read("manifest.json"))
+        assert [row["status"] for row in manifest["files"]]==["ok","ok","unsupported"]
+        assert len(manifest["files"][0]["sha256"])==64
+
+def test_private_mixed_batch_limits_and_fail_closed():
+    many=[("files",(f"bad{i}.gif",gif_bytes(),"image/gif")) for i in range(7)]
+    too_many=client.post("/workers/batch/v1/convert",headers=HEADERS,files=many)
+    assert too_many.status_code==413
+    no_valid=client.post("/workers/batch/v1/convert",headers=HEADERS,
+        files=[("files",("broken.bin",b"xx","application/octet-stream"))])
+    assert no_valid.status_code==422
