@@ -58,3 +58,21 @@ def test_rejects_invalid_media_and_oversize(monkeypatch):
  result=client.post("/v1/media?operation=audio-to-mp3",headers=HEADERS,
                     files={"file":("sound.wav",b"x"*(25*1024*1024+1),"audio/wav")})
  assert result.status_code==413
+
+def test_animated_gif_to_mp4_retains_multiple_frames(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_MEDIA_SECRET",TOKEN)
+ sample=tmp_path/"original.mp4"
+ sample.write_bytes(sample_video(tmp_path))
+ animated=tmp_path/"animated.gif"
+ subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-i",str(sample),
+                 "-vf","fps=4","-loop","0","-y",str(animated)],check=True)
+ result=client.post("/v1/media?operation=animated-gif-to-mp4",headers=HEADERS,
+                    files={"file":("animated.gif",animated.read_bytes(),"image/gif")})
+ assert result.status_code==200,result.text[:200] if result.status_code!=200 else ""
+ assert b"ftyp" in result.content[:16]
+ output=tmp_path/"converted.mp4"
+ output.write_bytes(result.content)
+ probe=subprocess.check_output(["ffprobe","-v","error","-count_frames",
+    "-select_streams","v:0","-show_entries","stream=nb_read_frames",
+    "-of","default=noprint_wrappers=1:nokey=1",str(output)])
+ assert int(probe.strip())>=2
