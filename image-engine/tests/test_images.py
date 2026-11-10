@@ -1,3 +1,4 @@
+import pytest
 import io
 import os
 from PIL import Image,ImageSequence
@@ -6,7 +7,11 @@ from app import app
 
 client=TestClient(app)
 SECRET="filemagik-image-test-secret-"+"x"*40
-HEADERS={"Authorization":"Bearer "+SECRET}
+HEADERS={"Authorization":"Bearer "+SECRET,"X-Filemagik-Visitor":"a"*64}
+@pytest.fixture(autouse=True)
+def persistent_quota_db(monkeypatch,tmp_path):
+ monkeypatch.setenv("FILEMAGIK_IMAGE_QUOTA_DB",str(tmp_path/"quota.sqlite3"))
+
 
 def heic_image():
  im=Image.new("RGB",(8,8),(220,90,20))
