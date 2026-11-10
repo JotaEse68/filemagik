@@ -12,6 +12,7 @@ export function limitsFor(slug:ToolSlug):FileLimits{
  if(slug==='heic-to-png')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
  if(slug==='tiff-pages-to-zip')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
  if(slug==='tiff-to-png')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
+ if(slug==='gif-frames-to-zip')return {perFile:30*MIB,total:30*MIB,maxFiles:1};
  if(slug==='gif-to-png')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
  if(slug==='markdown-to-docx')return {perFile:3*MIB,total:3*MIB,maxFiles:1};
  if(slug==='avif-to-png')return {perFile:40*MIB,total:40*MIB,maxFiles:1};
