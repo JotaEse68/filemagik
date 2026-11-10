@@ -23,6 +23,7 @@ export const tools=[
  {slug:'heic-to-png',from:'HEIC/HEIF image',to:'PNG image',kind:'image',accept:'.heic,.heif,image/heic,image/heif'},
  {slug:'tiff-pages-to-zip',from:'Multi-page TIFF',to:'PNG pages ZIP',kind:'image',accept:'.tif,.tiff,image/tiff'},
  {slug:'tiff-to-png',from:'TIFF image',to:'PNG image',kind:'image',accept:'.tif,.tiff,image/tiff'},
+ {slug:'gif-frames-to-zip',from:'Animated GIF',to:'All frames PNG ZIP',kind:'image',accept:'.gif,image/gif'},
  {slug:'gif-to-png',from:'GIF animation',to:'First frame PNG',kind:'image',accept:'.gif,image/gif'},
  {slug:'markdown-to-docx',from:'Markdown',to:'Editable Word DOCX',kind:'document',accept:'.md,.markdown,text/markdown,text/plain'},
  {slug:'avif-to-png',from:'AVIF still image',to:'PNG image',kind:'image',accept:'.avif,image/avif'},
