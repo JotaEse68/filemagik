@@ -25,9 +25,16 @@ function requiresChallenge(){
  return !!process.env.FILEMAGIK_TURNSTILE_SECRET&&process.env.FILEMAGIK_TURNSTILE_SECRET.length>=16&&
   !!process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY&&process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY.length>5;
 }
-export async function GET(){
- return NextResponse.json({available:configured(),challengeRequired:configured()&&requiresChallenge(),
-  siteKey:configured()&&requiresChallenge()?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null},
+const advanced=new Set(['ocr-pdf','replace-pdf-image','replace-pdf-text']);
+function operationEnabled(operation:string):boolean{
+ if(!advanced.has(operation))return true;
+ return (process.env.FILEMAGIK_PDF_ADVANCED_ENABLED_OPERATIONS||'').split(',').map(x=>x.trim()).includes(operation);
+}
+export async function GET(request:NextRequest){
+ const operation=request.nextUrl.searchParams.get('operation')||'';
+ const ready=configured()&&operationEnabled(operation);
+ return NextResponse.json({available:ready,challengeRequired:ready&&requiresChallenge(),
+  siteKey:ready&&requiresChallenge()?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null},
   {headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(request:NextRequest){
@@ -35,7 +42,7 @@ export async function POST(request:NextRequest){
  const quality=request.nextUrl.searchParams.get('quality')||'lossless';
  if(!supported[operation]||!['lossless','balanced','maximum'].includes(quality))
   return NextResponse.json({error:'Unsupported conversion'},{status:400});
- if(!configured())return NextResponse.json({error:'Advanced engine not configured'},{status:503});
+ if(!configured()||!operationEnabled(operation))return NextResponse.json({error:'Advanced engine operation not enabled'},{status:503});
  const origin=request.headers.get('origin');
  if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:'Origin not allowed'},{status:403});
  const length=Number(request.headers.get('content-length')||0);
