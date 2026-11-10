@@ -11,18 +11,40 @@ const outputExtensions:Record<string,string>={
  'server-gif-to-mp4':'.mp4',
  'server-extract-7z':'.zip',
  'server-extract-rar':'.zip',
+ 'server-audio-to-flac':'.flac',
+ 'server-audio-to-ogg':'.ogg',
+ 'server-trim-audio':'.mp3',
+ 'server-trim-video':'.mp4',
+ 'server-video-frame':'.png',
+ 'server-gif-frames-zip':'.zip',
+ 'server-gif-edit':'.webp',
+ 'server-mixed-batch':'.zip',
+ 'server-join-audio':'.mp3',
+ 'server-join-video':'.mp4',
 };
 export function isWorkerSlug(slug:string):boolean{
  return Object.prototype.hasOwnProperty.call(outputExtensions,slug);
 }
 export async function runWorkerConversion(
- slug:string,file:File,token:string,signal?:AbortSignal,
+ slug:string,files:File[],token:string,signal?:AbortSignal,
+ options:{start?:number;end?:number;preset?:'web-friendly'|'extract';firstFrame?:number;lastFrame?:number;speed?:number}={},
 ):Promise<OutputFile>{
  if(!isWorkerSlug(slug))throw new Error('Unsupported server conversion');
  if(!token)throw new Error('Human verification is required');
+ const batch=slug==='server-mixed-batch';
+ const multi=batch||slug==='server-join-audio'||slug==='server-join-video';
+ if(!files.length)throw new Error('Select at least one file');
  const form=new FormData();
- form.set('file',file,file.name);form.set('turnstile',token);
- const response=await fetch('/api/worker-engine?operation='+encodeURIComponent(slug),{
+ for(const file of files)form.append(multi?'files':'file',file,file.name);
+ form.set('turnstile',token);
+ const params=new URLSearchParams({operation:slug});
+ if(options.start!==undefined)params.set('start',String(options.start));
+ if(options.end!==undefined)params.set('end',String(options.end));
+ if(batch)params.set('preset',options.preset||'web-friendly');
+ if(options.firstFrame!==undefined)params.set('startFrame',String(options.firstFrame));
+ if(options.lastFrame!==undefined)params.set('endFrame',String(options.lastFrame));
+ if(options.speed!==undefined)params.set('speed',String(options.speed));
+ const response=await fetch('/api/worker-engine?'+params,{
   method:'POST',body:form,cache:'no-store',signal,
  });
  if(!response.ok){
@@ -32,6 +54,6 @@ export async function runWorkerConversion(
  const mime=response.headers.get('content-type')||'application/octet-stream';
  const blob=await response.blob();
  if(blob.size<8||blob.size>12*1024*1024)throw new Error('Invalid server output size');
- return {name:file.name.replace(/\.[^.]+$/,'')+'-filemagik'+outputExtensions[slug],
+ return {name:(batch?'filemagik-batch':multi?'filemagik-joined':files[0].name.replace(/\.[^.]+$/,'')+'-filemagik')+outputExtensions[slug],
   blob:new Blob([blob],{type:mime})};
 }

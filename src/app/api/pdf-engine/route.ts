@@ -5,7 +5,7 @@ export const runtime='nodejs';
 const supported:Record<string,readonly string[]>={
  'pdf-to-docx':['.pdf'],'pdf-to-xlsx':['.pdf'],
  'office-to-pdf':['.docx','.xlsx','.pptx','.odt','.ods','.odp'],
- 'optimize-pdf':['.pdf'],'redact-pdf':['.pdf'],
+ 'optimize-pdf':['.pdf'],'redact-pdf':['.pdf'],'ocr-pdf':['.pdf'],'replace-pdf-image':['.pdf'],'replace-pdf-text':['.pdf'],
 };
 const maxBytes=3*1024*1024;
 const maxResponseBytes=22*1024*1024;
@@ -13,7 +13,7 @@ const safeExt=(name:string)=>name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0]||'';
 const allowedMime:Record<string,string>={
  'pdf-to-docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
  'pdf-to-xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
- 'office-to-pdf':'application/pdf','optimize-pdf':'application/pdf','redact-pdf':'application/pdf',
+ 'office-to-pdf':'application/pdf','optimize-pdf':'application/pdf','redact-pdf':'application/pdf','ocr-pdf':'application/pdf','replace-pdf-image':'application/pdf','replace-pdf-text':'application/pdf',
 };
 function configured(){
  const base=process.env.FILEMAGIK_PDF_ENGINE_URL||'';
@@ -25,9 +25,16 @@ function requiresChallenge(){
  return !!process.env.FILEMAGIK_TURNSTILE_SECRET&&process.env.FILEMAGIK_TURNSTILE_SECRET.length>=16&&
   !!process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY&&process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY.length>5;
 }
-export async function GET(){
- return NextResponse.json({available:configured(),challengeRequired:configured()&&requiresChallenge(),
-  siteKey:configured()&&requiresChallenge()?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null},
+const advanced=new Set(['ocr-pdf','replace-pdf-image','replace-pdf-text']);
+function operationEnabled(operation:string):boolean{
+ if(!advanced.has(operation))return true;
+ return (process.env.FILEMAGIK_PDF_ADVANCED_ENABLED_OPERATIONS||'').split(',').map(x=>x.trim()).includes(operation);
+}
+export async function GET(request:NextRequest){
+ const operation=request.nextUrl.searchParams.get('operation')||'';
+ const ready=configured()&&operationEnabled(operation);
+ return NextResponse.json({available:ready,challengeRequired:ready&&requiresChallenge(),
+  siteKey:ready&&requiresChallenge()?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null},
   {headers:{'Cache-Control':'no-store'}});
 }
 export async function POST(request:NextRequest){
@@ -35,12 +42,12 @@ export async function POST(request:NextRequest){
  const quality=request.nextUrl.searchParams.get('quality')||'lossless';
  if(!supported[operation]||!['lossless','balanced','maximum'].includes(quality))
   return NextResponse.json({error:'Unsupported conversion'},{status:400});
- if(!configured())return NextResponse.json({error:'Advanced engine not configured'},{status:503});
+ if(!configured()||!operationEnabled(operation))return NextResponse.json({error:'Advanced engine operation not enabled'},{status:503});
  const origin=request.headers.get('origin');
  if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:'Origin not allowed'},{status:403});
  const length=Number(request.headers.get('content-length')||0);
  if(!Number.isSafeInteger(length)||length<0)return NextResponse.json({error:'Invalid request size'},{status:400});
- if(length>maxBytes+4096)return NextResponse.json({error:'Maximum 3 MB upload'},{status:413});
+ if(length>(operation==='replace-pdf-image'?2*maxBytes+8192:maxBytes+4096))return NextResponse.json({error:'Upload exceeds secure size limit'},{status:413});
  let data:FormData;
  try{data=await request.formData();}catch{return NextResponse.json({error:'Invalid upload'},{status:400});}
  const token=data.get('turnstile');
@@ -65,6 +72,23 @@ export async function POST(request:NextRequest){
  }
  const payload=new FormData();
  payload.set('file',new File([await file.arrayBuffer()],file.name,{type:file.type||'application/octet-stream'}));
+ if(operation==='replace-pdf-text'){
+  const page=Number(data.get('page'));const original=data.get('source_text'),newText=data.get('new_text');
+  if(!Number.isInteger(page)||page<1||page>100||typeof original!=='string'||typeof newText!=='string'||
+    !original||original.length>120||original.length!==newText.length||
+    !/^[\x20-\x7E]+$/.test(original)||!/^[\x20-\x7E]+$/.test(newText)||original===newText)
+    return NextResponse.json({error:'Native text requires matching-length printable ASCII strings'},{status:400});
+  payload.set('page',String(page));payload.set('source_text',original);payload.set('new_text',newText);
+ }
+ if(operation==='replace-pdf-image'){
+  const image=data.get('replacement'),page=Number(data.get('page')),imageIndex=Number(data.get('image_index'));
+  if(!(image instanceof File)||image.size<1||image.size>maxBytes||!/^image\/(png|jpeg|webp)$/.test(image.type)||
+    !/\.(png|jpg|jpeg|webp)$/i.test(image.name)||!Number.isInteger(page)||page<1||page>100||
+    !Number.isInteger(imageIndex)||imageIndex<1||imageIndex>100)
+   return NextResponse.json({error:'Invalid replacement image or object index'},{status:400});
+  payload.set('replacement',new File([await image.arrayBuffer()],image.name,{type:image.type}));
+  payload.set('page',String(page));payload.set('image_index',String(imageIndex));
+ }
  if(operation==='redact-pdf'){
   const regions=data.get('regions');
   if(typeof regions!=='string'||regions.length>6000)return NextResponse.json({error:'Invalid redaction request'},{status:400});

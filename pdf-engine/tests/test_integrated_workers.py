@@ -145,3 +145,162 @@ def test_ffprobe_rejects_excessive_video_dimensions(monkeypatch,tmp_path):
     with pytest.raises(HTTPException) as rejected:
         media_worker.inspect(tmp_path/"fake.mp4")
     assert rejected.value.status_code==413
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="FFmpeg tools required")
+def test_new_media_formats_and_audio_trim(monkeypatch):
+    monkeypatch.setenv("FILEMAGIK_MEDIA_HOURLY_VISITOR","100")
+    monkeypatch.setenv("FILEMAGIK_MEDIA_DAILY_VISITOR","100")
+    import media_worker
+    payload=wav_bytes()
+    base="/workers/media/v1/media?operation="
+    for op,magic in [("audio-to-flac",b"fLaC"),("audio-to-ogg",b"OggS")]:
+        response=client.post(base+op,headers=HEADERS,
+            files={"file":("sample.wav",payload,"audio/wav")})
+        assert response.status_code==200,response.text[:150] if response.status_code!=200 else ""
+        assert response.content.startswith(magic)
+    response=client.post(base+"trim-audio-mp3&start=0.1&end=0.6",headers=HEADERS,
+        files={"file":("sample.wav",payload,"audio/wav")})
+    assert response.status_code==200
+    assert response.content.startswith(b"ID3") or response.content[:1]==bytes.fromhex("ff")
+    for invalid in ("start=-1&end=0.5","start=0.8&end=0.2",
+                    "start=0&end=120","start=nan&end=1"):
+        rejected=client.post(base+"trim-audio-mp3&"+invalid,headers=HEADERS,
+            files={"file":("sample.wav",payload,"audio/wav")})
+        assert rejected.status_code in (400,422)
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"), reason="FFmpeg tools required")
+def test_new_video_trim_and_single_png_frame(tmp_path):
+    source=tmp_path/"moving.mp4"
+    subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-f","lavfi",
+        "-i","testsrc=size=128x96:rate=10","-t","2","-threads","1",
+        "-c:v","mpeg4","-y",str(source)],check=True)
+    data=source.read_bytes()
+    base="/workers/media/v1/media?operation="
+    frame=client.post(base+"video-frame-png&start=0.5",headers=HEADERS,
+        files={"file":("moving.mp4",data,"video/mp4")})
+    assert frame.status_code==200,frame.text[:150] if frame.status_code!=200 else ""
+    assert frame.content.startswith(bytes.fromhex("89504e470d0a1a0a"))
+    trimmed=client.post(base+"trim-video-mp4&start=0.25&end=1.25",headers=HEADERS,
+        files={"file":("moving.mp4",data,"video/mp4")})
+    assert trimmed.status_code==200,trimmed.text[:150] if trimmed.status_code!=200 else ""
+    assert b"ftyp" in trimmed.content[:64]
+
+
+def test_gif_frame_zip_contains_real_pngs_and_timing():
+    import json
+    response=client.post("/workers/image/v1/convert?operation=gif-to-frames-zip",
+        headers=HEADERS,files={"file":("animation.gif",gif_bytes(),"image/gif")})
+    assert response.status_code==200,response.text[:160] if response.status_code!=200 else ""
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        assert archive.namelist()==["frame-001.png","frame-002.png","frames.json"]
+        assert archive.read("frame-001.png").startswith(bytes.fromhex("89504e470d0a1a0a"))
+        meta=json.loads(archive.read("frames.json"))
+        assert meta["frames"]==2
+        assert meta["durations_ms"]==[120,240]
+
+
+def test_private_mixed_batch_zip_manifest_and_presets(monkeypatch):
+    import json
+    monkeypatch.setenv("FILEMAGIK_MEDIA_HOURLY_VISITOR","100")
+    monkeypatch.setenv("FILEMAGIK_IMAGE_HOURLY_VISITOR","100")
+    url="/workers/batch/v1/convert?preset=web-friendly"
+    mixed=[
+        ("files",("animation.gif",gif_bytes(),"image/gif")),
+        ("files",("sound.wav",wav_bytes(),"audio/wav")),
+        ("files",("unknown.xyz",b"bad","application/octet-stream"))]
+    assert client.post(url,files=mixed).status_code==401
+    result=client.post(url,headers=HEADERS,files=mixed)
+    assert result.status_code==200,result.text[:180] if result.status_code!=200 else ""
+    with zipfile.ZipFile(io.BytesIO(result.content)) as archive:
+        names=archive.namelist()
+        assert "01-animation.webp" in names
+        assert "02-sound.mp3" in names
+        assert archive.read("01-animation.webp")[:4]==b"RIFF"
+        assert archive.read("02-sound.mp3")[:3]==b"ID3"
+        manifest=json.loads(archive.read("manifest.json"))
+        assert [row["status"] for row in manifest["files"]]==["ok","ok","unsupported"]
+        assert len(manifest["files"][0]["sha256"])==64
+
+def test_private_mixed_batch_limits_and_fail_closed():
+    many=[("files",(f"bad{i}.gif",gif_bytes(),"image/gif")) for i in range(7)]
+    too_many=client.post("/workers/batch/v1/convert",headers=HEADERS,files=many)
+    assert too_many.status_code==413
+    no_valid=client.post("/workers/batch/v1/convert",headers=HEADERS,
+        files=[("files",("broken.bin",b"xx","application/octet-stream"))])
+    assert no_valid.status_code==422
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"),reason="FFmpeg required")
+def test_join_audio_preserves_combined_length_and_requires_two_files(monkeypatch):
+    monkeypatch.setenv("FILEMAGIK_MEDIA_HOURLY_VISITOR","100")
+    monkeypatch.setenv("FILEMAGIK_MEDIA_DAILY_VISITOR","100")
+    source=wav_bytes()
+    inputs=[("files",("first.wav",source,"audio/wav")),
+            ("files",("second.wav",source,"audio/wav"))]
+    response=client.post("/workers/media/v1/join?operation=join-audio-mp3",
+                         headers=HEADERS,files=inputs)
+    assert response.status_code==200,response.text[:150] if response.status_code!=200 else ""
+    assert response.content.startswith(b"ID3") or response.content[:1]==bytes.fromhex("ff")
+    with __import__("tempfile").NamedTemporaryFile(suffix=".mp3") as output:
+        output.write(response.content);output.flush()
+        length=subprocess.check_output(["ffprobe","-v","error","-show_entries",
+          "format=duration","-of","default=nokey=1:noprint_wrappers=1",output.name])
+    assert 1.9<float(length)<2.2
+    invalid=client.post("/workers/media/v1/join?operation=join-audio-mp3",
+        headers=HEADERS,files=[("files",("only.wav",source,"audio/wav"))])
+    assert invalid.status_code==413
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"),reason="FFmpeg required")
+def test_join_video_with_sound_keeps_audio(tmp_path,monkeypatch):
+    monkeypatch.setenv("FILEMAGIK_MEDIA_HOURLY_VISITOR","100")
+    monkeypatch.setenv("FILEMAGIK_MEDIA_DAILY_VISITOR","100")
+    source=tmp_path/"clip.mp4"
+    subprocess.run(["ffmpeg","-hide_banner","-loglevel","error",
+        "-f","lavfi","-i","testsrc=size=96x72:rate=12",
+        "-f","lavfi","-i","sine=frequency=440:sample_rate=44100",
+        "-t","0.6","-threads","1","-c:v","mpeg4","-c:a","aac",
+        "-shortest","-y",str(source)],check=True)
+    blob=source.read_bytes()
+    inputs=[("files",("first.mp4",blob,"video/mp4")),
+            ("files",("second.mp4",blob,"video/mp4"))]
+    response=client.post("/workers/media/v1/join?operation=join-video-mp4",
+                         headers=HEADERS,files=inputs)
+    assert response.status_code==200,response.text[:180] if response.status_code!=200 else ""
+    assert b"ftyp" in response.content[:24]
+    output=tmp_path/"joined.mp4";output.write_bytes(response.content)
+    video=subprocess.check_output(["ffprobe","-v","error","-select_streams",
+        "v:0","-show_entries","stream=index","-of","csv=p=0",str(output)])
+    audio=subprocess.check_output(["ffprobe","-v","error","-select_streams",
+        "a:0","-show_entries","stream=index","-of","csv=p=0",str(output)])
+    assert video.strip() and audio.strip()
+
+
+def test_gif_editor_trims_frames_and_updates_duration():
+    response=client.post("/workers/image/v1/convert?operation=gif-edit-webp&start_frame=2&end_frame=2&speed=2",
+      headers=HEADERS,files={"file":("animation.gif",gif_bytes(),"image/gif")})
+    assert response.status_code==200,response.text[:150] if response.status_code!=200 else ""
+    with Image.open(io.BytesIO(response.content)) as result:
+        assert result.n_frames==1
+        assert result.getpixel((0,0))[2]>result.getpixel((0,0))[0]  # kept blue second frame
+    two=client.post("/workers/image/v1/convert?operation=gif-edit-webp&start_frame=1&end_frame=2&speed=2",
+      headers=HEADERS,files={"file":("animation.gif",gif_bytes(),"image/gif")})
+    assert two.status_code==200
+    with Image.open(io.BytesIO(two.content)) as edited:
+        assert edited.n_frames==2
+        # Pillow does not consistently expose WebP frame timing in .info.
+        # Check the animation container's ANMF frame-duration fields directly.
+        marker=b"ANMF"
+        offsets=[];cursor=0
+        while True:
+            at=two.content.find(marker,cursor)
+            if at<0:break
+            offsets.append(at);cursor=at+4
+        assert len(offsets)==2
+        durations=[int.from_bytes(two.content[at+20:at+23],"little") for at in offsets]
+        assert 40<=durations[0]<=90
+        assert 100<=durations[1]<=160
+    bad=client.post("/workers/image/v1/convert?operation=gif-edit-webp&start_frame=3&end_frame=4&speed=1",
+      headers=HEADERS,files={"file":("animation.gif",gif_bytes(),"image/gif")})
+    assert bad.status_code==400

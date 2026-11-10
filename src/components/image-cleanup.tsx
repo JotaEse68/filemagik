@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Download,ImagePlus,RotateCcw,Undo2,Redo2,WandSparkles} from 'lucide-react';
 import type {Locale} from '@/config/site';
-import {healRectangle,healBrushStroke,normalizeArea,type Area} from '@/lib/image-heal';
+import {healRectangle,healBrushStroke,healPolygon,normalizeArea,type Area} from '@/lib/image-heal';
 
 type Point={x:number;y:number};
 const copies={
@@ -17,7 +17,8 @@ export default function ImageCleanup({locale}:{locale:Locale}){
  const original=useRef<ImageData|null>(null),history=useRef<ImageData[]>([]),future=useRef<ImageData[]>([]);
  const start=useRef<Point|null>(null),preview=useRef<ImageData|null>(null),base=useRef<ImageData|null>(null);
  const stroke=useRef<Point[]>([]);
- const [mode,setMode]=useState<'rectangle'|'brush'>('rectangle'),[brushSize,setBrushSize]=useState(8);
+ const lasso=useRef<Point[]|null>(null);
+ const [mode,setMode]=useState<'rectangle'|'brush'|'lasso'>('rectangle'),[brushSize,setBrushSize]=useState(8);
  const [selection,setSelection]=useState<Area|null>(null),[loaded,setLoaded]=useState(false),[error,setError]=useState('');
  const [historySize,setHistorySize]=useState(0),[redoSize,setRedoSize]=useState(0),[zoom,setZoom]=useState(100);
  const [name,setName]=useState('cleaned-image');
@@ -44,17 +45,33 @@ export default function ImageCleanup({locale}:{locale:Locale}){
    history.current=[];future.current=[];setHistorySize(0);setRedoSize(0);setZoom(100);setSelection(null);setLoaded(true);setName(file.name.replace(/\.[^.]+$/,'')+'-cleaned');setShowOriginal(false);
   }catch(e){setError(e instanceof Error?e.message:copy.error);}finally{bitmap?.close();}
  }
- function begin(e:React.PointerEvent<HTMLCanvasElement>){if(!loaded||showOriginal)return;const el=canvas.current!;el.setPointerCapture(e.pointerId);const ctx=el.getContext('2d',{willReadFrequently:true})!;if(base.current)ctx.putImageData(base.current,0,0);start.current=coords(e);preview.current=ctx.getImageData(0,0,el.width,el.height);base.current=preview.current;stroke.current=[start.current];setSelection(null);}
- function move(e:React.PointerEvent<HTMLCanvasElement>){if(!start.current||!preview.current)return;const point=coords(e),el=canvas.current!;if(mode==='brush'){const previous=stroke.current.at(-1)!;if(Math.hypot(point.x-previous.x,point.y-previous.y)>brushSize*.8&&stroke.current.length<40)stroke.current.push(point);const ctx=el.getContext('2d')!;ctx.putImageData(preview.current,0,0);ctx.strokeStyle='#8cf5ff';ctx.lineWidth=Math.max(2,brushSize*2);ctx.lineCap='round';ctx.beginPath();stroke.current.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();return;}const rect=normalizeArea(start.current,point,el.width,el.height);drawSelection(rect,preview.current);}
- function finish(e:React.PointerEvent<HTMLCanvasElement>){if(!start.current||!preview.current)return;const point=coords(e),el=canvas.current!;if(mode==='brush'){const ctx=el.getContext('2d',{willReadFrequently:true})!;const before=preview.current;ctx.putImageData(before,0,0);try{const points=[...stroke.current,point].slice(0,40);const result=healBrushStroke(before,points,brushSize);history.current=[...history.current.slice(-9),before];future.current=[];setHistorySize(history.current.length);setRedoSize(0);ctx.putImageData(result,0,0);base.current=null;setError('');}catch(err){setError(err instanceof Error?err.message:copy.error);base.current=before;}stroke.current=[];start.current=null;preview.current=null;return;}const rect=normalizeArea(start.current,point,el.width,el.height);drawSelection(rect,preview.current);setSelection(rect);start.current=null;preview.current=null;}
+ function begin(e:React.PointerEvent<HTMLCanvasElement>){if(!loaded||showOriginal)return;const el=canvas.current!;el.setPointerCapture(e.pointerId);const ctx=el.getContext('2d',{willReadFrequently:true})!;if(base.current)ctx.putImageData(base.current,0,0);start.current=coords(e);preview.current=ctx.getImageData(0,0,el.width,el.height);base.current=preview.current;stroke.current=[start.current];lasso.current=null;setSelection(null);}
+ function move(e:React.PointerEvent<HTMLCanvasElement>){if(!start.current||!preview.current)return;const point=coords(e),el=canvas.current!;if(mode==='brush'||mode==='lasso'){const previous=stroke.current.at(-1)!;if(Math.hypot(point.x-previous.x,point.y-previous.y)>(mode==='lasso'?3:brushSize*.8)&&stroke.current.length<(mode==='lasso'?180:40))stroke.current.push(point);const ctx=el.getContext('2d')!;ctx.putImageData(preview.current,0,0);ctx.strokeStyle='#8cf5ff';ctx.lineWidth=mode==='lasso'?2:Math.max(2,brushSize*2);ctx.lineCap='round';ctx.beginPath();stroke.current.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));if(mode==='lasso')ctx.closePath();ctx.stroke();return;}const rect=normalizeArea(start.current,point,el.width,el.height);drawSelection(rect,preview.current);}
+ function finish(e:React.PointerEvent<HTMLCanvasElement>){if(!start.current||!preview.current)return;const point=coords(e),el=canvas.current!;if(mode==='lasso'){
+   const points=[...stroke.current,point].slice(0,200);
+   const ctx=el.getContext('2d',{willReadFrequently:true})!;
+   ctx.putImageData(preview.current,0,0);
+   if(points.length>=3){
+    ctx.strokeStyle='#8cf5ff';ctx.lineWidth=2;ctx.beginPath();
+    ctx.moveTo(points[0].x,points[0].y);
+    for(const p of points.slice(1))ctx.lineTo(p.x,p.y);
+    ctx.closePath();ctx.stroke();
+    const x=Math.min(...points.map(p=>p.x)),y=Math.min(...points.map(p=>p.y));
+    const right=Math.max(...points.map(p=>p.x)),bottom=Math.max(...points.map(p=>p.y));
+    setSelection(normalizeArea({x,y},{x:right,y:bottom},el.width,el.height));
+    lasso.current=points;
+   }else{setError('Draw a larger freehand selection');lasso.current=null;}
+   start.current=null;stroke.current=[];preview.current=null;return;
+  }
+  if(mode==='brush'){const ctx=el.getContext('2d',{willReadFrequently:true})!;const before=preview.current;ctx.putImageData(before,0,0);try{const points=[...stroke.current,point].slice(0,40);const result=healBrushStroke(before,points,brushSize);history.current=[...history.current.slice(-9),before];future.current=[];setHistorySize(history.current.length);setRedoSize(0);ctx.putImageData(result,0,0);base.current=null;setError('');}catch(err){setError(err instanceof Error?err.message:copy.error);base.current=before;}stroke.current=[];start.current=null;preview.current=null;return;}const rect=normalizeArea(start.current,point,el.width,el.height);drawSelection(rect,preview.current);setSelection(rect);start.current=null;preview.current=null;}
  function apply(){ensureEditedPreview();
   const el=canvas.current,ctx=el?.getContext('2d',{willReadFrequently:true});
   if(!ctx||!el||!selection)return;
   try{
    const current=base.current??ctx.getImageData(0,0,el.width,el.height);
-   const result=healRectangle(current,selection);
+   const result=lasso.current?healPolygon(current,lasso.current):healRectangle(current,selection);
    history.current=[...history.current.slice(-9),current];future.current=[];setHistorySize(history.current.length);setRedoSize(0);
-   ctx.putImageData(result,0,0);base.current=null;setSelection(null);setError('');
+   ctx.putImageData(result,0,0);base.current=null;setSelection(null);lasso.current=null;setError('');
   }catch(e){setError(e instanceof Error?e.message:copy.error);}
  }
  function undo(){ensureEditedPreview();const ctx=canvas.current?.getContext('2d',{willReadFrequently:true});const previous=history.current.pop();if(previous&&ctx&&canvas.current){future.current=[...future.current.slice(-9),ctx.getImageData(0,0,canvas.current.width,canvas.current.height)];ctx.putImageData(previous,0,0);setHistorySize(history.current.length);setRedoSize(future.current.length);base.current=null;setSelection(null);}}
@@ -69,7 +86,7 @@ export default function ImageCleanup({locale}:{locale:Locale}){
   <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" className="visually-hidden" onChange={e=>{const f=e.target.files?.[0];if(f)void openFile(f);}}/>
   <div className="image-cleanup-toolbar">
    <button className="btn btn-primary" onClick={()=>input.current?.click()}><ImagePlus size={17}/>{copy.load}</button>
-   <label className="image-export-select">{({es:'Herramienta',en:'Tool',pt:'Ferramenta',fr:'Outil'} as const)[locale]} <select aria-label="Herramienta de retoque" value={mode} onChange={e=>{setMode(e.target.value as 'rectangle'|'brush');setSelection(null);}}><option value="rectangle">{({es:'Zona rectangular',en:'Rectangle',pt:'Área retangular',fr:'Rectangle'} as const)[locale]}</option><option value="brush">{({es:'Pincel corrector',en:'Healing brush',pt:'Pincel de retoque',fr:'Pinceau correcteur'} as const)[locale]}</option></select></label>
+   <label className="image-export-select">{({es:'Herramienta',en:'Tool',pt:'Ferramenta',fr:'Outil'} as const)[locale]} <select aria-label="Herramienta de retoque" value={mode} onChange={e=>{setMode(e.target.value as 'rectangle'|'brush'|'lasso');setSelection(null);}}><option value="rectangle">{({es:'Zona rectangular',en:'Rectangle',pt:'Área retangular',fr:'Rectangle'} as const)[locale]}</option><option value="lasso">{({es:'Lazo libre',en:'Freehand lasso',pt:'Laço livre',fr:'Lasso libre'} as const)[locale]}</option><option value="brush">{({es:'Pincel corrector',en:'Healing brush',pt:'Pincel de retoque',fr:'Pinceau correcteur'} as const)[locale]}</option></select></label>
    {mode==='brush'&&<label className="image-export-select">{({es:'Tamaño de pincel',en:'Brush size',pt:'Tamanho do pincel',fr:'Taille du pinceau'} as const)[locale]} <input aria-label="Tamaño de pincel" type="range" min="3" max="20" value={brushSize} onChange={e=>setBrushSize(Number(e.target.value))}/>{brushSize}px</label>}
    <button className="btn btn-ghost" disabled={!selection} onClick={apply}><WandSparkles size={17}/>{copy.apply}</button>
    <button className="btn btn-ghost" disabled={!historySize} onClick={undo}><Undo2 size={17}/>{copy.undo}</button>
@@ -80,7 +97,7 @@ export default function ImageCleanup({locale}:{locale:Locale}){
    <label className="image-export-select">Formato <select value={format} onChange={e=>setFormat(e.target.value as 'png'|'jpeg'|'webp')}><option value="png">PNG</option><option value="jpeg">JPG</option><option value="webp">WebP</option></select></label>
    <button className="btn btn-primary" disabled={!loaded||showOriginal} onClick={download}><Download size={17}/>{copy.download.replace('PNG',format==='jpeg'?'JPG':format.toUpperCase())}</button>
   </div>
-  <p>{mode==='brush'?({es:'Pinta trazos cortos sobre los detalles que quieres corregir. Máximo 4 megapíxeles por imagen.',en:'Brush over small details in short strokes. Maximum 4 megapixels per image.',pt:'Pinte traços curtos nos detalhes a corrigir. Máximo de 4 megapixels por imagem.',fr:'Passez le pinceau par petites touches. Maximum 4 mégapixels par image.'} as const)[locale]:copy.select}</p>
+  <p>{mode==='brush'?({es:'Pinta trazos cortos sobre los detalles que quieres corregir. Máximo 4 megapíxeles por imagen.',en:'Brush over small details in short strokes. Maximum 4 megapixels per image.',pt:'Pinte traços curtos nos detalhes a corrigir. Máximo de 4 megapixels por imagem.',fr:'Passez le pinceau par petites touches. Maximum 4 mégapixels par image.'} as const)[locale]:mode==='lasso'?({es:'Dibuja una selección a mano alzada, ciérrala y pulsa limpiar. Solo se modifican los píxeles seleccionados.',en:'Draw and close a freehand selection, then clean it. Only selected pixels are modified.',pt:'Desenhe uma seleção livre e aplique a correção apenas dentro dela.',fr:'Tracez une sélection libre ; seuls les pixels sélectionnés seront modifiés.'} as const)[locale]:copy.select}</p>
   <div className="image-cleanup-stage" style={zoom>100?{justifyContent:'flex-start'}:undefined}><canvas ref={canvas} className={loaded?'image-cleanup-canvas':'image-cleanup-empty'} style={{display:loaded?'block':'none',maxWidth:zoom===100?'100%':'none',width:zoom+'%',flexShrink:0}} onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish}/>{!loaded&&<span>{copy.load}</span>}</div>
   {downloadName&&<div className="conversion-complete" role="status" data-testid="conversion-success"><div className="conversion-complete-heading"><Download size={22} aria-hidden="true"/><div><h3>{({es:'¡Imagen exportada!',en:'Image export requested!',pt:'Imagem exportada!',fr:'Image exportée !'} as const)[locale]}</h3><p>{({es:'La descarga se ha solicitado. Comprueba la carpeta de descargas de tu navegador.',en:'Download requested. Check your browser downloads.',pt:'Transferência solicitada. Consulte as transferências do navegador.',fr:'Téléchargement demandé. Vérifiez les téléchargements du navigateur.'} as const)[locale]}</p></div></div><p className="conversion-complete-file">{downloadName}</p></div>}
   {error&&<p role="alert" className="error">{error}</p>}

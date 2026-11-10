@@ -59,3 +59,34 @@ export function healBrushStroke(source:ImageData,points:ReadonlyArray<{x:number;
  }
  return result;
 }
+
+/** Heal only pixels enclosed by a bounded freehand polygon, leaving all other
+ * pixels bit-for-bit unchanged. The local rectangle algorithm supplies the
+ * fill estimate; the polygon mask decides what may actually be modified.
+ */
+export function healPolygon(source:ImageData,points:ReadonlyArray<{x:number;y:number}>):ImageData{
+ if(source.width*source.height>4_000_000)throw new Error('Lasso editing is limited to 4 megapixels');
+ if(points.length<3||points.length>200)throw new Error('Select a closed region using 3 to 200 points');
+ if(points.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)))throw new Error('Invalid lasso coordinates');
+ const left=Math.max(2,Math.floor(Math.min(...points.map(p=>p.x))));
+ const top=Math.max(2,Math.floor(Math.min(...points.map(p=>p.y))));
+ const right=Math.min(source.width-2,Math.ceil(Math.max(...points.map(p=>p.x))));
+ const bottom=Math.min(source.height-2,Math.ceil(Math.max(...points.map(p=>p.y))));
+ if(right-left<3||bottom-top<3)throw new Error('Lasso selection too small');
+ if((right-left)*(bottom-top)>source.width*source.height*.3)throw new Error('Lasso selection too large');
+ const estimated=healRectangle(source,{x:left,y:top,width:right-left,height:bottom-top});
+ const mask=document.createElement('canvas');mask.width=source.width;mask.height=source.height;
+ const ctx=mask.getContext('2d',{willReadFrequently:true});if(!ctx)throw new Error('Canvas unavailable');
+ ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
+ for(const point of points.slice(1))ctx.lineTo(point.x,point.y);
+ ctx.closePath();ctx.fill();
+ const selected=ctx.getImageData(left,top,right-left,bottom-top).data;
+ const result=new ImageData(new Uint8ClampedArray(source.data),source.width,source.height);
+ for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
+  const m=((y-top)*(right-left)+(x-left))*4+3;
+  if(selected[m]===0)continue;
+  const index=(y*source.width+x)*4;
+  for(let c=0;c<4;c++)result.data[index+c]=estimated.data[index+c];
+ }
+ return result;
+}

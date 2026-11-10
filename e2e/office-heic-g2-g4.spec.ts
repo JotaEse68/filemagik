@@ -48,3 +48,36 @@ test('HEIC header spoofing is rejected before browser decoding',async({page})=>{
  await expect(page.locator('p.error[role="alert"]')).toContainText('Not a valid HEIC');
  await expect(page.locator('a[download]')).toHaveCount(0);
 });
+
+
+test('new premium media and mixed batch stay disabled without public certification',async({page})=>{
+ for(const slug of ['server-trim-audio','server-join-video','server-mixed-batch','server-gif-edit']){
+  const requests:string[]=[];
+  page.on('request',request=>{if(request.method()==='POST'&&request.url().includes('/api/worker-engine'))requests.push(request.url());});
+  await page.goto('/es/'+slug);
+  await expect(page.getByText('Servicio privado no habilitado. No se subirá ningún archivo.')).toHaveCount(0);
+  const type=slug==='server-join-video'?'video/mp4':slug==='server-gif-edit'?'image/gif':'audio/wav';
+  const filename=slug==='server-join-video'?'clip.mp4':slug==='server-gif-edit'?'test.gif':'clip.wav';
+  await page.locator('input[type=file]').first().setInputFiles({name:filename,mimeType:type,buffer:Buffer.from('fake media bytes')});
+  await expect(page.getByText('Servicio privado no habilitado. No se subirá ningún archivo.')).toBeVisible();
+  await expect(page.getByRole('button',{name:/convertir ahora/i})).toBeVisible();
+  expect(requests).toHaveLength(0);
+ }
+});
+
+test('new native PDF operations remain fail-closed without their allowlist',async({page})=>{
+ for(const slug of ['ocr-pdf-professional','replace-pdf-image-native','replace-pdf-text-native']){
+  let calls=0;
+  await page.route('**/api/pdf-engine**',route=>{
+   if(route.request().method()==='POST')calls++;
+   return route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({available:false,challengeRequired:false,siteKey:null})});
+  });
+  await page.goto('/es/'+slug);
+  await page.locator('input[type=file]').first().setInputFiles({name:'test.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\\n')});
+  await page.getByRole('button',{name:/convertir ahora/i}).click();
+  await expect(page.locator('p.error[role="alert"]')).toBeVisible();
+  expect(calls).toBe(0);
+  await page.unrouteAll();
+ }
+});
