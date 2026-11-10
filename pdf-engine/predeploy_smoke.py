@@ -89,9 +89,29 @@ async def verify():
             redacted_text=after.pages[0].extract_text() or ""
             if "FileMagik integration" not in original_text or "FileMagik integration" in redacted_text:
                 raise RuntimeError("Redaction did not irreversibly remove searchable source text")
+            # Validate actual OpenDocument files through the authenticated API,
+            # not only a mocked browser network response. Separate visitors
+            # avoid exhausting the hourly smoke budget.
+            from odf_fixtures import ods_fixture,odp_fixture
+            for extension,mime,payload,marker,identity in (
+                (".ods","application/vnd.oasis.opendocument.spreadsheet",
+                    ods_fixture(),"FileMagik ODS integration","c"*64),
+                (".odp","application/vnd.oasis.opendocument.presentation",
+                    odp_fixture(),"FileMagik ODP integration","d"*64)):
+                result=client.post("/v1/jobs?operation=office-to-pdf",
+                    headers={**headers,"X-Filemagik-Visitor":identity},
+                    files={"file":("predeploy"+extension,payload,mime)})
+                if result.status_code!=200 or not result.content.startswith(b"%PDF-"):
+                    raise RuntimeError("Authenticated OpenDocument "+extension+
+                        " to PDF conversion failed: "+str(result.status_code))
+                readable=" ".join(page.extract_text() or "" for page in PdfReader(
+                    io.BytesIO(result.content)).pages)
+                if marker not in readable:
+                    raise RuntimeError("OpenDocument "+extension+
+                        " conversion lost editable source text")
         finally:
             if original_path is None:os.environ.pop("PDF_ENGINE_QUOTA_DB",None)
             else:os.environ["PDF_ENGINE_QUOTA_DB"]=original_path
-    print("PASS: private Gotenberg, authenticated FastAPI Office/PDF, DOCX/XLSX, irreversible redaction and denial checks")
+    print("PASS: private Gotenberg, authenticated FastAPI Office/PDF, DOCX/XLSX, irreversible redaction, ODS/ODP Office fidelity and denial checks")
 if __name__=="__main__":
     asyncio.run(verify())
