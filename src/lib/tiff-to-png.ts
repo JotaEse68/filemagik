@@ -22,7 +22,29 @@ export function decodePackBits(compressed:Uint8Array,expected:number):Uint8Array
  if(output!==expected||input!==compressed.length)throw new Error('Truncated or oversized TIFF PackBits strip');
  return decoded;
 }
-export function decodeBaselineTiff(bytes:Uint8Array):{width:number;height:number;rgba:Uint8ClampedArray}{
+/** Walks every TIFF IFD with cycle, length and page-count protection. */
+export function tiffPageOffsets(bytes:Uint8Array):number[]{
+ if(bytes.length<16||bytes.length>MAX)throw new Error('TIFF size is invalid');
+ const little=bytes[0]===73&&bytes[1]===73,big=bytes[0]===77&&bytes[1]===77;
+ if(!little&&!big)throw new Error('Invalid TIFF endian signature');
+ const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+ const u16=(p:number)=>{if(p<0||p+2>bytes.length)throw new Error('Truncated TIFF directory');return view.getUint16(p,little);};
+ const u32=(p:number)=>{if(p<0||p+4>bytes.length)throw new Error('Truncated TIFF directory');return view.getUint32(p,little);};
+ if(u16(2)!==42)throw new Error('Unsupported TIFF variant');
+ const offsets:number[]=[],visited=new Set<number>();let next=u32(4);
+ while(next!==0){
+  if(visited.has(next))throw new Error('Cyclic TIFF page directory');
+  if(offsets.length>=30)throw new Error('Maximum 30 TIFF pages');
+  visited.add(next);
+  const count=u16(next);
+  if(count>256||next+2+count*12+4>bytes.length)throw new Error('Invalid TIFF directory');
+  offsets.push(next);
+  next=u32(next+2+count*12);
+ }
+ if(!offsets.length)throw new Error('TIFF has no image directories');
+ return offsets;
+}
+export function decodeBaselineTiff(bytes:Uint8Array,pageIndex=0):{width:number;height:number;rgba:Uint8ClampedArray}{
  if(bytes.length<16||bytes.length>MAX)throw new Error('TIFF size is invalid');
  const little=bytes[0]===73&&bytes[1]===73,big=bytes[0]===77&&bytes[1]===77;
  if(!little&&!big)throw new Error('Invalid TIFF endian signature');
@@ -30,8 +52,9 @@ export function decodeBaselineTiff(bytes:Uint8Array):{width:number;height:number
  const u16=(i:number)=>{if(i<0||i+2>bytes.length)throw new Error('Truncated TIFF');return view.getUint16(i,little);};
  const u32=(i:number)=>{if(i<0||i+4>bytes.length)throw new Error('Truncated TIFF');return view.getUint32(i,little);};
  if(u16(2)!==42)throw new Error('Unsupported TIFF variant');
- const ifd=u32(4),count=u16(ifd);if(count>256||ifd+2+count*12+4>bytes.length)throw new Error('Invalid TIFF directory');
- if(u32(ifd+2+count*12)!==0)throw new Error('Multi-page TIFF requires a page-aware exporter');
+ const pages=tiffPageOffsets(bytes);
+ if(!Number.isInteger(pageIndex)||pageIndex<0||pageIndex>=pages.length)throw new Error('TIFF page index out of bounds');
+ const ifd=pages[pageIndex],count=u16(ifd);
  const tags=new Map<number,Tag>();
  for(let i=0;i<count;i++){
   const pos=ifd+2+i*12;
@@ -74,7 +97,9 @@ export function decodeBaselineTiff(bytes:Uint8Array):{width:number;height:number
 }
 export async function tiffToPng(file:File):Promise<OutputFile>{
  if(file.size===0||file.size>MAX)throw new Error('TIFF exceeds 40 MB');
- const image=decodeBaselineTiff(new Uint8Array(await file.arrayBuffer()));
+ const bytes=new Uint8Array(await file.arrayBuffer());
+ if(tiffPageOffsets(bytes).length!==1)throw new Error('Multi-page TIFF requires the TIFF pages to ZIP tool');
+ const image=decodeBaselineTiff(bytes);
  const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;
  const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Canvas unavailable');
  ctx.putImageData(new ImageData(new Uint8ClampedArray(image.rgba),image.width,image.height),0,0);
