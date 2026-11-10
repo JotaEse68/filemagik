@@ -11,6 +11,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from image_worker import convert_image
+from image_quota import reserve as reserve_image
 from media_worker import convert as media_convert
 
 app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
@@ -63,6 +64,7 @@ async def batch_convert(files:list[UploadFile]=File(...),preset:str=Query("web-f
     if not 1<=len(files)<=MAX_ITEMS:
         raise HTTPException(413,"Maximum six files per batch")
     total=0
+    expanded=0
     manifest={"preset":preset,"files":[]}
     destination=io.BytesIO()
     with zipfile.ZipFile(destination,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=3) as archive:
@@ -83,7 +85,8 @@ async def batch_convert(files:list[UploadFile]=File(...),preset:str=Query("web-f
             operation,out_ext,engine=rule
             try:
                 if engine=="image":
-                    result=await asyncio.to_thread(convert_image,data,operation)
+                    with reserve_image(x_filemagik_visitor):
+                        result=await asyncio.to_thread(convert_image,data,operation)
                 else:
                     uploaded=UploadFile(filename="input"+extension,file=io.BytesIO(data))
                     response=await asyncio.to_thread(media_convert,operation,uploaded,None,None,
@@ -91,6 +94,9 @@ async def batch_convert(files:list[UploadFile]=File(...),preset:str=Query("web-f
                     result=response.body
                 if not result:
                     raise ValueError("Empty result")
+                expanded+=len(result)
+                if expanded>MAX_ZIP:
+                    raise HTTPException(413,"Batch expanded output exceeds 12 MB")
                 out_name=secure_name(source_name,index)+out_ext
                 archive.writestr(out_name,result)
                 if destination.tell()>MAX_ZIP:
