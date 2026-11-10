@@ -12,8 +12,24 @@ from contextlib import contextmanager
 from pathlib import Path
 from fastapi import HTTPException
 
+def memory_headroom():
+    """Check Railway cgroup-v2 memory budget without collecting user data."""
+    root=Path("/sys/fs/cgroup")
+    try:
+        limit=(root/"memory.max").read_text().strip()
+        if limit=="max":return
+        available=int(limit)-int((root/"memory.current").read_text().strip())
+        minimum=int(os.getenv("FILEMAGIK_UNIFIED_MIN_FREE_MB","384"))*1024*1024
+        if available<minimum:
+            raise HTTPException(503,"Insufficient memory headroom for conversion")
+    except (FileNotFoundError,ValueError,OSError):
+        # Windows/dev hosts and older cgroup layouts use the global capacity
+        # gate; Railway uses cgroup v2 and enforces the headroom check.
+        return
+
 @contextmanager
 def capacity():
+    memory_headroom()
     path=Path(os.getenv("FILEMAGIK_UNIFIED_CAPACITY_DB","/data/filemagik-worker-capacity.sqlite3"))
     if not path.parent.is_dir():
         raise HTTPException(503,"Persistent worker storage unavailable")
