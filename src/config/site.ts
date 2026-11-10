@@ -4,6 +4,14 @@ export const defaultLocale:Locale='en';
 export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.vercel.app').replace(/\/$/,'');
 export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
+ {slug:'server-heic-to-png',from:'HEIC/HEIF',to:'Server PNG',kind:'image',accept:'.heic,.heif,image/heic,image/heif'},
+ {slug:'server-gif-to-webp',from:'Animated GIF',to:'Animated WebP',kind:'image',accept:'.gif,image/gif'},
+ {slug:'server-audio-to-mp3',from:'Audio',to:'MP3',kind:'audio',accept:'.wav,.mp3,.m4a,.ogg,.flac,audio/*'},
+ {slug:'server-video-to-gif',from:'Video',to:'Animated GIF',kind:'video',accept:'.mp4,.webm,.mov,video/*'},
+ {slug:'server-video-to-mp4',from:'Video',to:'MP4',kind:'video',accept:'.mp4,.webm,.mov,video/*'},
+ {slug:'server-gif-to-mp4',from:'Animated GIF',to:'MP4 video',kind:'video',accept:'.gif,image/gif'},
+ {slug:'server-extract-7z',from:'7Z archive',to:'Extracted ZIP',kind:'archive',accept:'.7z,application/x-7z-compressed'},
+ {slug:'server-extract-rar',from:'RAR archive',to:'Extracted ZIP',kind:'archive',accept:'.rar,application/x-rar-compressed'},
  {slug:'ods-to-pdf',from:'OpenDocument ODS',to:'Professional PDF',kind:'document',accept:'.ods,application/vnd.oasis.opendocument.spreadsheet'},
  {slug:'odp-to-pdf',from:'OpenDocument ODP',to:'Professional PDF',kind:'document',accept:'.odp,application/vnd.oasis.opendocument.presentation'},
  {slug:'word-to-layout-pdf',from:'Word DOCX',to:'Structured PDF',kind:'document',accept:'.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document'},
