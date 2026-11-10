@@ -12,6 +12,7 @@ from PIL import Image
 from pypdf.errors import PdfReadError
 import httpx
 from document import pdf_to_docx, pdf_to_xlsx
+from ocr_worker import raster_ocr_pdf
 from quota import reserve
 from worker_capacity import capacity
 from image_worker import app as image_api
@@ -25,10 +26,10 @@ MAX=int(os.getenv("MAX_UPLOAD_MIB","12"))*1024*1024
 GOTENBERG=os.getenv("GOTENBERG_URL","http://gotenberg.railway.internal:3000").rstrip("/")
 MIMES={"pdf-to-docx":"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 "pdf-to-xlsx":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-"office-to-pdf":"application/pdf","optimize-pdf":"application/pdf","redact-pdf":"application/pdf"}
+"office-to-pdf":"application/pdf","optimize-pdf":"application/pdf","redact-pdf":"application/pdf","ocr-pdf":"application/pdf"}
 EXTENSIONS={"pdf-to-docx":".pdf","pdf-to-xlsx":".pdf",
 "office-to-pdf":(".docx",".xlsx",".pptx",".odt",".ods",".odp"),
-"optimize-pdf":".pdf","redact-pdf":".pdf"}
+"optimize-pdf":".pdf","redact-pdf":".pdf","ocr-pdf":".pdf"}
 
 @app.middleware("http")
 async def reject_oversized_body(request, call_next):
@@ -197,6 +198,7 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
       try:
         if operation=="pdf-to-docx":result=await asyncio.to_thread(pdf_to_docx,data)
         elif operation=="pdf-to-xlsx":result=await asyncio.to_thread(pdf_to_xlsx,data)
+        elif operation=="ocr-pdf":result=await asyncio.to_thread(raster_ocr_pdf,data)
         elif operation=="redact-pdf":
             rects=_redaction_regions(data,regions)
             result=await call_gotenberg("/forms/pdf/redact",data,filename,{"regions":rects})
