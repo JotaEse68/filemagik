@@ -13,7 +13,7 @@ import type {Dictionary} from '@/lib/i18n';
 export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictionary;locale?:Locale}){
  const abortController=useRef<AbortController|null>(null);
  const serverOnlyWorker=isWorkerSlug(slug);
- const tool=getTool(slug)!;const serverOnlyOffice=slug==='ods-to-pdf'||slug==='odp-to-pdf'||slug==='ocr-pdf-professional'||slug==='replace-pdf-image-native';const input=useRef<HTMLInputElement>(null);const [files,setFiles]=useState<File[]>([]);
+ const tool=getTool(slug)!;const serverOnlyOffice=slug==='ods-to-pdf'||slug==='odp-to-pdf'||slug==='ocr-pdf-professional'||slug==='replace-pdf-image-native'||slug==='replace-pdf-text-native';const input=useRef<HTMLInputElement>(null);const [files,setFiles]=useState<File[]>([]);
  const [drag,setDrag]=useState(false),[busy,setBusy]=useState(false);
  const [result,setResult]=useState<{name:string;url:string}|null>(null);
  const [downloadStarted,setDownloadStarted]=useState(false);
@@ -56,6 +56,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [batchPreset,setBatchPreset]=useState<'web-friendly'|'extract'>('web-friendly');
  const [batchRecovery,setBatchRecovery]=useState(false);
  const [replacementFile,setReplacementFile]=useState<File|null>(null),[pdfImagePage,setPdfImagePage]=useState(1),[pdfImageIndex,setPdfImageIndex]=useState(1);
+ const [pdfNativeOriginal,setPdfNativeOriginal]=useState(''),[pdfNativeReplacement,setPdfNativeReplacement]=useState('');
  const [firstFrame,setFirstFrame]=useState(1),[lastFrame,setLastFrame]=useState<number|undefined>(),[gifSpeed,setGifSpeed]=useState(1);
  const [ocrLang,setOcrLang]=useState<'eng'|'spa'|'por'|'fra'>('eng');
  const [pages,setPages]=useState('1-2'),[groupSize,setGroupSize]=useState(2),[watermark,setWatermark]=useState('CONFIDENTIAL'),[opacity,setOpacity]=useState(25);
@@ -67,6 +68,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  if(['server-trim-audio','server-trim-video'].includes(slug)&&(audioEndSeconds===undefined||audioEndSeconds<=audioStartSeconds)){setError('El final del recorte debe ser mayor que el inicio.');return;}abortController.current=new AbortController();setBusy(true);setDownloadStarted(false);setError('');setOcrProgress('');try{
  if(serverOnlyOffice&&!engineReady)throw new Error('Professional document engine unavailable');
  if(slug==='replace-pdf-image-native'&&!replacementFile)throw new Error('Selecciona una imagen de sustitución.');
+ if(slug==='replace-pdf-text-native'&&(!pdfNativeOriginal||pdfNativeOriginal.length!==pdfNativeReplacement.length))throw new Error('El texto original y el nuevo deben tener la misma longitud.');
  if(serverOnlyWorker&&!workerReady)throw new Error('Private conversion engine not available; no insecure fallback');
  if(serverOnlyWorker&&!workerToken)throw new Error('Completa la verificación para convertir');
  if(professional&&engineReady&&challengeRequired&&!challengeToken)throw new Error('Completa la verificación para usar el motor profesional');
@@ -74,7 +76,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
   try{const m=await import('@/lib/batch-recovery');await m.saveBatch(files,batchPreset);setBatchRecovery(true);}catch{/* Conversion still works without local retention */}
  }
  const output=serverOnlyWorker?await runWorkerConversion(slug,files,workerToken,abortController.current.signal,{start: ['server-trim-audio','server-trim-video','server-video-frame'].includes(slug)?audioStartSeconds:undefined,end: ['server-trim-audio','server-trim-video'].includes(slug)?audioEndSeconds:undefined,preset:batchPreset,firstFrame:slug==='server-gif-edit'?firstFrame:undefined,lastFrame:slug==='server-gif-edit'?lastFrame:undefined,speed:slug==='server-gif-edit'?gifSpeed:undefined}):
- professional&&engineReady&&isProfessionalSlug(slug)?await runProfessionalConversion(slug,files[0],challengeToken,slug==='compress-pdf-raster'?compressionMode:'lossless',{replacement:replacementFile||undefined,page:pdfImagePage,imageIndex:pdfImageIndex}):
+ professional&&engineReady&&isProfessionalSlug(slug)?await runProfessionalConversion(slug,files[0],challengeToken,slug==='compress-pdf-raster'?compressionMode:'lossless',{replacement:replacementFile||undefined,page:pdfImagePage,imageIndex:pdfImageIndex,sourceText:pdfNativeOriginal,newText:pdfNativeReplacement}):
  await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,signal:abortController.current.signal,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});if(!output.blob.size)throw new Error('El archivo generado está vacío. Prueba otro archivo.');
  if(slug==='server-mixed-batch'){
   try{const m=await import('@/lib/batch-recovery');await m.saveBatchResult(output.blob,output.name);}catch{/* File is still available for immediate download */}
@@ -128,6 +130,12 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  {files.length>0&&!result&&slug==='compress-pdf-raster'&&<p style={{color:'#edc58f',fontSize:12}}>{labels[5]}</p>}
  {files.length>0&&!result&&['ocr-pdf','ocr-image','ocr-pdf-searchable'].includes(slug)&&<div className="pdf-option-panel"><label>{labels[6]}<select value={ocrLang} onChange={e=>setOcrLang(e.target.value as 'eng'|'spa'|'por'|'fra')}><option value="eng">English</option><option value="spa">Español</option><option value="por">Português</option><option value="fra">Français</option></select></label></div>}
  {files.length>0&&!result&&(slug==='protect-pdf'||slug==='unlock-pdf')&&<div className="pdf-option-panel"><label>{({es:'Contraseña del PDF',en:'PDF password',pt:'Senha do PDF',fr:'Mot de passe PDF'} as const)[locale]}<input type="password" required minLength={slug==='protect-pdf'?8:1} maxLength={128} autoComplete="new-password" value={pdfPassword} onChange={e=>setPdfPassword(e.target.value)}/></label><p>{({es:'Se procesa localmente en tu navegador. Para proteger usa al menos 8 caracteres; para desbloquear necesitas conocer la contraseña.',en:'Processed locally in your browser. Use at least 8 characters to protect; to unlock you must know the password.',pt:'Processado localmente. Use 8 caracteres para proteger; para desbloquear é necessário saber a senha.',fr:'Traitement local. Utilisez au moins 8 caractères pour protéger; le déverrouillage exige le mot de passe.'} as const)[locale]}</p></div>}
+ {files.length>0&&!result&&slug==='replace-pdf-text-native'&&<div className="pdf-option-panel">
+ <label>{({es:'Página (desde 1)',en:'Page (from 1)',pt:'Página',fr:'Page'} as const)[locale]}<input type="number" min={1} max={100} value={pdfImagePage} onChange={e=>setPdfImagePage(Number(e.target.value))}/></label>
+ <label>{({es:'Texto original exacto',en:'Exact original text',pt:'Texto original exato',fr:'Texte original exact'} as const)[locale]}<input maxLength={120} value={pdfNativeOriginal} onChange={e=>setPdfNativeOriginal(e.target.value)}/></label>
+ <label>{({es:'Texto nuevo (igual cantidad de caracteres)',en:'New text (same number of characters)',pt:'Novo texto (mesmo número de caracteres)',fr:'Nouveau texte (même nombre de caractères)'} as const)[locale]}<input maxLength={120} value={pdfNativeReplacement} onChange={e=>setPdfNativeReplacement(e.target.value)}/></label>
+ <p>{({es:'Modifica directamente un objeto de texto PDF simple sin rasterizar. Solo ASCII imprimible, coincidencia única y longitud igual. Los PDF complejos o con fuentes especiales se rechazan, sin modificar el original.',en:'Directly changes one simple native PDF text object. Printable ASCII, unique match and equal length required. Complex fonts are rejected safely.',pt:'Edita um único objeto nativo ASCII, com correspondência exata e igual comprimento. Fontes complexas são recusadas.',fr:'Modifie un objet texte PDF natif simple. ASCII, correspondance unique et longueur identique. Les polices complexes sont refusées.'} as const)[locale]}</p>
+ </div>}
  {files.length>0&&!result&&slug==='replace-pdf-image-native'&&<div className="pdf-option-panel">
  <label>{({es:'Imagen nueva (JPG/PNG/WebP, máximo 3 MB)',en:'Replacement image (JPG/PNG/WebP, up to 3 MB)',pt:'Imagem de substituição (máx. 3 MB)',fr:'Image de remplacement (3 Mo max.)'} as const)[locale]}
  <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" onChange={e=>{const img=e.target.files?.[0]||null;setReplacementFile(img);}}/></label>
