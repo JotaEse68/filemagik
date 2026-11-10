@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from 'next/server';
 import {createHmac} from 'node:crypto';
 
 export const runtime='nodejs';
-type Engine='image'|'media'|'archive';
+type Engine='image'|'media'|'archive'|'batch';
 type Operation={engine:Engine;endpoint:string;extension:string[];mime:string;max:number};
 const MiB=1024*1024;
 const operations:Record<string,Operation>={
@@ -16,6 +16,13 @@ const operations:Record<string,Operation>={
  'server-gif-to-mp4':{engine:'media',endpoint:'animated-gif-to-mp4',extension:['.gif'],mime:'video/mp4',max:3*MiB},
  'server-extract-7z':{engine:'archive',endpoint:'extract',extension:['.7z'],mime:'application/zip',max:3*MiB},
  'server-extract-rar':{engine:'archive',endpoint:'extract',extension:['.rar'],mime:'application/zip',max:3*MiB},
+ 'server-audio-to-flac':{engine:'media',endpoint:'audio-to-flac',extension:['.mp3','.wav','.m4a','.ogg','.flac'],mime:'audio/flac',max:3*MiB},
+ 'server-audio-to-ogg':{engine:'media',endpoint:'audio-to-ogg',extension:['.mp3','.wav','.m4a','.ogg','.flac'],mime:'audio/ogg',max:3*MiB},
+ 'server-trim-audio':{engine:'media',endpoint:'trim-audio-mp3',extension:['.mp3','.wav','.m4a','.ogg','.flac'],mime:'audio/mpeg',max:3*MiB},
+ 'server-trim-video':{engine:'media',endpoint:'trim-video-mp4',extension:['.mp4','.webm','.mov'],mime:'video/mp4',max:3*MiB},
+ 'server-video-frame':{engine:'media',endpoint:'video-frame-png',extension:['.mp4','.webm','.mov'],mime:'image/png',max:3*MiB},
+ 'server-gif-frames-zip':{engine:'image',endpoint:'gif-to-frames-zip',extension:['.gif'],mime:'application/zip',max:3*MiB},
+ 'server-mixed-batch':{engine:'batch',endpoint:'batch',extension:['.heic','.heif','.gif','.mp3','.wav','.flac','.ogg','.m4a','.mov','.webm','.mp4'],mime:'application/zip',max:12*MiB},
 };
 const config=(engine:Engine,operation:string)=>{
  // All three engines live behind the existing FileMagik PDF API on Railway.
@@ -55,13 +62,35 @@ export async function POST(request:NextRequest){
  if(origin&&origin!==request.nextUrl.origin)return json('Origin not allowed',403);
  const length=Number(request.headers.get('content-length')||0);
  if(!Number.isSafeInteger(length)||length<0)return json('Invalid upload size',400);
- if(length>op.max+4096)return json('Maximum 3 MB upload',413);
+ if(length>op.max+12000)return json('Upload exceeds operation limit',413);
  let form:FormData;
  try{form=await request.formData();}catch{return json('Invalid upload',400);}
- const file=form.get('file'),token=form.get('turnstile');
- if(!(file instanceof File)||file.size<1||file.size>op.max)return json('File must be 1 byte to 3 MB',413);
- const extension=file.name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0]||'';
- if(!op.extension.includes(extension))return json('Invalid file extension',415);
+ const token=form.get('turnstile');
+ const batch=op.engine==='batch';
+ const incoming=batch?form.getAll('files'): [form.get('file')];
+ if(!incoming.length||incoming.length>(batch?6:1))return json('Invalid file count',413);
+ if(incoming.some(item=>!(item instanceof File)))return json('Missing uploaded file',400);
+ const files=incoming as File[];
+ const total=files.reduce((sum,file)=>sum+file.size,0);
+ if(total>op.max||files.some(file=>file.size<1||file.size>(batch?3*MiB:op.max)))
+  return json('File size exceeds secure limits',413);
+ if(files.some(file=>!op.extension.includes(file.name.toLowerCase().match(/\\.[a-z0-9]+$/)?.[0]||'')))
+  return json('Invalid file extension',415);
+ const timeStart=request.nextUrl.searchParams.get('start');
+ const timeEnd=request.nextUrl.searchParams.get('end');
+ const timed=['server-trim-audio','server-trim-video','server-video-frame'].includes(name);
+ if((timeStart!==null||timeEnd!==null)&&!timed)return json('Unexpected time range',400);
+ const decodeTime=(raw:string|null)=>raw===null?null:Number(raw);
+ const startSeconds=decodeTime(timeStart),endSeconds=decodeTime(timeEnd);
+ if(timed){
+  if(timeStart===null||!Number.isFinite(startSeconds)||startSeconds!<0||startSeconds!>120)
+   return json('Invalid start time',400);
+  if(name!=='server-video-frame'&&(timeEnd===null||!Number.isFinite(endSeconds)||endSeconds!<=startSeconds!||endSeconds!>120))
+   return json('Invalid end time',400);
+  if(name==='server-video-frame'&&timeEnd!==null)return json('Unexpected end time',400);
+ }
+ const preset=request.nextUrl.searchParams.get('preset')||'web-friendly';
+ if(batch&&!['web-friendly','extract'].includes(preset))return json('Invalid batch preset',400);
  if(typeof token!=='string'||token.length<1||token.length>2048)return json('Human verification required',403);
  try{
   const body=new URLSearchParams({secret:tokenSecret,response:token,
@@ -73,13 +102,17 @@ export async function POST(request:NextRequest){
    return json('Human verification failed',403);
  }catch{return json('Human verification unavailable',503);}
  const payload=new FormData();
- payload.set('file',new File([await file.arrayBuffer()],file.name,{type:file.type||'application/octet-stream'}));
+ for(const file of files)payload.append(batch?'files':'file',
+  new File([await file.arrayBuffer()],file.name,{type:file.type||'application/octet-stream'}));
  const ip=(request.headers.get('x-forwarded-for')||request.headers.get('x-real-ip')||'unknown').split(',')[0].trim().slice(0,90);
  const visitor=createHmac('sha256',secret).update(ip||'unknown').digest('hex');
- const workerPath=op.engine==='archive'?'/workers/archive/v1/extract':
+ const workerPath=op.engine==='batch'?'/workers/batch/v1/convert':op.engine==='archive'?'/workers/archive/v1/extract':
   '/workers/'+op.engine+'/v1/'+(op.engine==='image'?'convert':'media');
  const url=base.replace(/\/+$/,'')+workerPath+
-  (op.engine==='archive'?'':'?operation='+encodeURIComponent(op.endpoint));
+  (batch?'?preset='+encodeURIComponent(preset):op.engine==='archive'?'':
+   '?operation='+encodeURIComponent(op.endpoint)+
+   (timed?'&start='+encodeURIComponent(String(startSeconds))+
+      (timeEnd===null?'':'&end='+encodeURIComponent(String(endSeconds))):''));
  let response:Response;
  try{
   response=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+secret,'X-Filemagik-Visitor':visitor},
@@ -100,7 +133,9 @@ export async function POST(request:NextRequest){
   op.mime==='image/webp'?ascii.slice(0,4)==='RIFF'&&ascii.slice(8,12)==='WEBP':
   op.mime==='image/gif'?ascii.startsWith('GIF8'):op.mime==='video/mp4'?ascii.slice(4,8)==='ftyp':
   op.mime==='audio/mpeg'?ascii.startsWith('ID3')||header[0]===255:
-  op.mime==='audio/wav'?ascii.startsWith('RIFF')&&ascii.slice(8,12)==='WAVE':true;
+  op.mime==='audio/wav'?ascii.startsWith('RIFF')&&ascii.slice(8,12)==='WAVE':
+  op.mime==='audio/flac'?ascii.startsWith('fLaC'):
+  op.mime==='audio/ogg'?ascii.startsWith('OggS'):false;
  if(!valid)return json('Invalid engine output',502);
  return new NextResponse(output,{headers:{'Content-Type':op.mime,'Cache-Control':'private, no-store',
   'X-Content-Type-Options':'nosniff','Content-Disposition':'attachment; filename="filemagik-result"'}});
