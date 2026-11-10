@@ -4,6 +4,7 @@ import hmac
 import io
 import os
 import json
+import math
 import zipfile
 import threading
 from image_quota import reserve
@@ -18,9 +19,9 @@ app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
 MAX_BYTES=12*1024*1024
 MAX_OUTPUT=12*1024*1024
 _LIMIT=threading.BoundedSemaphore(1)
-OPERATIONS={"heic-to-png":(".heic",".heif"),"gif-to-animated-webp":(".gif",),"gif-to-frames-zip":(".gif",)}
+OPERATIONS={"heic-to-png":(".heic",".heif"),"gif-to-animated-webp":(".gif",),"gif-to-frames-zip":(".gif",),"gif-edit-webp":(".gif",)}
 
-def convert_image(data:bytes,operation:str)->bytes:
+def convert_image(data:bytes,operation:str,start_frame:int|None=None,end_frame:int|None=None,speed:float=1.0)->bytes:
  try:
   with Image.open(io.BytesIO(data)) as image:
    if operation=="heic-to-png":
@@ -38,6 +39,17 @@ def convert_image(data:bytes,operation:str)->bytes:
      frames.append(frame.convert("RGBA").copy())
      timings.append(max(20,int(frame.info.get("duration",image.info.get("duration",100)) or 100)))
     if not frames:raise HTTPException(422,"No GIF animation frames")
+    if operation=="gif-edit-webp":
+     first=1 if start_frame is None else start_frame
+     last=len(frames) if end_frame is None else end_frame
+     if not math.isfinite(speed) or speed<.5 or speed>2:
+      raise HTTPException(400,"GIF speed must be between 0.5 and 2")
+     if first<1 or last>len(frames) or last<first:
+      raise HTTPException(400,"Frame selection is outside the animation")
+     frames=frames[first-1:last]
+     timings=[max(20,min(2000,int(milliseconds/speed))) for milliseconds in timings[first-1:last]]
+    elif start_frame is not None or end_frame is not None or speed!=1:
+     raise HTTPException(400,"Frame editing options only apply to GIF editor")
     output=io.BytesIO()
     if operation=="gif-to-frames-zip":
      with zipfile.ZipFile(output,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=3) as archive:
@@ -61,7 +73,9 @@ def convert_image(data:bytes,operation:str)->bytes:
 def health():return {"status":"ok","engine":"filemagik-image"}
 
 @app.post("/v1/convert")
-async def convert(operation:str=Query(...),file:UploadFile=File(...),authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
+async def convert(operation:str=Query(...),file:UploadFile=File(...),
+ start_frame:int|None=Query(None),end_frame:int|None=Query(None),speed:float=Query(1.0),
+ authorization:str|None=Header(None),x_filemagik_visitor:str|None=Header(None)):
  secret=os.environ.get("PDF_ENGINE_SECRET","")
  if len(secret)<32 or not authorization or not authorization.startswith("Bearer ") or not hmac.compare_digest(authorization[7:],secret):
   raise HTTPException(401,"Not authorized")
@@ -73,9 +87,9 @@ async def convert(operation:str=Query(...),file:UploadFile=File(...),authorizati
   with reserve(x_filemagik_visitor):
    data=await file.read(MAX_BYTES+1)
    if not data or len(data)>MAX_BYTES:raise HTTPException(413,"Input exceeds 30 MB")
-   content=await asyncio.to_thread(convert_image,data,operation)
+   content=await asyncio.to_thread(convert_image,data,operation,start_frame,end_frame,speed)
    mime={"heic-to-png":"image/png","gif-to-animated-webp":"image/webp",
-         "gif-to-frames-zip":"application/zip"}[operation]
+         "gif-to-frames-zip":"application/zip","gif-edit-webp":"image/webp"}[operation]
    return Response(content,media_type=mime,headers={"Cache-Control":"private, no-store",
      "X-Content-Type-Options":"nosniff","Content-Disposition":"attachment"})
  finally:_LIMIT.release()
