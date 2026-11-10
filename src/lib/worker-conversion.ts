@@ -18,6 +18,8 @@ const outputExtensions:Record<string,string>={
  'server-video-frame':'.png',
  'server-gif-frames-zip':'.zip',
  'server-mixed-batch':'.zip',
+ 'server-join-audio':'.mp3',
+ 'server-join-video':'.mp4',
 };
 export function isWorkerSlug(slug:string):boolean{
  return Object.prototype.hasOwnProperty.call(outputExtensions,slug);
@@ -29,9 +31,10 @@ export async function runWorkerConversion(
  if(!isWorkerSlug(slug))throw new Error('Unsupported server conversion');
  if(!token)throw new Error('Human verification is required');
  const batch=slug==='server-mixed-batch';
+ const multi=batch||slug==='server-join-audio'||slug==='server-join-video';
  if(!files.length)throw new Error('Select at least one file');
  const form=new FormData();
- for(const file of files)form.append(batch?'files':'file',file,file.name);
+ for(const file of files)form.append(multi?'files':'file',file,file.name);
  form.set('turnstile',token);
  const params=new URLSearchParams({operation:slug});
  if(options.start!==undefined)params.set('start',String(options.start));
@@ -47,6 +50,6 @@ export async function runWorkerConversion(
  const mime=response.headers.get('content-type')||'application/octet-stream';
  const blob=await response.blob();
  if(blob.size<8||blob.size>12*1024*1024)throw new Error('Invalid server output size');
- return {name:(batch?'filemagik-batch':files[0].name.replace(/\.[^.]+$/,'')+'-filemagik')+outputExtensions[slug],
+ return {name:(batch?'filemagik-batch':multi?'filemagik-joined':files[0].name.replace(/\.[^.]+$/,'')+'-filemagik')+outputExtensions[slug],
   blob:new Blob([blob],{type:mime})};
 }
