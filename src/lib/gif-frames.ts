@@ -1,5 +1,5 @@
 import type {OutputFile} from './convert';
-type FrameResult={image:{width:number;height:number;duration?:number;close:()=>void}};
+type FrameResult={image:{displayWidth:number;displayHeight:number;duration?:number;close:()=>void}};
 type Decoder={tracks:{ready:Promise<void>;selectedTrack?:{frameCount:number}};decode:(opts:{frameIndex:number})=>Promise<FrameResult>;close:()=>void};
 type DecoderConstructor=new(opts:{data:Uint8Array;type:string})=>Decoder;
 /** Preserves every GIF frame as PNG plus playback timing metadata, no lossy first-frame claim. */
@@ -22,12 +22,12 @@ export async function gifFramesToZip(file:File,options:{signal?:AbortSignal;onPr
    if(options.signal?.aborted)throw new DOMException('GIF frame export cancelled','AbortError');
    const {image}=await decoder.decode({frameIndex:i});
    try{
-    if(!image.width||!image.height||image.width*image.height>16_000_000)
+    if(!image.displayWidth||!image.displayHeight||image.displayWidth*image.displayHeight>16_000_000)
      throw new Error('GIF frame dimensions exceed the 16 megapixel limit');
-    totalPixels+=image.width*image.height;
+    totalPixels+=image.displayWidth*image.displayHeight;
     if(totalPixels>80_000_000)throw new Error('GIF frame batch exceeds 80 megapixels');
     const canvas=document.createElement('canvas');
-    canvas.width=image.width;canvas.height=image.height;
+    canvas.width=image.displayWidth;canvas.height=image.displayHeight;
     const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Canvas is unavailable');
     ctx.drawImage(image as unknown as CanvasImageSource,0,0);
     const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Cannot encode GIF frame')),'image/png'));
