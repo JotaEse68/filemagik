@@ -18,10 +18,11 @@ OPERATIONS={
  "audio-to-mp3":(".mp3","audio/mpeg",{"audio"}),
  "audio-to-wav":(".wav","audio/wav",{"audio"}),
  "video-to-mp4":(".mp4","video/mp4",{"video"}),
+ "animated-gif-to-mp4":(".mp4","video/mp4",{"video"}),
  "extract-audio-mp3":(".mp3","audio/mpeg",{"video"}),
  "video-to-gif":(".gif","image/gif",{"video"}),
 }
-ALLOWED={".mp3",".mp4",".wav",".webm",".mov",".m4a",".ogg",".flac"}
+ALLOWED={".mp3",".mp4",".wav",".webm",".mov",".m4a",".ogg",".flac",".gif"}
 def run_command(arguments,timeout=35):
  try:
   result=subprocess.run(arguments,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
@@ -64,7 +65,7 @@ async def convert(operation:str=Query(...),file:UploadFile=File(...),authorizati
     args=["-vn","-map","0:a:0","-codec:a","libmp3lame","-b:a","128k"]
    elif operation=="audio-to-wav":
     args=["-vn","-map","0:a:0","-codec:a","pcm_s16le","-ar","44100","-ac","2"]
-   elif operation=="video-to-mp4":
+   elif operation in ("video-to-mp4","animated-gif-to-mp4"):
     args=["-map","0:v:0","-map","0:a:0?","-vf","scale=w='min(1280,iw)':h=-2:flags=lanczos",
           "-codec:v","libx264","-preset","veryfast","-crf","27",
           "-codec:a","aac","-b:a","96k","-movflags","+faststart"]
