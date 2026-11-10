@@ -73,3 +73,11 @@ def test_pdf_compression_modes_keep_page_count_and_searchable_text():
         assert len(result.pages)==len(baseline.pages)
         assert [p.extract_text() for p in result.pages]==original_text
         assert len(output)<=len(sample), "Do not return larger compressed PDF"
+
+
+def test_multiline_table_expansion_does_not_split_uneven_merged_cells():
+    from document import _expand_multiline_table_rows
+    recovered=_expand_multiline_table_rows([["ID\n00012\n00013","Name\nNotebook\nPen"]])
+    assert recovered==[["ID","Name"],["00012","Notebook"],["00013","Pen"]]
+    unequal=[["paragraph\nwith details","single heading"]]
+    assert _expand_multiline_table_rows(unequal)==unequal
