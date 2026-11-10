@@ -230,3 +230,48 @@ def test_private_mixed_batch_limits_and_fail_closed():
     no_valid=client.post("/workers/batch/v1/convert",headers=HEADERS,
         files=[("files",("broken.bin",b"xx","application/octet-stream"))])
     assert no_valid.status_code==422
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"),reason="FFmpeg required")
+def test_join_audio_preserves_combined_length_and_requires_two_files(monkeypatch):
+    monkeypatch.setenv("FILEMAGIK_MEDIA_HOURLY_VISITOR","100")
+    monkeypatch.setenv("FILEMAGIK_MEDIA_DAILY_VISITOR","100")
+    source=wav_bytes()
+    inputs=[("files",("first.wav",source,"audio/wav")),
+            ("files",("second.wav",source,"audio/wav"))]
+    response=client.post("/workers/media/v1/join?operation=join-audio-mp3",
+                         headers=HEADERS,files=inputs)
+    assert response.status_code==200,response.text[:150] if response.status_code!=200 else ""
+    assert response.content.startswith(b"ID3") or response.content[:1]==bytes.fromhex("ff")
+    with __import__("tempfile").NamedTemporaryFile(suffix=".mp3") as output:
+        output.write(response.content);output.flush()
+        length=subprocess.check_output(["ffprobe","-v","error","-show_entries",
+          "format=duration","-of","default=nokey=1:noprint_wrappers=1",output.name])
+    assert 1.9<float(length)<2.2
+    invalid=client.post("/workers/media/v1/join?operation=join-audio-mp3",
+        headers=HEADERS,files=[("files",("only.wav",source,"audio/wav"))])
+    assert invalid.status_code==413
+
+@pytest.mark.skipif(not shutil.which("ffmpeg") or not shutil.which("ffprobe"),reason="FFmpeg required")
+def test_join_video_with_sound_keeps_audio(tmp_path,monkeypatch):
+    monkeypatch.setenv("FILEMAGIK_MEDIA_HOURLY_VISITOR","100")
+    monkeypatch.setenv("FILEMAGIK_MEDIA_DAILY_VISITOR","100")
+    source=tmp_path/"clip.mp4"
+    subprocess.run(["ffmpeg","-hide_banner","-loglevel","error",
+        "-f","lavfi","-i","testsrc=size=96x72:rate=12",
+        "-f","lavfi","-i","sine=frequency=440:sample_rate=44100",
+        "-t","0.6","-threads","1","-c:v","mpeg4","-c:a","aac",
+        "-shortest","-y",str(source)],check=True)
+    blob=source.read_bytes()
+    inputs=[("files",("first.mp4",blob,"video/mp4")),
+            ("files",("second.mp4",blob,"video/mp4"))]
+    response=client.post("/workers/media/v1/join?operation=join-video-mp4",
+                         headers=HEADERS,files=inputs)
+    assert response.status_code==200,response.text[:180] if response.status_code!=200 else ""
+    assert b"ftyp" in response.content[:24]
+    output=tmp_path/"joined.mp4";output.write_bytes(response.content)
+    video=subprocess.check_output(["ffprobe","-v","error","-select_streams",
+        "v:0","-show_entries","stream=index","-of","csv=p=0",str(output)])
+    audio=subprocess.check_output(["ffprobe","-v","error","-select_streams",
+        "a:0","-show_entries","stream=index","-of","csv=p=0",str(output)])
+    assert video.strip() and audio.strip()
