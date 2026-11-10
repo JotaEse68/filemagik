@@ -3,6 +3,8 @@ import asyncio
 import hmac
 import io
 import os
+import json
+import zipfile
 import threading
 from image_quota import reserve
 from fastapi import FastAPI,File,Header,HTTPException,Query,UploadFile
@@ -16,7 +18,7 @@ app=FastAPI(docs_url=None,redoc_url=None,openapi_url=None)
 MAX_BYTES=12*1024*1024
 MAX_OUTPUT=12*1024*1024
 _LIMIT=threading.BoundedSemaphore(1)
-OPERATIONS={"heic-to-png":(".heic",".heif"),"gif-to-animated-webp":(".gif",)}
+OPERATIONS={"heic-to-png":(".heic",".heif"),"gif-to-animated-webp":(".gif",),"gif-to-frames-zip":(".gif",)}
 
 def convert_image(data:bytes,operation:str)->bytes:
  try:
@@ -37,7 +39,16 @@ def convert_image(data:bytes,operation:str)->bytes:
      timings.append(max(20,int(frame.info.get("duration",image.info.get("duration",100)) or 100)))
     if not frames:raise HTTPException(422,"No GIF animation frames")
     output=io.BytesIO()
-    frames[0].save(output,format="WEBP",save_all=True,append_images=frames[1:],
+    if operation=="gif-to-frames-zip":
+     with zipfile.ZipFile(output,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=3) as archive:
+      for index,frame in enumerate(frames):
+       buffer=io.BytesIO()
+       frame.save(buffer,format="PNG")
+       archive.writestr(f"frame-{index+1:03d}.png",buffer.getvalue())
+      archive.writestr("frames.json",json.dumps({"frames":len(frames),"durations_ms":timings,
+       "loop":max(0,int(image.info.get("loop",0)))}))
+    else:
+     frames[0].save(output,format="WEBP",save_all=True,append_images=frames[1:],
        duration=timings,loop=max(0,int(image.info.get("loop",0))),lossless=False,quality=78,method=3)
    result_bytes=output.getvalue()
    if not result_bytes or len(result_bytes)>MAX_OUTPUT:raise HTTPException(413,"Output exceeds 35 MB")
@@ -63,7 +74,8 @@ async def convert(operation:str=Query(...),file:UploadFile=File(...),authorizati
    data=await file.read(MAX_BYTES+1)
    if not data or len(data)>MAX_BYTES:raise HTTPException(413,"Input exceeds 30 MB")
    content=await asyncio.to_thread(convert_image,data,operation)
-   mime="image/png" if operation=="heic-to-png" else "image/webp"
+   mime={"heic-to-png":"image/png","gif-to-animated-webp":"image/webp",
+         "gif-to-frames-zip":"application/zip"}[operation]
    return Response(content,media_type=mime,headers={"Cache-Control":"private, no-store",
      "X-Content-Type-Options":"nosniff","Content-Disposition":"attachment"})
  finally:_LIMIT.release()
