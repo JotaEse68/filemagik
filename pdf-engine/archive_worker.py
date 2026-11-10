@@ -68,7 +68,7 @@ def extract(file:UploadFile=File(...),authorization:str|None=Header(None),x_file
    data=file.file.read(MAX_ARCHIVE+1)
    if not data or len(data)>MAX_ARCHIVE:raise HTTPException(413,"Archive exceeds 25 MB")
    zipped=safe_extract(data,file.filename or "")
-   if len(zipped)>MAX_EXPANDED+1024*1024:raise HTTPException(413,"ZIP output exceeds size limit")
+   if len(zipped)>12*1024*1024:raise HTTPException(413,"ZIP output exceeds size limit")
    return Response(zipped,media_type="application/zip",headers={
     "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
     "Content-Disposition":'attachment; filename="filemagik-extracted.zip"'})
