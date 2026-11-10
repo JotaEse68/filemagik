@@ -4,6 +4,7 @@ from odf.opendocument import OpenDocumentSpreadsheet,OpenDocumentPresentation
 from odf.table import Table,TableRow,TableCell
 from odf.text import P
 from odf.draw import Page,Frame,TextBox
+from odf.style import MasterPage
 
 
 def ods_fixture():
@@ -22,7 +23,8 @@ def ods_fixture():
 
 def odp_fixture():
     doc=OpenDocumentPresentation()
-    slide=Page(name="FileMagik slide")
+    doc.masterstyles.addElement(MasterPage(name="Default"))
+    slide=Page(name="FileMagik slide",masterpagename="Default")
     frame=Frame(x="1cm",y="1cm",width="23cm",height="3cm")
     box=TextBox()
     box.addElement(P(text="FileMagik ODP integration"))
