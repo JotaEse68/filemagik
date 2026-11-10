@@ -13,6 +13,8 @@ export const tools=[
  {slug:'server-video-to-mp4',from:'Video',to:'MP4',kind:'video',accept:'.mp4,.webm,.mov,video/*'},
  {slug:'server-gif-to-mp4',from:'Animated GIF',to:'MP4 video',kind:'video',accept:'.gif,image/gif'},
  {slug:'server-extract-7z',from:'7Z archive',to:'Extracted ZIP',kind:'archive',accept:'.7z,application/x-7z-compressed'},
+ {slug:'server-join-audio',from:'Audio clips',to:'Joined MP3',kind:'audio',accept:'.mp3,.wav,.m4a,.ogg,.flac,audio/*'},
+ {slug:'server-join-video',from:'Video clips',to:'Joined MP4',kind:'video',accept:'.mp4,.webm,.mov,video/*'},
  {slug:'server-audio-to-flac',from:'Audio',to:'FLAC',kind:'audio',accept:'.mp3,.wav,.m4a,.ogg,.flac,audio/*'},
  {slug:'server-audio-to-ogg',from:'Audio',to:'OGG',kind:'audio',accept:'.mp3,.wav,.m4a,.ogg,.flac,audio/*'},
  {slug:'server-trim-audio',from:'Audio',to:'Trimmed MP3',kind:'audio',accept:'.mp3,.wav,.m4a,.ogg,.flac,audio/*'},
