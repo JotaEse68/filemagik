@@ -41,3 +41,21 @@ export function healRectangle(source:ImageData,area:Area):ImageData{
  }
  return out;
 }
+/** Controlled local correction brush. Retains full undo/redo via one final image.
+ * Deliberately bounded: each dab costs one image pass, no remote API or AI.
+ */
+export function healBrushStroke(source:ImageData,points:ReadonlyArray<{x:number;y:number}>,radius:number):ImageData{
+ if(source.width*source.height>4_000_000)throw new Error('Brush editing is limited to 4 megapixels. Resize this image first.');
+ if(!Number.isFinite(radius)||radius<3||radius>32)throw new Error('Brush size must be between 3 and 32 pixels.');
+ if(points.length<1||points.length>40)throw new Error('Brush stroke is too long. Try smaller strokes.');
+ let result=source;
+ const size=Math.round(radius*2);
+ for(const point of points){
+  if(!Number.isFinite(point.x)||!Number.isFinite(point.y))throw new Error('Invalid brush coordinates');
+  const x=Math.max(2,Math.min(source.width-size-3,Math.round(point.x-radius)));
+  const y=Math.max(2,Math.min(source.height-size-3,Math.round(point.y-radius)));
+  if(x>=2&&y>=2&&x+size<source.width-1&&y+size<source.height-1)
+   result=healRectangle(result,{x,y,width:size,height:size});
+ }
+ return result;
+}
