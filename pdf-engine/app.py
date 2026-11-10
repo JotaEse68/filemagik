@@ -44,9 +44,12 @@ async def integrated_worker_gate(request, call_next):
     """Private workers stay disabled until explicit server-side activation.
     Capacity is shared across every engine and Uvicorn worker process.
     """
-    if not request.url.path.startswith("/workers/"):
+    enabled=os.getenv("FILEMAGIK_UNIFIED_WORKERS_ENABLED","false").lower()=="true"
+    worker=request.url.path.startswith("/workers/")
+    pdf_job=request.url.path=="/v1/jobs"
+    if not worker and not (enabled and pdf_job):
         return await call_next(request)
-    if os.getenv("FILEMAGIK_UNIFIED_WORKERS_ENABLED","false").lower()!="true":
+    if worker and not enabled:
         return Response("Integrated conversion engines are disabled",status_code=503)
     try:
         with capacity():
