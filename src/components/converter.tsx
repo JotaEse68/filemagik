@@ -8,7 +8,7 @@ import {validateFiles,sizeLimitLabel} from '@/lib/file-limits';
 import {getTool,type ToolSlug,type Locale} from '@/config/site';
 import PdfPreview from '@/components/pdf-preview';
 import PdfFormEditor from '@/components/pdf-form-editor';
-import ProfessionalPdfOption,{isProfessionalSlug,runProfessionalConversion} from '@/components/professional-pdf-option';
+import ProfessionalPdfOption,{isProfessionalSlug,professionalOperations,runProfessionalConversion} from '@/components/professional-pdf-option';
 import type {Dictionary} from '@/lib/i18n';
 export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictionary;locale?:Locale}){
  const abortController=useRef<AbortController|null>(null);
@@ -31,7 +31,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [challengeVersion,setChallengeVersion]=useState(0);
  const [compressionMode,setCompressionMode]=useState<'lossless'|'balanced'|'maximum'>('lossless');
  useEffect(()=>{if(!isProfessionalSlug(slug))return;let alive=true;
-  void fetch('/api/pdf-engine',{cache:'no-store'}).then(r=>r.json()).then((value:{available?:boolean;siteKey?:string|null;challengeRequired?:boolean})=>{
+  void fetch('/api/pdf-engine?operation='+encodeURIComponent(professionalOperations[slug]),{cache:'no-store'}).then(r=>r.json()).then((value:{available?:boolean;siteKey?:string|null;challengeRequired?:boolean})=>{
    if(!alive)return;const ready=value.available===true;
    setChallengeRequired(ready&&value.challengeRequired===true);
    setEngineReady(ready);setProfessional(ready);setSiteKey(ready?value.siteKey||'':'');
