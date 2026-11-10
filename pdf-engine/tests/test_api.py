@@ -174,3 +174,41 @@ def test_ocr_rejects_invalid_pdf_without_rasterizing(monkeypatch):
         headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
         files={"file":("broken.pdf",b"not a pdf","application/pdf")})
     assert result.status_code==422
+
+
+def test_native_pdf_image_xobject_replacement_preserves_text(monkeypatch):
+    from PIL import Image
+    from reportlab.lib.utils import ImageReader
+    from pypdf import PdfReader
+    secret="n"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    original=io.BytesIO()
+    paper=canvas.Canvas(original)
+    paper.drawString(60,700,"Original searchable text")
+    red=Image.new("RGB",(32,32),(245,20,20))
+    paper.drawImage(ImageReader(red),60,500,width=80,height=80)
+    paper.save()
+    blue=Image.new("RGB",(32,32),(10,60,245))
+    replacement=io.BytesIO();blue.save(replacement,format="PNG")
+    response=client.post("/v1/jobs?operation=replace-pdf-image",headers={
+      "Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+      files={"file":("input.pdf",original.getvalue(),"application/pdf"),
+             "replacement":("replacement.png",replacement.getvalue(),"image/png")},
+      data={"page":"1","image_index":"1"})
+    assert response.status_code==200,response.text[:250] if response.status_code!=200 else ""
+    document=PdfReader(io.BytesIO(response.content))
+    assert "Original searchable text" in document.pages[0].extract_text()
+    images=list(document.pages[0].images)
+    assert images
+    sample=images[0].image.convert("RGB").getpixel((16,16))
+    assert sample[2]>sample[0]
+
+def test_native_pdf_replacement_rejects_missing_image(monkeypatch):
+    secret="m"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    result=client.post("/v1/jobs?operation=replace-pdf-image",headers={
+      "Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+      files={"file":("input.pdf",make_pdf(),"application/pdf"),
+             "replacement":("new.png",b"broken","image/png")},
+      data={"page":"1","image_index":"1"})
+    assert result.status_code in (400,422)
