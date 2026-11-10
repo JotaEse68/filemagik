@@ -41,7 +41,7 @@ def raster_ocr_pdf(data:bytes)->bytes:
                 # for pages that already provide a useful searchable text layer.
                 # OCR only raster/scan pages, not the whole mixed PDF.
                 searchable=(original.pages[index].extract_text() or '').strip()
-                if len(searchable)>=12:
+                if searchable:
                     writer.add_page(original.pages[index])
                     continue
                 scanned_pages+=1
