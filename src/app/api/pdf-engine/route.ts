@@ -69,14 +69,14 @@ export async function POST(request:NextRequest){
   const page=Number(data.get('page'));const original=data.get('source_text'),newText=data.get('new_text');
   if(!Number.isInteger(page)||page<1||page>100||typeof original!=='string'||typeof newText!=='string'||
     !original||original.length>120||original.length!==newText.length||
-    !/^[\\x20-\\x7E]+$/.test(original)||!/^[\\x20-\\x7E]+$/.test(newText)||original===newText)
+    !/^[\x20-\x7E]+$/.test(original)||!/^[\x20-\x7E]+$/.test(newText)||original===newText)
     return NextResponse.json({error:'Native text requires matching-length printable ASCII strings'},{status:400});
   payload.set('page',String(page));payload.set('source_text',original);payload.set('new_text',newText);
  }
  if(operation==='replace-pdf-image'){
   const image=data.get('replacement'),page=Number(data.get('page')),imageIndex=Number(data.get('image_index'));
-  if(!(image instanceof File)||image.size<1||image.size>maxBytes||!/^image\\/(png|jpeg|webp)$/.test(image.type)||
-    !/\\.(png|jpg|jpeg|webp)$/i.test(image.name)||!Number.isInteger(page)||page<1||page>100||
+  if(!(image instanceof File)||image.size<1||image.size>maxBytes||!/^image\/(png|jpeg|webp)$/.test(image.type)||
+    !/\.(png|jpg|jpeg|webp)$/i.test(image.name)||!Number.isInteger(page)||page<1||page>100||
     !Number.isInteger(imageIndex)||imageIndex<1||imageIndex>100)
    return NextResponse.json({error:'Invalid replacement image or object index'},{status:400});
   payload.set('replacement',new File([await image.arrayBuffer()],image.name,{type:image.type}));
