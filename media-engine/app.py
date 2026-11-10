@@ -33,7 +33,7 @@ def run_command(arguments,timeout=35):
  return result.stdout
 
 def inspect(path):
- output=run_command(["ffprobe","-v","error","-show_entries","format=duration",
+ output=run_command(["ffprobe","-v","error","-protocol_whitelist","file,pipe","-show_entries","format=duration",
                      "-of","default=noprint_wrappers=1:nokey=1",str(path)],timeout=8)
  try:seconds=float(output.decode().strip())
  except (ValueError,UnicodeError):raise HTTPException(422,"Media duration unavailable")
@@ -60,7 +60,7 @@ async def convert(operation:str=Query(...),file:UploadFile=File(...),authorizati
    src=Path(temp)/("input"+extension);src.write_bytes(data)
    inspect(src)
    dest=Path(temp)/("output"+out_ext)
-   common=["ffmpeg","-hide_banner","-nostdin","-loglevel","error","-y","-threads","1","-i",str(src),"-t",str(MAX_DURATION)]
+   common=["ffmpeg","-hide_banner","-nostdin","-loglevel","error","-y","-threads","1","-protocol_whitelist","file,pipe","-i",str(src),"-t",str(MAX_DURATION)]
    if operation in ("audio-to-mp3","extract-audio-mp3"):
     args=["-vn","-map","0:a:0","-codec:a","libmp3lame","-b:a","128k"]
    elif operation=="audio-to-wav":
