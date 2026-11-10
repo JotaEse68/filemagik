@@ -150,3 +150,27 @@ def test_lossy_refuses_interactive_form(monkeypatch):
         headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
         files={"file":("form.pdf",buf.getvalue(),"application/pdf")})
     assert result.status_code==422
+
+
+def test_private_ocr_creates_searchable_pdf_from_raster(monkeypatch):
+    import shutil
+    from pypdf import PdfReader
+    if not shutil.which("tesseract"):
+        pytest.skip("Tesseract not installed")
+    secret="o"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    result=client.post("/v1/jobs?operation=ocr-pdf",
+        headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+        files={"file":("scanned.pdf",make_pdf(),"application/pdf")})
+    assert result.status_code==200,result.text[:250] if result.status_code!=200 else ""
+    result_pdf=PdfReader(io.BytesIO(result.content))
+    assert len(result_pdf.pages)==1
+    assert "FileMagik" in (result_pdf.pages[0].extract_text() or "")
+
+def test_ocr_rejects_invalid_pdf_without_rasterizing(monkeypatch):
+    secret="p"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    result=client.post("/v1/jobs?operation=ocr-pdf",
+        headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+        files={"file":("broken.pdf",b"not a pdf","application/pdf")})
+    assert result.status_code==422
