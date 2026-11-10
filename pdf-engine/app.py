@@ -17,6 +17,7 @@ from worker_capacity import capacity
 from image_worker import app as image_api
 from media_worker import app as media_api
 from archive_worker import app as archive_api
+from batch_worker import app as batch_api
 
 
 app=FastAPI(title="FileMagik PDF Engine",docs_url=None,redoc_url=None,openapi_url=None)
@@ -226,3 +227,4 @@ async def convert(operation:str=Query(...),quality:str=Query("lossless"),file:Up
 app.mount("/workers/image",image_api)
 app.mount("/workers/media",media_api)
 app.mount("/workers/archive",archive_api)
+app.mount("/workers/batch",batch_api)
