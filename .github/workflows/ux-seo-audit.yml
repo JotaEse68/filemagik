@@ -22,7 +22,7 @@ jobs:
       - name: Build production
         run: npm run build
       - name: Install Chromium for browser tests
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: Test Spanish conversion flow, all locales, mobile and WCAG
         run: npm run test:e2e
       - name: Upload browser screenshots and traces on failure
