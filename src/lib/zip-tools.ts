@@ -10,7 +10,7 @@ export async function createZip(files:File[]):Promise<OutputFile>{
 }
 export async function extractZip(file:File):Promise<OutputFile>{
  if(file.size>MAX_TOTAL)throw new Error('ZIP exceeds 120 MB');
- const {default:JSZip}=await import('jszip'),input=await JSZip.loadAsync(await file.arrayBuffer()),out=new JSZip();
+ const {default:JSZip}=await import('jszip'),input=await JSZip.loadAsync(await file.arrayBuffer(),{checkCRC32:true}),out=new JSZip();
  const entries=Object.values(input.files).filter(f=>!f.dir);
  if(entries.length>150)throw new Error('Archive has too many files (150 maximum)');
  // Preflight every central-directory size before decompressing a single entry.

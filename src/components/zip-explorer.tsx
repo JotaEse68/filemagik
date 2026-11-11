@@ -18,7 +18,7 @@ export default function ZipExplorer({locale}:{locale:Locale}){
   setError('');setDownloadName('');setEntries([]);setLoading(true);setName(file.name);
   try{
    if(file.size>120*1024*1024)throw new Error(t.limit);
-   const {default:JSZip}=await import('jszip');const zip=await JSZip.loadAsync(await file.arrayBuffer());
+   const {default:JSZip}=await import('jszip');const zip=await JSZip.loadAsync(await file.arrayBuffer(),{checkCRC32:true});
    const items=Object.values(zip.files).filter(v=>!v.dir);
    if(items.length>100)throw new Error(t.limit);
    const details:ZipEntry[]=items.map(entry=>{
