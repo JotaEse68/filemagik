@@ -3,7 +3,7 @@ import Link from 'next/link';
 import {useState} from 'react';
 import type {CSSProperties} from 'react';
 import {FileText,Image as ImageIcon,FileSpreadsheet,ScanText,FolderArchive,Files,ArrowUpRight,Layers2,Scissors,Merge,RotateCw,FileDown,Stamp,Minimize2,BookOpen,Search} from 'lucide-react';
-import type {Locale,ToolSlug} from '@/config/site';
+import {getTool,type Locale,type ToolSlug} from '@/config/site';
 import {getConversionBenefit} from '@/lib/conversion-benefits';
 
 const sections=['pdf','images','office','data','ocr','archives'] as const;
@@ -26,7 +26,7 @@ const words={
 } as const;
 
 const actionNames:Record<Locale,Partial<Record<string,string>>>={
- es:{'split-pdf-by-count':'DIVIDIR PDF','merge-pdf':'UNIR PDF','extract-pdf-pages':'EXTRAER','compress-pdf-lossless':'OPTIMIZAR PDF','rotate-pdf':'GIRAR','pdf-to-word-text':'PDF → WORD TEXTO','image-cleanup':'LIMPIAR IMAGEN','word-to-basic-pdf':'WORD → PDF BÁSICO','create-zip':'CREAR ZIP','extract-zip':'ABRIR ZIP','rename-batch':'RENOMBRAR','inspect-file':'INFO ARCHIVO','batch-images-to-webp':'LOTE WEBP','ocr-pdf-searchable':'PDF BUSCABLE','ocr-image':'OCR IMAGEN','delete-pdf-pages':'QUITAR PÁGINAS'},
+ es:{'split-pdf-by-count':'DIVIDIR PDF','merge-pdf':'UNIR PDF','extract-pdf-pages':'EXTRAER','compress-pdf-lossless':'OPTIMIZAR PDF','rotate-pdf':'GIRAR','pdf-to-word-text':'PDF → WORD TEXTO','image-cleanup':'LIMPIAR IMAGEN','word-to-basic-pdf':'WORD → PDF BÁSICO','create-zip':'CREAR ZIP','extract-zip':'ABRIR ZIP','rename-batch':'RENOMBRAR','inspect-file':'INFO ARCHIVO','batch-images-to-webp':'LOTE WEBP','ocr-pdf-searchable':'LEER PDF','ocr-image':'LEER FOTO','delete-pdf-pages':'QUITAR PÁGINAS'},
  pt:{'split-pdf-by-count':'DIVIDIR PDF','merge-pdf':'JUNTAR PDF','extract-pdf-pages':'EXTRAIR','compress-pdf-lossless':'OTIMIZAR PDF','rotate-pdf':'GIRAR','pdf-to-word-text':'PDF → WORD TEXTO','image-cleanup':'LIMPAR IMAGEM','create-zip':'CRIAR ZIP','extract-zip':'ABRIR ZIP','word-to-basic-pdf':'WORD → PDF BÁSICO'},
  fr:{'split-pdf-by-count':'DIVISER PDF','merge-pdf':'FUSIONNER PDF','extract-pdf-pages':'EXTRAIRE','compress-pdf-lossless':'OPTIMISER PDF','rotate-pdf':'PIVOTER','pdf-to-word-text':'PDF → WORD TEXTE','image-cleanup':'NETTOYER IMAGE','create-zip':'CRÉER ZIP','extract-zip':'OUVRIR ZIP','word-to-basic-pdf':'WORD → PDF SIMPLE'},
  en:{'pdf-to-word-text':'PDF → WORD TEXT','compress-pdf-lossless':'OPTIMIZE PDF','ocr-pdf-searchable':'SEARCHABLE PDF','word-to-basic-pdf':'WORD → BASIC PDF'}
@@ -79,7 +79,7 @@ export default function RadialStudio({locale}:{locale:Locale}){
    <div><span className="radial-explainer-kicker">{preview.will}</span>
     <strong>{actionNames[locale][fallback.slug]??fallback.label}</strong>
     <p>{getConversionBenefit(fallback.slug as ToolSlug,locale)}</p>
-    <small>{preview.out}: {fallback.slug.replaceAll('-',' ')}</small>
+    <small>{preview.out}: {getTool(fallback.slug)?.to??fallback.label}</small>
    </div>
    <Link className="btn btn-primary" href={`/${locale}/${fallback.slug}`}>{preview.go}<ArrowUpRight size={17}/></Link>
   </div>
