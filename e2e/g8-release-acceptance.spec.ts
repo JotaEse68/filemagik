@@ -57,6 +57,6 @@ test('G8: downloadable PDF success and explicit error feedback',async({page})=>{
  await page.getByRole('link',{name:/descargar archivo/i}).click();
  expect((await download).suggestedFilename()).toMatch(/\.pdf$/);
  await expect(page.getByTestId('download-notice')).toBeVisible();
- await page.getByRole('button',{name:/restablecer/i}).last().click();
+ await page.getByRole('button',{name:/nueva conversión/i}).last().click();
  await expect(page.getByTestId('conversion-success')).toHaveCount(0);
 });
