@@ -262,3 +262,77 @@ html{scroll-padding-top:90px}body{min-width:320px}.header-inner{position:relativ
 .conversion-download-notice{display:flex;gap:7px;align-items:flex-start;margin:12px 0 0;padding:10px 12px;background:rgba(116,221,188,.11);border-radius:9px;color:#bff4db;font-size:12px;line-height:1.5}
 .conversion-download-notice svg{flex:none}
 @media (max-width:640px){.conversion-benefit{padding:14px;margin-bottom:14px}.conversion-complete{padding:16px}.conversion-complete h3{font-size:15px}.conversion-download-notice{align-items:flex-start}}
+
+
+/* G13 — One consistent premium upload and advertising design system.
+ * The same classes power every locale and every tool; no advertising markup or
+ * tracking is changed. Empty ad slots do not reserve phantom columns.
+ */
+.smart-upload-after{padding-block:clamp(38px,5vw,76px);background:radial-gradient(ellipse at 52% 12%,#24365c42,transparent 65%)}
+.fm-smartdrop-ad-grid{width:100%;max-width:1240px;grid-template-columns:minmax(0,3fr) minmax(240px,1fr);gap:clamp(22px,2.6vw,36px);align-items:start}
+.fm-smartdrop-main{display:flex;flex-direction:column;align-items:stretch;gap:22px;padding:clamp(23px,3vw,38px);border:1px solid #526c9a79;border-radius:28px;background:linear-gradient(155deg,#1b2a49 0%,#101d36 55%,#0b1427 100%);box-shadow:0 20px 65px #02071375,inset 0 1px #ffffff19;min-width:0}
+.fm-smartdrop-main>div:first-child{max-width:660px}
+.fm-smartdrop-main>div:first-child h2{margin:10px 0 9px;font-size:clamp(26px,3vw,40px);line-height:1.12;letter-spacing:-.025em}
+.fm-smartdrop-main>div:first-child p{margin:0;color:#b7c9e7;font-size:clamp(14px,1.25vw,16px);line-height:1.65}
+.fm-smartdrop-main .magik-uploader{width:100%;max-width:none;margin:0;padding:8px;border-radius:23px;background:linear-gradient(140deg,#415b96b0,#192744 50%,#101c35);border:1px solid #7693d27a;box-shadow:0 15px 44px #0107166b}
+.fm-smartdrop-main .magik-uploader .smart-dropzone{min-height:300px;padding:clamp(25px,3vw,42px) clamp(16px,2.4vw,28px);border-radius:17px}
+.fm-smartdrop-main .magik-uploader .smart-dropzone h2{font-size:clamp(18px,1.9vw,24px);max-width:100%;text-wrap:balance}
+.fm-smartdrop-main .magik-uploader .smart-dropzone p{font-size:14px;max-width:440px;line-height:1.6}
+.fm-smartdrop-main .magik-uploader .smart-dropzone .upload-icon{width:68px;height:68px;border-radius:20px;margin-bottom:18px}
+.fm-smartdrop-main .magik-uploader .smart-dropzone .upload-icon svg{width:31px;height:31px}
+.fm-smartdrop-banner{display:flex;align-items:stretch;justify-content:center;min-width:0;align-self:stretch}
+.fm-smartdrop-banner .first-party-ad{position:sticky;top:104px;width:100%;max-width:none;max-height:none;min-height:0}
+.fm-smartdrop-banner .first-party-ad img{width:100%;height:auto;max-height:510px;object-fit:contain}
+.fm-tool-ad-layout{width:100%;max-width:1240px;margin-inline:auto;grid-template-columns:minmax(0,3fr) minmax(240px,1fr);gap:clamp(22px,2.6vw,36px);align-items:start}
+.fm-tool-ad-layout .tool-main{min-width:0}
+.fm-tool-ad-layout .tool-main>.converter{padding:clamp(15px,2.5vw,30px);background:linear-gradient(155deg,#1b2947,#101c32);border:1px solid #506b9975;border-radius:27px;box-shadow:0 18px 55px #02091759}
+.fm-tool-ad-layout .tool-main .dropzone{min-height:300px;padding:clamp(24px,3.5vw,44px) clamp(17px,3vw,30px)}
+.fm-tool-ad-layout .tool-main .dropzone h2{font-size:clamp(19px,2vw,25px);line-height:1.25;text-wrap:balance}
+.fm-tool-side-ad{position:sticky;top:104px;width:100%;min-width:0}
+.fm-tool-side-ad .first-party-ad{max-height:none;min-height:0;width:100%;margin:0}
+.fm-tool-side-ad .first-party-ad img{width:100%;height:auto;max-height:510px;object-fit:contain}
+.fm-tool-horizontal-ad{margin:26px auto 42px;min-height:0;max-width:1240px}
+.fm-tool-horizontal-ad .first-party-ad{max-width:970px;margin:0 auto}
+.fm-tool-horizontal-ad .first-party-ad img{max-height:220px;object-fit:contain}
+.fm-tool-ad-layout .dropzone,.fm-smartdrop-main .dropzone{border:1.5px dashed #8eaaed97;background:radial-gradient(circle at 50% 0%,#324c8470,#19274345 72%);transition:border-color .2s ease,background .2s ease,box-shadow .2s ease}
+.fm-tool-ad-layout .dropzone.dragging,.fm-smartdrop-main .dropzone.dragging{border-color:#b5e6ff;background:linear-gradient(135deg,#284d82a6,#233c64a6);box-shadow:inset 0 0 0 2px #7bd0ff33}
+.fm-tool-ad-layout .dropzone .btn-primary,.fm-smartdrop-main .dropzone .btn-primary{min-height:48px;padding-inline:24px;border-radius:13px;box-shadow:0 8px 28px #413bb54d}
+.fm-tool-ad-layout .dropzone .file-hint,.fm-smartdrop-main .dropzone .file-hint{line-height:1.6;text-wrap:balance}
+.first-party-ad:not(.first-party-ad-mobile){display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:11px;width:100%;min-width:0;padding:clamp(13px,1.4vw,19px);border:1px solid #5a709c70;border-radius:23px;background:linear-gradient(156deg,#1c2c4a 0%,#111e35 63%,#0c172c 100%);box-shadow:0 13px 42px #01071657,inset 0 1px 0 #ffffff1d;overflow:hidden}
+.first-party-ad:not(.first-party-ad-mobile)>.first-party-ad-label{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 3px;font-size:10px;font-weight:750;letter-spacing:.13em;color:#9aafcf}
+.first-party-ad:not(.first-party-ad-mobile)>.first-party-ad-label::before,.first-party-ad:not(.first-party-ad-mobile)>.first-party-ad-label::after{content:'';height:1px;flex:1;background:linear-gradient(90deg,transparent,#7694cb55)}
+.first-party-ad:not(.first-party-ad-mobile)>a,.first-party-ad:not(.first-party-ad-mobile)>img{display:flex;align-items:center;justify-content:center;width:100%;min-width:0;border-radius:14px;overflow:hidden}
+.first-party-ad:not(.first-party-ad-mobile) a img,.first-party-ad:not(.first-party-ad-mobile)>img{display:block;max-width:100%;height:auto;object-fit:contain;border-radius:12px}
+.first-party-ad:not(.first-party-ad-mobile)>p{margin:auto;text-align:center;color:#a8bbd7;line-height:1.5}
+.first-party-ad:not(.first-party-ad-mobile)>.fm-ad-rotation{font-size:11px;color:#bac9df;letter-spacing:.03em}
+.ad-placement:not(:has(.first-party-ad)),.fm-tool-horizontal-ad:not(:has(.first-party-ad)),.fm-smartdrop-banner:not(:has(.first-party-ad)){display:none}
+.fm-smartdrop-ad-grid:not(:has(.fm-smartdrop-banner .first-party-ad)){grid-template-columns:minmax(0,1fr);max-width:950px}
+.fm-tool-ad-layout:not(:has(.fm-tool-side-ad .first-party-ad)){grid-template-columns:minmax(0,1fr);max-width:950px}
+.ad-placement{max-width:970px;margin:24px auto 36px}
+.ad-placement .first-party-ad{max-width:970px;margin-inline:auto}
+@media(max-width:1050px){
+ .fm-smartdrop-ad-grid,.fm-tool-ad-layout{grid-template-columns:minmax(0,1fr) minmax(205px,26%);gap:20px}
+ .fm-smartdrop-main{padding:24px}
+ .fm-smartdrop-main .magik-uploader .smart-dropzone{min-height:275px}
+}
+@media(max-width:800px){
+ .fm-smartdrop-ad-grid,.fm-tool-ad-layout{display:flex;flex-direction:column;gap:17px}
+ .fm-smartdrop-main,.fm-tool-ad-layout .tool-main{width:100%;max-width:100%;margin:0 auto}
+ .fm-smartdrop-main{padding:clamp(18px,4vw,26px);border-radius:22px}
+ .fm-smartdrop-banner,.fm-tool-side-ad{display:none}
+ .fm-tool-ad-layout .tool-main>.converter{border-radius:22px}
+ .fm-tool-horizontal-ad{margin:18px auto 28px;padding-inline:16px}
+ .fm-tool-horizontal-ad .first-party-ad img{max-height:150px}
+}
+@media(max-width:480px){
+ .fm-smartdrop-main{padding:16px;gap:16px}
+ .fm-smartdrop-main>div:first-child h2{font-size:26px}
+ .fm-smartdrop-main .magik-uploader{padding:6px;border-radius:18px}
+ .fm-smartdrop-main .magik-uploader .smart-dropzone{min-height:245px;padding:23px 13px}
+ .fm-tool-ad-layout .tool-main>.converter{padding:12px}
+ .fm-tool-ad-layout .tool-main .dropzone{min-height:250px;padding:24px 14px}
+ .first-party-ad:not(.first-party-ad-mobile){padding:12px;border-radius:18px}
+}
+@media(prefers-reduced-motion:reduce){
+ .fm-tool-ad-layout .dropzone,.fm-smartdrop-main .dropzone{transition:none}
+}
