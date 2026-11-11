@@ -6,3 +6,24 @@
 .fm-admin-order-item>div{display:flex;gap:7px}
 .fm-admin-order-item button{min-height:36px;min-width:40px;border-radius:9px;background:#203859;border:1px solid #536d95;color:#fff;cursor:pointer}
 .fm-admin-order-item button:disabled{opacity:.35;cursor:default}
+
+
+/* G15: one-screen advertising composer with visible placements and bulk upload */
+.fm-admin-simple-create{display:flex;flex-wrap:wrap;align-items:end;gap:14px;padding:20px;border:1px solid #668cc4;border-radius:17px;background:linear-gradient(115deg,#233a64,#12223c);margin:12px 0 8px;box-shadow:0 14px 34px #03091655}
+.fm-admin-simple-create>label:first-child{display:grid;gap:8px;color:#e6f0ff;font-weight:750;font-size:13px;flex:1;min-width:220px}
+.fm-admin-simple-create>label:first-child select{height:48px;min-width:0}
+.fm-admin-simple-create>.fm-admin-primary{min-height:48px;padding-inline:20px}
+.fm-admin-import{display:flex;flex-direction:column;justify-content:center;gap:7px;min-width:185px;max-width:250px;flex:1;font-size:12px;color:#dae7ff;font-weight:750}
+.fm-admin-import input[type=file]{font-size:11px;min-height:48px}
+.fm-admin-import input::file-selector-button{padding:8px 12px;border:1px solid #8097c4;border-radius:8px;background:#29466e;color:#fff;font-weight:700;cursor:pointer}
+.fm-admin-simple-hint{padding:6px 8px 16px;font-size:13px!important;color:#c6d9f7!important}
+.fm-admin-direct-slots{grid-column:1/-1;padding:17px;border-radius:14px;background:#101f3b;border:1px solid #496999;display:grid;gap:12px}
+.fm-admin-direct-slots>strong{font-size:13px;letter-spacing:.02em;color:#f1f6ff}
+.fm-admin-direct-slots>div{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.fm-admin-slot-choice{display:flex;align-items:center;gap:11px;min-height:49px;padding:10px 13px;background:#1a3052;border:1px solid #466186;border-radius:11px;color:#d8e8ff;font-size:12px;font-weight:650;cursor:pointer}
+.fm-admin-slot-choice:has(input:checked){background:#273d74;border-color:#b4adff;box-shadow:inset 0 0 0 1px #9c94f680;color:#fff}
+.fm-admin-slot-choice input{flex:0 0 auto;width:20px!important;height:20px!important;accent-color:#a1a0ff}
+.fm-admin-slot-choice:focus-within{outline:2px solid #b6ddff;outline-offset:2px}
+.fm-admin-campaign{align-items:start}
+.fm-admin-campaign .fm-admin-fields{min-width:0}
+@media(max-width:720px){.fm-admin-simple-create{padding:15px;align-items:stretch}.fm-admin-simple-create>label:first-child,.fm-admin-import{max-width:none;width:100%;flex:1 1 100%}.fm-admin-simple-create>.fm-admin-primary{width:100%}.fm-admin-direct-slots>div{grid-template-columns:1fr}.fm-admin-slot-choice{min-height:52px}}

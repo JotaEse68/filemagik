@@ -11,12 +11,12 @@ test('G10: home ad positions share one public configuration request and keep saf
   requests++;
   await route.fulfill({status:200,contentType:'application/json',
    body:JSON.stringify({enabled:true,configured:true,standalone:false,
-    banners:[own('home','Portada campaña'),own('homeHeroSide','Smart Drop campaña')],
+    banners:[own('home','Portada campaña'),own('desktop','Lateral superior')],
     rotation:{home:{seconds:60,banners:[own('home','Portada campaña'),own('home','Alternativa campaña')]}}})});
  });
  await page.goto('/es');
  await expect(page.locator('.first-party-ad-home img')).toHaveCount(1);
- await expect(page.locator('.first-party-ad-homeHeroSide img')).toHaveCount(1);
+ await expect(page.locator('.fm-site-rail .first-party-ad-desktop img')).toHaveCount(1);
  await expect(page.locator('.first-party-ad-home a')).toHaveAttribute('rel',/sponsored/);
  await expect(page.locator('.first-party-ad-home a')).toHaveAttribute('rel',/noopener/);
  await expect(page.locator('.fm-ad-rotation')).toContainText('Campaña');

@@ -26,9 +26,14 @@ export default async function LocaleLayout({children,params}:{children:React.Rea
  return <html lang={locale} className={`${dmSans.variable} ${spaceGrotesk.variable}`}><body>
   <a className="skip-link" href="#main-content">{skipLabels[locale]}</a>
   <Header locale={locale} d={d}/>
-  <main id="main-content" tabIndex={-1}>{children}</main>
+  <div className="fm-site-frame">
+   <main id="main-content" tabIndex={-1} className="fm-site-primary">{children}</main>
+   <aside className="fm-site-rail fm-global-desktop-ad" aria-label="Publicidad lateral">
+    <AdSlot slot="desktop" label="Publicidad superior"/>
+    <AdSlot slot="desktopLower" label="Publicidad inferior"/>
+   </aside>
+  </div>
   <Footer locale={locale} d={d}/>
-  <aside className="fm-global-desktop-ad" aria-label="Publicidad lateral"><AdSlot slot="desktop" label="Publicidad superior"/><AdSlot slot="desktopLower" label="Publicidad inferior"/></aside>
   <div className="fm-global-mobile-ad"><AdSlot slot="mobile" label="Publicidad inferior"/></div>
  </body></html>;
 }

@@ -9,8 +9,17 @@ import './filemagik-admin.css';
 const labels:Record<AdSlot,string>={home:'Portada',desktop:'Lateral PC · superior',desktopLower:'Lateral PC · inferior',homeHeroSide:'Banner junto a Smart Drop',popularTop:'Banner horizontal bajo categorías',toolSide:'Lateral · junto al conversor',toolHorizontal:'Horizontal · bajo el conversor',mobile:'Móvil',incontent:'Dentro de herramientas',result:'Tras la conversión'};
 const hints:Record<AdSlot,string>={home:'Antes de las dos ruedas · responsive',desktop:'Bloque 1/2 · rectángulo superior sticky',desktopLower:'Bloque 2/2 · rectángulo inferior sticky',homeHeroSide:'Portada · columna 25% junto a subida de archivos',popularTop:'Debajo de filtros de herramientas · 728×90 responsive',toolSide:'Páginas de herramientas · a la derecha de subir archivo (solo PC)',toolHorizontal:'Páginas de herramientas · franja horizontal antes del contenido inferior',mobile:'Bloque exclusivo de móvil',incontent:'Integrado en la herramienta',result:'Después de completar una conversión'};
 const blank=():Campaign=>({id:crypto.randomUUID(),name:'Nueva campaña',src:'',href:'',alt:'',enabled:false,newTab:true});
+// Simple public locations. Each one supports its own rotating set of banners.
+const primarySlots:AdSlot[]=['desktop','desktopLower','home','popularTop','toolHorizontal','mobile','result'];
+const quickLabels:Record<string,string>={
+ desktop:'Lateral vertical 1 · escritorio',desktopLower:'Lateral vertical 2 · escritorio',
+ home:'Horizontal portada',popularTop:'Horizontal bajo herramientas',
+ toolHorizontal:'Horizontal en conversores',mobile:'Banner móvil',result:'Horizontal tras descargar'
+};
+
 export default function StandaloneDashboard(){
- const [settings,setSettings]=useState<AdsSettings|null>(null),[revision,setRevision]=useState(''),[tab,setTab]=useState<'overview'|'banners'|'spaces'|'google'|'rewarded'>('overview'),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(''),[message,setMessage]=useState(''),[error,setError]=useState('');
+ const [settings,setSettings]=useState<AdsSettings|null>(null),[revision,setRevision]=useState(''),[tab,setTab]=useState<'overview'|'banners'|'spaces'|'google'|'rewarded'>('banners'),[busy,setBusy]=useState(false),[uploading,setUploading]=useState(''),[message,setMessage]=useState(''),[error,setError]=useState('');
+ const [quickSlot,setQuickSlot]=useState<AdSlot>('desktop');
  const load=useCallback(async()=>{
   const res=await fetch('/api/admin/advertising',{cache:'no-store',credentials:'same-origin'});
   const body=await res.json();
@@ -20,6 +29,47 @@ export default function StandaloneDashboard(){
  useEffect(()=>{void load().catch(e=>setError(e instanceof Error?e.message:'Error de conexión'));},[load]);
  function patchCampaign(id:string,changes:Partial<Campaign>){setSettings(prev=>prev?{...prev,campaigns:prev.campaigns.map(c=>c.id===id?{...c,...changes}:c)}:prev);}
  function patchPlacement(slot:AdSlot,changes:Partial<Placement>){setSettings(prev=>prev?{...prev,placements:{...prev.placements,[slot]:{...prev.placements[slot],...changes}}}:prev);}
+ function setCampaignSlot(id:string,slot:AdSlot,checked:boolean){
+  setSettings(prev=>{
+   if(!prev)return prev;
+   const current=prev.placements[slot];
+   const ids=checked?[...new Set([...current.campaignIds,id])]:current.campaignIds.filter(x=>x!==id);
+   return {...prev,placements:{...prev.placements,[slot]:{...current,provider:'own',enabled:checked||current.enabled,campaignIds:ids}}};
+  });
+ }
+ function createSimpleBanner(){
+  const campaign={...blank(),name:'Banner '+((settings?.campaigns.length??0)+1)};
+  setSettings(prev=>prev&&prev.campaigns.length<50?{
+   ...prev,campaigns:[...prev.campaigns,campaign],
+   placements:{...prev.placements,[quickSlot]:{...prev.placements[quickSlot],provider:'own',enabled:true,campaignIds:[...prev.placements[quickSlot].campaignIds,campaign.id]}}
+  }:prev);
+  setTab('banners');setMessage('Banner creado y asignado a '+quickLabels[quickSlot]+'. Sube su imagen y guarda.');
+ }
+ async function importSeveral(files:FileList|null){
+  if(!files?.length||!settings)return;
+  const selected=Array.from(files);
+  if(selected.some(file=>!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size===0||file.size>8_000_000)){
+   setError('Solo imágenes JPG, PNG o WebP de máximo 8 MB cada una.');return;
+  }
+  if(settings.campaigns.length+selected.length>50){setError('Máximo 50 banners por configuración.');return;}
+  const drafts=selected.map(file=>({...blank(),name:file.name.replace(/\.[^.]+$/,'').slice(0,100)||'Banner'}));
+  setSettings(prev=>prev?{...prev,campaigns:[...prev.campaigns,...drafts],
+   placements:{...prev.placements,[quickSlot]:{...prev.placements[quickSlot],enabled:true,provider:'own',campaignIds:[...prev.placements[quickSlot].campaignIds,...drafts.map(d=>d.id)]}}
+  }:prev);
+  setUploading('bulk');setError('');setMessage('');
+  let count=0;
+  for(let i=0;i<selected.length;i++){
+   const file=selected[i],draft=drafts[i];
+   try{
+    const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
+    const uploaded=await blobUpload('filemagik/ads/images/'+crypto.randomUUID()+'.'+ext,file,{access:'public',handleUploadUrl:'/api/admin/advertising/client-upload'});
+    patchCampaign(draft.id,{src:uploaded.url,enabled:true});count++;
+   }catch(e){setError('Algunas imágenes no se subieron: '+(e instanceof Error?e.message:String(e)));}
+  }
+  setUploading('');
+  setMessage(count+' de '+selected.length+' imágenes subidas y asignadas a '+quickLabels[quickSlot]+'. Pulsa Guardar y publicar.');
+ }
+
  function addCampaignToSlot(slot:AdSlot){const campaign={...blank(),name:slot==='desktop'?'Lateral superior':slot==='desktopLower'?'Lateral inferior':'Nuevo anuncio '+labels[slot]};setSettings(prev=>prev?{...prev,campaigns:[...prev.campaigns,campaign],placements:{...prev.placements,[slot]:{...prev.placements[slot],enabled:true,provider:'own',campaignIds:[...prev.placements[slot].campaignIds,campaign.id]}}}:prev);setTab('banners');setMessage('Campaña añadida y asignada a «'+labels[slot]+'». Sube la imagen, indica el enlace y activa el anuncio; después guarda.');}
  function importGoogleCode(slot:AdSlot,code:string){const publisher=code.match(/data-ad-client\s*=\s*["'](ca-pub-\d{16})["']/i)?.[1]||code.match(/client=(ca-pub-\d{16})/i)?.[1];const unit=code.match(/data-ad-slot\s*=\s*["'](\d{5,20})["']/i)?.[1];if(!publisher||!unit){setError('Código inválido: no se encuentran data-ad-client y data-ad-slot.');return;}patchPlacement(slot,{publisherId:publisher,adSlotId:unit});setError('');setMessage('Código de Google interpretado. Solo se guardan los identificadores seguros; no se ejecuta HTML. Guarda para aplicar cambios.');}
  function duplicateCampaign(id:string){setSettings(prev=>{if(!prev||prev.campaigns.length>=50)return prev;const original=prev.campaigns.find(c=>c.id===id);if(!original)return prev;const copy={...original,id:crypto.randomUUID(),name:(original.name.slice(0,89)+' · copia'),enabled:false};return {...prev,campaigns:[...prev.campaigns,copy]};});setMessage('Campaña duplicada como borrador. Actívala y guarda cuando esté lista.');}
@@ -75,7 +125,15 @@ export default function StandaloneDashboard(){
      <section className="fm-admin-panel"><h2>Inventario de espacios</h2><div className="fm-admin-space-summary">{adSlots.map(slot=><div key={slot}><strong>{labels[slot]}</strong><span>{!settings.placements[slot].enabled?'Desactivado':settings.placements[slot].provider==='adsense'?'Google AdSense':settings.placements[slot].campaignIds.some(id=>settings.campaigns.some(c=>c.id===id&&c.enabled&&c.src&&(!c.startsAt||c.startsAt<=today)&&(!c.endsAt||c.endsAt>=today)))?'Listo para mostrar':'Sin anuncios publicables'}</span><small>{settings.placements[slot].campaignIds.length} campañas asignadas</small></div>)}</div></section>
     </>}
     {tab==='banners'&&<section className="fm-admin-panel">
-     <div className="fm-admin-section-head"><div><h2>Mis campañas publicitarias</h2><p>Puedes subir una imagen o indicar una URL HTTPS de imagen, sin tener que usar ambas. El enlace de destino y la descripción son opcionales; activa y guarda la campaña para publicarla.</p></div><button className="fm-admin-primary" type="button" disabled={settings.campaigns.length>=50} onClick={()=>setSettings({...settings,campaigns:[...settings.campaigns,blank()]})}>+ Crear campaña</button></div>
+     <div className="fm-admin-section-head"><div><h2>Mis banners · publicación sencilla</h2><p>1. Elige dónde aparecerá. 2. Sube una o varias imágenes. 3. Guarda. Cada ubicación puede rotar varios banners de forma independiente.</p></div></div>
+     <div className="fm-admin-simple-create">
+      <label>¿Dónde quieres mostrar el banner?<select aria-label="Ubicación del banner" value={quickSlot} onChange={e=>setQuickSlot(e.target.value as AdSlot)}>
+       {primarySlots.map(slot=><option value={slot} key={slot}>{quickLabels[slot]}</option>)}
+      </select></label>
+      <button className="fm-admin-primary" type="button" disabled={settings.campaigns.length>=50||Boolean(uploading)} onClick={createSimpleBanner}>+ Añadir banner</button>
+      <label className="fm-admin-import">Importar varias imágenes<input aria-label="Importar banners JPG, PNG o WebP" type="file" multiple accept="image/jpeg,image/png,image/webp" disabled={Boolean(uploading)} onChange={e=>{void importSeveral(e.target.files);e.currentTarget.value='';}}/></label>
+     </div>
+     <p className="fm-admin-simple-hint">Los dos laterales son independientes y rotatorios. Para el banner horizontal selecciona «Horizontal portada» o «Horizontal en conversores». Cambia las ubicaciones de cualquier banner abajo, sin ir a otra pantalla.</p>
      {settings.campaigns.length===0&&<p className="fm-admin-empty">Aún no hay banners cargados. Añade una campaña y sube su imagen.</p>}
      <div className="fm-admin-campaigns">{settings.campaigns.map(c=><article className="fm-admin-campaign" key={c.id}>
       <div className="fm-admin-preview">{c.src?<img src={c.src} alt={c.alt||c.name}/>:<span>Vista previa del banner</span>}</div>
@@ -85,7 +143,8 @@ export default function StandaloneDashboard(){
        <label>O URL pública de imagen<input type="url" value={c.src} onChange={e=>patchCampaign(c.id,{src:e.target.value})} placeholder="https://..."/></label>
        <label>Enlace de destino (opcional)<input type="url" value={c.href} onChange={e=>patchCampaign(c.id,{href:e.target.value})} placeholder="https://tu-producto.com/"/></label>
        <label>Descripción de imagen (opcional)<input value={c.alt} maxLength={160} onChange={e=>patchCampaign(c.id,{alt:e.target.value})} placeholder="Descripción del producto anunciado"/></label><label>Inicio de campaña (opcional)<input type="date" value={c.startsAt||""} max={c.endsAt||undefined} onChange={e=>patchCampaign(c.id,{startsAt:e.target.value})}/></label><label>Final de campaña (opcional)<input type="date" value={c.endsAt||""} min={c.startsAt||undefined} onChange={e=>patchCampaign(c.id,{endsAt:e.target.value})}/></label>
-       <div className="fm-admin-campaign-footer"><label className="fm-admin-toggle"><input type="checkbox" checked={c.newTab!==false} onChange={e=>patchCampaign(c.id,{newTab:e.target.checked})}/> Abrir destino en ventana nueva</label><label className="fm-admin-toggle"><input type="checkbox" checked={c.enabled} onChange={e=>patchCampaign(c.id,{enabled:e.target.checked})}/> Campaña activada</label><button type="button" className="fm-admin-secondary" disabled={settings.campaigns.length>=50} onClick={()=>duplicateCampaign(c.id)}>Duplicar</button><button type="button" className="fm-admin-danger" onClick={()=>{if(window.confirm('¿Eliminar esta campaña de la configuración?'))removeCampaign(c.id);}}>Eliminar</button></div>
+       <div className="fm-admin-direct-slots"><strong>Mostrar este banner en</strong><div>{primarySlots.map(slot=><label key={slot} className="fm-admin-slot-choice"><input type="checkbox" checked={settings.placements[slot].campaignIds.includes(c.id)} onChange={e=>setCampaignSlot(c.id,slot,e.target.checked)}/><span>{quickLabels[slot]}</span></label>)}</div></div>
+        <div className="fm-admin-campaign-footer"><label className="fm-admin-toggle"><input type="checkbox" checked={c.newTab!==false} onChange={e=>patchCampaign(c.id,{newTab:e.target.checked})}/> Abrir destino en ventana nueva</label><label className="fm-admin-toggle"><input type="checkbox" checked={c.enabled} onChange={e=>patchCampaign(c.id,{enabled:e.target.checked})}/> Campaña activada</label><button type="button" className="fm-admin-secondary" disabled={settings.campaigns.length>=50} onClick={()=>duplicateCampaign(c.id)}>Duplicar</button><button type="button" className="fm-admin-danger" onClick={()=>{if(window.confirm('¿Eliminar esta campaña de la configuración?'))removeCampaign(c.id);}}>Eliminar</button></div>
        {uploading===c.id&&<span role="status">Subiendo imagen…</span>}
       </div>
      </article>)}</div></section>}

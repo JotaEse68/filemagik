@@ -336,3 +336,56 @@ html{scroll-padding-top:90px}body{min-width:320px}.header-inner{position:relativ
 @media(prefers-reduced-motion:reduce){
  .fm-tool-ad-layout .dropzone,.fm-smartdrop-main .dropzone{transition:none}
 }
+
+
+/* G14: centered, bounded workspace. One integrated column of TWO independent
+   rotating vertical adverts, rather than a fixed overlay or a third side rail. */
+body:has(.fm-site-frame){padding-right:0!important}
+.fm-site-frame{width:min(1420px,calc(100% - 44px));margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 252px;column-gap:24px;align-items:start}
+.fm-site-primary{min-width:0;width:100%;overflow:clip}
+.fm-site-primary .container{width:min(100% - 36px,1100px);max-width:100%}
+.fm-site-primary .magik-hero-focus{padding-block:clamp(38px,4vw,68px);border-radius:0 0 24px 24px}
+.fm-site-primary .magik-hero-focus h1{font-size:clamp(35px,4.3vw,64px);line-height:1.08;overflow-wrap:break-word;text-wrap:balance}
+.fm-site-primary .magik-hero-copy{max-width:830px;margin:0 auto}
+.fm-site-primary .magik-hero-copy p{max-width:680px;margin-inline:auto}
+.fm-site-primary .radial-section{padding-top:14px}
+.fm-site-primary .radial-section>.container>.radial-studio{max-width:100%}
+.fm-site-primary .section{padding-block:clamp(36px,4.5vw,70px)}
+.fm-site-primary .fm-smartdrop-ad-grid{display:block;max-width:920px;width:100%;margin:auto}
+.fm-site-primary .fm-smartdrop-main{width:100%;max-width:100%;margin:0 auto}
+.fm-site-primary .fm-tool-ad-layout{display:block;width:100%;max-width:920px}
+.fm-site-primary .fm-tool-ad-layout .tool-main{width:100%;max-width:100%}
+.fm-site-primary .fm-tool-horizontal-ad,.fm-site-primary .fm-home-horizontal-ad{max-width:920px;width:min(100% - 36px,920px);margin:20px auto 35px;min-height:0}
+.fm-site-primary .fm-home-horizontal-ad:empty{display:none}
+.fm-site-primary .ad-placement:empty,.fm-site-primary .fm-tool-horizontal-ad:empty{display:none}
+.fm-site-primary .ad-placement .first-party-ad,.fm-site-primary .fm-tool-horizontal-ad .first-party-ad,.fm-site-primary .fm-home-horizontal-ad .first-party-ad{width:100%;max-width:920px;min-height:0}
+.fm-site-primary .ad-placement .first-party-ad img,.fm-site-primary .fm-home-horizontal-ad .first-party-ad img,.fm-site-primary .fm-tool-horizontal-ad .first-party-ad img{max-height:200px;width:auto;max-width:100%;margin-inline:auto}
+.fm-site-primary .fm-tool-ad-layout .tool-main>.converter{padding:clamp(16px,3vw,32px);border-radius:23px}
+.fm-global-desktop-ad.fm-site-rail{display:flex;position:sticky;top:20px;right:auto;bottom:auto;left:auto;z-index:1;width:100%;height:auto;max-height:calc(100dvh - 38px);padding:0 3px 14px;margin:0;overflow-x:hidden;overflow-y:auto;flex-direction:column;align-items:stretch;gap:14px;scrollbar-width:thin;box-shadow:none;background:transparent}
+.fm-site-rail .first-party-ad{width:100%;max-width:100%;min-width:0;height:auto;min-height:0;max-height:none;flex:0 0 auto;margin:0;padding:10px;border-radius:15px}
+.fm-site-rail .first-party-ad>a{display:block;max-height:310px;flex:none;width:100%}
+.fm-site-rail .first-party-ad img{display:block;width:100%;height:auto;max-height:310px;object-fit:contain}
+.fm-site-rail .first-party-ad-label{font-size:10px;margin-bottom:7px}
+.fm-site-rail .fm-ad-rotation{font-size:10px;margin-top:5px}
+.fm-site-frame:not(:has(.fm-site-rail .first-party-ad)){grid-template-columns:minmax(0,1fr);max-width:1180px}
+.fm-site-frame:not(:has(.fm-site-rail .first-party-ad)) .fm-site-rail{display:none}
+@media(max-width:1130px){
+ .fm-site-frame{display:block;width:min(1080px,calc(100% - 22px))}
+ .fm-global-desktop-ad.fm-site-rail{display:none!important}
+ .fm-site-primary .container{width:min(100% - 26px,980px)}
+ .fm-site-primary .magik-hero-focus h1{font-size:clamp(35px,5vw,58px)}
+ .fm-site-primary .fm-smartdrop-main{padding:clamp(16px,4vw,29px)}
+}
+@media(max-width:700px){
+ .fm-site-frame{width:100%;margin:0 auto}
+ .fm-site-primary{overflow:clip}
+ .fm-site-primary .container{width:min(100% - 28px,600px)}
+ .fm-site-primary .magik-hero-focus{padding:35px 0 25px;border-radius:0 0 18px 18px}
+ .fm-site-primary .magik-hero-focus h1{font-size:clamp(34px,9vw,48px);letter-spacing:-1.7px}
+ .fm-site-primary .section{padding-block:35px}
+ .fm-site-primary .fm-smartdrop-main{padding:17px;border-radius:20px}
+ .fm-site-primary .fm-home-horizontal-ad,.fm-site-primary .fm-tool-horizontal-ad{width:calc(100% - 28px);margin:18px auto 25px}
+ .fm-site-primary .fm-home-horizontal-ad .first-party-ad img,.fm-site-primary .fm-tool-horizontal-ad .first-party-ad img{max-height:110px}
+ .fm-site-primary .section-heading h2{font-size:clamp(24px,7vw,34px);overflow-wrap:anywhere}
+}
+@media(prefers-reduced-motion:reduce){.fm-site-primary .radial-section *{scroll-behavior:auto}}
