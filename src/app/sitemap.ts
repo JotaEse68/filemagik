@@ -1,7 +1,7 @@
 import type {MetadataRoute} from 'next';
 import {siteUrl,locales,tools} from '@/config/site';
 export default function sitemap():MetadataRoute.Sitemap{
- const paths=['','/tools','/pdf-studio',...tools.map(t=>'/'+t.slug)];
+ const paths=['','/tools','/pdf-studio','/alternatives',...tools.map(t=>'/'+t.slug)];
  return paths.flatMap((path,index)=>locales.map(locale=>({
   url:`${siteUrl}/${locale}${path}`,
   changeFrequency:(index<3?'weekly':'monthly') as 'weekly'|'monthly',
