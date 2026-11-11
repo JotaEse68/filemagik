@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type {Locale,ToolSlug} from '@/config/site';
-import {tools,siteUrl} from '@/config/site';
+import {tools} from '@/config/site';
 import {categoryOf,categoryLabels} from '@/config/tool-navigation';
 import {getConversionBenefit} from '@/lib/conversion-benefits';
 import {getToolCopy} from '@/lib/tool-content';
