@@ -213,6 +213,8 @@ def unlock_pdf(data:bytes,password:str)->bytes:
     except (ValueError,TypeError,KeyError,IndexError,AttributeError,PdfReadError):
         raise HTTPException(422,"Unable to unlock PDF safely")
 
+from native_font import encode_embedded_run
+
 def _native_font_width(font_name:str,text:str)->float:
     """Use built-in Type1 metrics; never guess widths for embedded fonts."""
     from reportlab.pdfbase import pdfmetrics
@@ -263,32 +265,42 @@ def replace_pdf_text(data:bytes,page_index:int,original:str,replacement:str)->by
         for operands,operator in stream.operations:
             if operator==b"Tf" and len(operands)>=2:
                 active_font=str(operands[0])
-            text_locations=[]
+            candidates=[]
             if operator in (b"Tj",b"'",b'"'):
-                idx=2 if operator==b'"' else 0
-                if len(operands)>idx and isinstance(operands[idx],TextStringObject) and str(operands[idx])==original:
-                    text_locations=[(operands,idx)]
+                position=2 if operator==b'"' else 0
+                if len(operands)>position and isinstance(operands[position],TextStringObject):
+                    candidates=[(operands,position)]
             elif operator==b"TJ" and operands:
-                text_locations=[(operands[0],index) for index,part in enumerate(operands[0])
-                    if isinstance(part,TextStringObject) and str(part)==original]
-            for container,index in text_locations:
+                candidates=[(operands[0],index) for index,item in enumerate(operands[0])
+                    if isinstance(item,TextStringObject)]
+            for container,index in candidates:
                 if not active_font or active_font not in fonts:
-                    raise HTTPException(422,"Cannot resolve text font")
+                    continue
                 font=fonts[active_font].get_object()
                 base=str(font.get("/BaseFont","")).lstrip("/")
+                embedded=encode_embedded_run(font,container[index],original,replacement)
+                if embedded is not None:
+                    found.append((container,index,embedded))
+                    continue
+                if str(container[index])!=original:
+                    continue
                 if (str(font.get("/Subtype"))!="/Type1" or
                     str(font.get("/Encoding"))!="/WinAnsiEncoding" or
                     base not in _NATIVE_TYPE1 or "/ToUnicode" in font):
-                    raise HTTPException(422,"Embedded or custom font encoding is not safely editable")
+                    raise HTTPException(422,"Font uses an unsupported or ambiguous PDF encoding")
+                try:
+                    encoded=replacement.encode("cp1252",errors="strict")
+                    original.encode("cp1252",errors="strict")
+                except UnicodeEncodeError:
+                    raise HTTPException(422,"Standard PDF font cannot encode the requested Unicode characters")
                 old_width=_native_font_width(base,original)
                 new_width=_native_font_width(base,replacement)
                 if old_width<=0 or new_width>old_width+0.01:
                     raise HTTPException(422,"New text is wider than the available original text run")
-                found.append((container,index))
+                found.append((container,index,encoded))
         if len(found)!=1:
             raise HTTPException(422,"Original text must match exactly one PDF text object")
-        container,index=found[0]
-        # Raw WinAnsi bytes preserve the actual PDF font encoding even for á/ñ.
+        container,index,replacement_bytes=found[0]
         container[index]=ByteStringObject(replacement_bytes)
         page[NameObject("/Contents")]=writer._add_object(stream)
         result_io=io.BytesIO();writer.write(result_io)
