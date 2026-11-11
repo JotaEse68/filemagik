@@ -18,28 +18,29 @@ async function zipCorrupted(){
  return bytes;
 }
 
-test('G9 corrupted ZIP CRC cannot produce a fake success download',async({page})=>{
+test('G9 damaged ZIP in public explorer is rejected before any file can be downloaded',async({page})=>{
  await page.goto('/es/extract-zip');
  const invalid=await zipCorrupted();
  await page.locator('input[type=file]').first().setInputFiles({name:'damaged.zip',mimeType:'application/zip',buffer:invalid});
- await page.getByRole('button',{name:/convertir ahora/i}).click();
  await expect(page.locator('p.error[role="alert"]')).toBeVisible();
- await expect(page.locator('a[download]')).toHaveCount(0);
+ await expect(page.locator('.zip-entries button')).toHaveCount(0);
  await expect(page.getByTestId('conversion-success')).toHaveCount(0);
 });
 
-test('G9 valid ZIP extracts files losslessly and preserves output',async({page})=>{
- const zip=new JSZip();zip.file('report.csv','name,value\nAbril,120\n');zip.file('notes.txt','México y España');
+test('G9 public ZIP explorer downloads the two original files without corruption',async({page})=>{
+ const zip=new JSZip();zip.file('report.csv','name,value\\nAbril,120\\n');zip.file('notes.txt','México y España');
  const bytes=Buffer.from(await zip.generateAsync({type:'uint8array'}));
  await page.goto('/es/extract-zip');
  await page.locator('input[type=file]').first().setInputFiles({name:'docs.zip',mimeType:'application/zip',buffer:bytes});
- const output=await getDownload(page);
- const unpacked=await JSZip.loadAsync(output);
- const items=Object.values(unpacked.files).filter(f=>!f.dir);
- expect(items).toHaveLength(2);
- const values=await Promise.all(items.map(f=>f.async('string')));
- expect(values).toContain('name,value\nAbril,120\n');
- expect(values).toContain('México y España');
+ await expect(page.locator('.zip-entries button')).toHaveCount(2);
+ const contents=[];
+ for(let i=0;i<2;i++){
+  const download=page.waitForEvent('download');
+  await page.locator('.zip-entries button').nth(i).click();
+  contents.push((await readFile(await (await download).path())).toString('utf8'));
+ }
+ expect(contents).toContain('name,value\\nAbril,120\\n');
+ expect(contents).toContain('México y España');
 });
 
 test('G9 EPUB conversion follows spine and does not duplicate nested list and quote paragraphs',async({page})=>{
