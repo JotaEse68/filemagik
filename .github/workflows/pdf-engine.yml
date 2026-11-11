@@ -21,9 +21,9 @@ jobs:
           python-version: '3.12'
           cache: pip
           cache-dependency-path: pdf-engine/requirements.txt
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg libarchive13 p7zip-full tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg libarchive13 p7zip-full tesseract-ocr tesseract-ocr-eng tesseract-ocr-spa fonts-dejavu-core
       - run: pip install -r requirements.txt pytest reportlab
-      - run: python -m compileall -q app.py document.py worker_capacity.py image_worker.py media_worker.py archive_worker.py image_quota.py media_quota.py archive_quota.py ocr_worker.py batch_worker.py
+      - run: python -m compileall -q app.py document.py worker_capacity.py image_worker.py media_worker.py archive_worker.py image_quota.py media_quota.py archive_quota.py ocr_worker.py batch_worker.py native_font.py
       - run: python -m pytest -q tests
       - run: bash tests/smoke-gotenberg.sh
   docker-build:
