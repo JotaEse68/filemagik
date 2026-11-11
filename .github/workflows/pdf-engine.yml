@@ -25,7 +25,7 @@ jobs:
         working-directory: .
         run: |
           docker build -t filemagik-engine-ci -f pdf-engine/Dockerfile pdf-engine
-          docker run --rm filemagik-engine-ci sh -c "pip install pytest reportlab && python -m compileall -q app.py document.py worker_capacity.py image_worker.py media_worker.py archive_worker.py image_quota.py media_quota.py archive_quota.py ocr_worker.py batch_worker.py native_font.py && python -m pytest -q tests"
+          docker run --rm -v "$PWD/pdf-engine/tests:/app/tests:ro" filemagik-engine-ci sh -c "pip install pytest reportlab && python -m compileall -q app.py document.py worker_capacity.py image_worker.py media_worker.py archive_worker.py image_quota.py media_quota.py archive_quota.py ocr_worker.py batch_worker.py native_font.py && python -m pytest -q tests"
       - name: Install Python integration dependencies
         run: pip install -r requirements.txt pytest reportlab
       - run: bash tests/smoke-gotenberg.sh
