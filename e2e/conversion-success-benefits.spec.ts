@@ -13,7 +13,7 @@ async function actualPng(page:import('@playwright/test').Page){
 test('anti-confusion UX: explains why, confirms conversion, then acknowledges download',async({page})=>{
  await page.goto('/es/png-to-webp');
  await expect(page.getByText('¿Por qué hacer esta conversión?')).toBeVisible();
- await expect(page.getByText(/Optimiza imágenes para que las webs carguen más rápido/)).toBeVisible();
+ await expect(page.getByRole('complementary', {name:'¿Por qué hacer esta conversión?'}).getByText(/Optimiza imágenes para que las webs carguen más rápido/)).toBeVisible();
  await page.locator('input[type=file]').setInputFiles({
   name:'foto.png',mimeType:'image/png',buffer:await actualPng(page),
  });
