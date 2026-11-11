@@ -32,7 +32,7 @@ function operationEnabled(operation:string):boolean{
 }
 export async function GET(request:NextRequest){
  const operation=request.nextUrl.searchParams.get('operation')||'';
- const ready=configured()&&operationEnabled(operation);
+ const ready=Object.hasOwn(supported,operation)&&configured()&&operationEnabled(operation);
  return NextResponse.json({available:ready,challengeRequired:ready&&requiresChallenge(),
   siteKey:ready&&requiresChallenge()?process.env.NEXT_PUBLIC_FILEMAGIK_TURNSTILE_SITE_KEY:null},
   {headers:{'Cache-Control':'no-store'}});

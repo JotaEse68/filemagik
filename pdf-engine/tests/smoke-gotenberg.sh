@@ -37,6 +37,19 @@ assert 'Text must remain selectable' not in (PdfReader('/tmp/filemagik-redacted.
 print('Gotenberg 9 Office/PDF conversion and lossless optimization smoke tests passed')
 PY
 
+# Run the release gate using the already-built production image so FFmpeg,
+# libarchive and OCR dependencies match Railway, not the bare GitHub runner.
+if [ -n "${FILEMAGIK_ENGINE_CI_IMAGE:-}" ]; then
+  docker run --rm --network host \
+    -e GOTENBERG_URL=http://127.0.0.1:3000 \
+    -e PDF_ENGINE_SECRET=ci-filemagik-integration-secret-long-enough-2026 \
+    "${FILEMAGIK_ENGINE_CI_IMAGE}" python predeploy_smoke.py
+  docker run --rm --network host \
+    -e GOTENBERG_URL=http://127.0.0.1:3000 \
+    -e PDF_ENGINE_SECRET=ci-filemagik-integration-secret-long-enough-2026 \
+    -e FILEMAGIK_UNIFIED_WORKERS_ENABLED=true \
+    "${FILEMAGIK_ENGINE_CI_IMAGE}" python predeploy_smoke.py
+else
 # Run the same private API + Gotenberg release gate used by Railway against
 # the disposable CI container. An invalid or visual-only redaction fails CI.
 GOTENBERG_URL=http://127.0.0.1:3000 \
@@ -50,3 +63,5 @@ GOTENBERG_URL=http://127.0.0.1:3000 \
 PDF_ENGINE_SECRET=ci-filemagik-integration-secret-long-enough-2026 \
 FILEMAGIK_UNIFIED_WORKERS_ENABLED=true \
 python predeploy_smoke.py
+
+fi
