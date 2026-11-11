@@ -192,6 +192,28 @@ async def verify():
                 if joined.status_code!=200 or not (
                     joined.content[:3]==b"ID3" or joined.content[:1]==b"\\xff"):
                     raise RuntimeError("Railway FFmpeg audio joining failed: "+str(joined.status_code))
+                # G11: certify the actual mixed batch response, manifest,
+                # two different conversion engines and per-file integrity on
+                # Railway before the protected public route can be enabled.
+                import json
+                import hashlib
+                import zipfile
+                mixed=client.post("/workers/batch/v1/convert?preset=web-friendly",
+                    headers={**headers,"X-Filemagik-Visitor":"c"*64},
+                    files=[
+                     ("files",("animation.gif",gif.getvalue(),"image/gif")),
+                     ("files",("sound.wav",wav.getvalue(),"audio/wav"))])
+                if mixed.status_code!=200 or mixed.content[:2]!=b"PK":
+                    raise RuntimeError("Railway mixed batch failed: "+str(mixed.status_code))
+                with zipfile.ZipFile(io.BytesIO(mixed.content)) as bundle:
+                    manifest=json.loads(bundle.read("manifest.json"))
+                    if len(manifest["files"])!=2 or any(row["status"]!="ok" for row in manifest["files"]):
+                        raise RuntimeError("Railway batch returned incomplete manifest")
+                    for row in manifest["files"]:
+                        payload=bundle.read(row["output"])
+                        if len(payload)!=row["bytes"] or hashlib.sha256(payload).hexdigest()!=row["sha256"]:
+                            raise RuntimeError("Railway batch output does not match SHA256 manifest")
+                print("PASS: Railway mixed GIF/WAV batch with verified ZIP manifest")
                 rar_data=b"".join(binascii.a2b_uu(line.encode("ascii"))
                                   for line in UU.splitlines()[1:-1])
                 result=client.post("/workers/archive/v1/extract",headers=headers,
