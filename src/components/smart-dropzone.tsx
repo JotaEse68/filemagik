@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {ArrowRight,Check,Download,FileUp,LoaderCircle,RotateCcw} from 'lucide-react';
 import {getAvailableTools} from '@/lib/detect-tools';
+import {getConversionBenefit} from '@/lib/conversion-benefits';
 import {convertFiles} from '@/lib/convert';
 import {validateFiles} from '@/lib/file-limits';
 import {sizeLimitLabel} from '@/lib/file-limits';
@@ -45,7 +46,7 @@ export default function SmartDropzone({locale,d}:{locale:Locale;d:Dictionary}){
    {files.length===0?<><h2>{d.dropTitle}</h2><p>{d.dropSub}</p><button type="button" className="btn btn-primary" onClick={()=>picker.current?.click()}>{d.browse}<ArrowRight size={18}/></button><small className="file-hint">{t.hint}</small></>:<>
     <h2>{files.length===1?files[0].name:`${files.length} ${d.selected.toLowerCase()}`}</h2>
     {!result&&<><p>{validOptions.length?t.select:options.length?t.tooLarge:t.unsupported}</p>
-     {validOptions.length>0&&<div className="smart-actions">{validOptions.map(slug=>{const tool=getTool(slug)!;return <button key={slug} disabled={busy} className="smart-action" type="button" onClick={()=>run(slug)}>{busy?<LoaderCircle className="spin" size={16}/>:<ArrowRight size={16}/>} {tool.from} → {tool.to}<small className="smart-action-limit">{t.filesLimit} {sizeLimitLabel(slug)}</small></button>})}</div>}
+     {validOptions.length>0&&<div className="smart-actions">{validOptions.map(slug=>{const tool=getTool(slug)!;return <button key={slug} disabled={busy} className="smart-action" type="button" onClick={()=>run(slug)}>{busy?<LoaderCircle className="spin" size={16}/>:<ArrowRight size={16}/>} <span>{tool.from} → {tool.to}</span><small className="smart-action-description">{getConversionBenefit(slug,locale)}</small><small className="smart-action-limit">{t.filesLimit} {sizeLimitLabel(slug)}</small></button>})}</div>}
      {validOptions.some(slug=>['jpg-to-webp','png-to-jpg','png-to-webp','webp-to-jpg','images-to-pdf'].includes(slug))&&<label className="quality">{d.imageQuality} {quality}%<input type="range" min={50} max={100} value={quality} onChange={e=>setQuality(+e.target.value)}/></label>}
     </>}
     {result&&<><div className="success-row"><Check size={18}/>{result.name}</div><a className="btn btn-primary" href={result.url} download={result.name}><Download size={18}/>{d.download}</a></>}

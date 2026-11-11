@@ -510,3 +510,29 @@ body:has(.fm-site-frame){padding-right:0!important}
   .fm-site-primary .fm-home-horizontal-ad{margin:28px auto 30px}
   .fm-site-primary .fm-home-lower-ad{margin:32px auto 40px}
 }
+
+
+/* SEO information: useful, crawlable conversion guidance without disturbing editor. */
+.fm-tool-guide{padding:42px 0 56px;background:#0d1325}
+.fm-tool-guide>.container{max-width:940px}
+.fm-tool-guide h2{font-size:clamp(22px,2.4vw,32px);line-height:1.25;margin:0 0 18px}
+.fm-tool-guide h3{font-size:18px;line-height:1.4;margin:25px 0 10px}
+.fm-tool-guide p,.fm-tool-guide li{line-height:1.75;color:#c8d4ed;font-size:15px}
+.fm-tool-guide ol,.fm-tool-guide ul{padding-left:24px;margin:10px 0 22px}
+.fm-tool-guide a{color:#96c9ff;text-underline-offset:4px}
+.fm-tool-guide a:hover{text-decoration:underline}
+.fm-tool-guide li+li{margin-top:8px}
+@media(max-width:700px){.fm-tool-guide{padding:30px 0 38px}.fm-tool-guide h3{margin-top:20px}}
+
+/* Plain-language help for first-time users, without replacing the radial UI. */
+.radial-category-explanation{max-width:740px;margin:16px auto 4px;text-align:center;line-height:1.55;color:#bcd7f3;font-size:14px}
+.radial-action-explainer{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:28px auto 10px;padding:18px 22px;max-width:920px;border:1px solid rgba(155,183,255,.25);border-radius:18px;background:rgba(51,76,128,.18)}
+.radial-action-explainer>div{min-width:0}
+.radial-explainer-kicker{display:block;color:#90d7fa;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.radial-action-explainer strong{display:block;margin-top:5px;font-size:19px;line-height:1.35}
+.radial-action-explainer p{margin:7px 0;line-height:1.65;color:#d4e0f5}
+.radial-action-explainer small{color:#9facd0}
+.radial-action-explainer>.btn{white-space:nowrap;flex-shrink:0}
+.smart-action .smart-action-description{display:block;width:100%;margin-top:5px;line-height:1.4;font-size:12px;color:inherit;opacity:.83;white-space:normal}
+.tool-card .tool-card-category{display:block;margin-top:8px;font-size:11px;opacity:.7}
+@media(max-width:700px){.radial-action-explainer{flex-direction:column;align-items:stretch;margin:20px 0;padding:17px}.radial-action-explainer>.btn{justify-content:center}.radial-category-explanation{padding:0 10px}}

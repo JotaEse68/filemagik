@@ -3,7 +3,8 @@ import Link from 'next/link';
 import {useState} from 'react';
 import type {CSSProperties} from 'react';
 import {FileText,Image as ImageIcon,FileSpreadsheet,ScanText,FolderArchive,Files,ArrowUpRight,Layers2,Scissors,Merge,RotateCw,FileDown,Stamp,Minimize2,BookOpen,Search} from 'lucide-react';
-import type {Locale} from '@/config/site';
+import {getTool,type Locale,type ToolSlug} from '@/config/site';
+import {getConversionBenefit} from '@/lib/conversion-benefits';
 
 const sections=['pdf','images','office','data','ocr','archives'] as const;
 type Section=typeof sections[number];
@@ -18,19 +19,26 @@ const actions:Record<Section,WheelItem[]>={
  archives:[{slug:'create-zip',label:'CREATE ZIP',icon:'merge'},{slug:'extract-zip',label:'EXTRACT ZIP',icon:'layers'},{slug:'rename-batch',label:'RENAME FILES',icon:'file'},{slug:'inspect-file',label:'FILE INFO',icon:'scan'},{slug:'pdf-to-png',label:'PDF → PNG ZIP',icon:'file'},{slug:'images-to-pdf',label:'IMAGES → PDF',icon:'file'}]
 };
 const words={
- es:{title:'1. Selecciona tu tipo de archivo',actions:'2. ¿Qué necesitas hacer?',pdf:'PDF',images:'Imágenes',office:'Documentos',data:'Excel y datos',ocr:'OCR',archives:'ZIP',intro:'Convierte o transforma tus archivos con dos clics.',hint:'Primero escoge el archivo en la rueda izquierda. Después pulsa la acción en la derecha.',explore:'Ver todas las herramientas',featured:'Más utilizadas',split:'Dividir PDF',merge:'Unir PDF',remove:'Limpiar imagen',steps:["Elige un tipo de archivo","Selecciona una acción","Sube tu archivo y descarga"],active:'Seleccionado',next:'Ahora elige una acción en la rueda derecha',start:'Empieza por aquí',help:'¿Cómo funciona?'},
- en:{title:'1. Choose your file type',actions:'2. What do you want to do?',pdf:'PDF',images:'Images',office:'Documents',data:'Excel & data',ocr:'OCR',archives:'ZIP',intro:'Convert and transform files in two clicks.',hint:'First choose your file in the left wheel. Then choose the action on the right.',explore:'Browse all tools',featured:'Popular shortcuts',split:'Split PDF',merge:'Merge PDF',remove:'Clean image',steps:["Choose a file type","Select an action","Upload and download"],active:'Selected',next:'Now choose an action on the right',start:'Start here',help:'How does it work?'},
- pt:{title:'1. Escolha o tipo de arquivo',actions:'2. O que deseja fazer?',pdf:'PDF',images:'Imagens',office:'Documentos',data:'Excel e dados',ocr:'OCR',archives:'ZIP',intro:'Converta arquivos em dois cliques.',hint:'Primeiro escolha o tipo na roda esquerda e depois a ação na direita.',explore:'Ver ferramentas',featured:'Acessos rápidos',split:'Dividir PDF',merge:'Unir PDF',remove:'Limpar imagem',steps:["Escolha o arquivo","Selecione uma ação","Envie e baixe"],active:'Selecionado',next:'Agora escolha a ação à direita',start:'Comece aqui',help:'Como funciona?'},
- fr:{title:'1. Choisissez le type de fichier',actions:'2. Que voulez-vous faire ?',pdf:'PDF',images:'Images',office:'Documents',data:'Excel et données',ocr:'OCR',archives:'ZIP',intro:'Transformez vos fichiers en deux clics.',hint:"Choisissez d'abord le type à gauche, puis l'action à droite.",explore:'Voir les outils',featured:'Accès rapides',split:'Diviser PDF',merge:'Fusionner PDF',remove:'Nettoyer une image',steps:['Choisissez le type','Sélectionnez une action','Importez et téléchargez'],active:'Sélectionné',next:'Choisissez ensuite une action à droite',start:'Commencez ici',help:'Comment ça marche ?'}
+ es:{title:'1. Selecciona tu tipo de archivo',actions:'2. ¿Qué necesitas hacer?',pdf:'PDF',images:'Imágenes',office:'Documentos',data:'Excel y datos',ocr:'Leer texto',archives:'ZIP',intro:'Convierte o transforma tus archivos con dos clics.',hint:'Primero escoge el archivo en la rueda izquierda. Después pulsa la acción en la derecha.',explore:'Ver todas las herramientas',featured:'Más utilizadas',split:'Dividir PDF',merge:'Unir PDF',remove:'Limpiar imagen',steps:["Elige un tipo de archivo","Selecciona una acción","Sube tu archivo y descarga"],active:'Seleccionado',next:'Ahora elige una acción en la rueda derecha',start:'Empieza por aquí',help:'¿Cómo funciona?'},
+ en:{title:'1. Choose your file type',actions:'2. What do you want to do?',pdf:'PDF',images:'Images',office:'Documents',data:'Excel & data',ocr:'Read text',archives:'ZIP',intro:'Convert and transform files in two clicks.',hint:'First choose your file in the left wheel. Then choose the action on the right.',explore:'Browse all tools',featured:'Popular shortcuts',split:'Split PDF',merge:'Merge PDF',remove:'Clean image',steps:["Choose a file type","Select an action","Upload and download"],active:'Selected',next:'Now choose an action on the right',start:'Start here',help:'How does it work?'},
+ pt:{title:'1. Escolha o tipo de arquivo',actions:'2. O que deseja fazer?',pdf:'PDF',images:'Imagens',office:'Documentos',data:'Excel e dados',ocr:'Ler texto',archives:'ZIP',intro:'Converta arquivos em dois cliques.',hint:'Primeiro escolha o tipo na roda esquerda e depois a ação na direita.',explore:'Ver ferramentas',featured:'Acessos rápidos',split:'Dividir PDF',merge:'Unir PDF',remove:'Limpar imagem',steps:["Escolha o arquivo","Selecione uma ação","Envie e baixe"],active:'Selecionado',next:'Agora escolha a ação à direita',start:'Comece aqui',help:'Como funciona?'},
+ fr:{title:'1. Choisissez le type de fichier',actions:'2. Que voulez-vous faire ?',pdf:'PDF',images:'Images',office:'Documents',data:'Excel et données',ocr:'Lire texte',archives:'ZIP',intro:'Transformez vos fichiers en deux clics.',hint:"Choisissez d'abord le type à gauche, puis l'action à droite.",explore:'Voir les outils',featured:'Accès rapides',split:'Diviser PDF',merge:'Fusionner PDF',remove:'Nettoyer une image',steps:['Choisissez le type','Sélectionnez une action','Importez et téléchargez'],active:'Sélectionné',next:'Choisissez ensuite une action à droite',start:'Commencez ici',help:'Comment ça marche ?'}
 } as const;
 
 const actionNames:Record<Locale,Partial<Record<string,string>>>={
- es:{'split-pdf-by-count':'DIVIDIR PDF','merge-pdf':'UNIR PDF','extract-pdf-pages':'EXTRAER','compress-pdf-lossless':'OPTIMIZAR PDF','rotate-pdf':'GIRAR','pdf-to-word-text':'PDF → WORD TEXTO','image-cleanup':'LIMPIAR IMAGEN','word-to-basic-pdf':'WORD → PDF BÁSICO','create-zip':'CREAR ZIP','extract-zip':'ABRIR ZIP','rename-batch':'RENOMBRAR','inspect-file':'INFO ARCHIVO','batch-images-to-webp':'LOTE WEBP','ocr-pdf-searchable':'PDF BUSCABLE','ocr-image':'OCR IMAGEN','delete-pdf-pages':'QUITAR PÁGINAS'},
+ es:{'split-pdf-by-count':'DIVIDIR PDF','merge-pdf':'UNIR PDF','extract-pdf-pages':'EXTRAER','compress-pdf-lossless':'OPTIMIZAR PDF','rotate-pdf':'GIRAR','pdf-to-word-text':'PDF → WORD TEXTO','image-cleanup':'LIMPIAR IMAGEN','word-to-basic-pdf':'WORD → PDF BÁSICO','create-zip':'CREAR ZIP','extract-zip':'ABRIR ZIP','rename-batch':'RENOMBRAR','inspect-file':'INFO ARCHIVO','batch-images-to-webp':'LOTE WEBP','ocr-pdf-searchable':'LEER PDF','ocr-image':'LEER FOTO','delete-pdf-pages':'QUITAR PÁGINAS'},
  pt:{'split-pdf-by-count':'DIVIDIR PDF','merge-pdf':'JUNTAR PDF','extract-pdf-pages':'EXTRAIR','compress-pdf-lossless':'OTIMIZAR PDF','rotate-pdf':'GIRAR','pdf-to-word-text':'PDF → WORD TEXTO','image-cleanup':'LIMPAR IMAGEM','create-zip':'CRIAR ZIP','extract-zip':'ABRIR ZIP','word-to-basic-pdf':'WORD → PDF BÁSICO'},
  fr:{'split-pdf-by-count':'DIVISER PDF','merge-pdf':'FUSIONNER PDF','extract-pdf-pages':'EXTRAIRE','compress-pdf-lossless':'OPTIMISER PDF','rotate-pdf':'PIVOTER','pdf-to-word-text':'PDF → WORD TEXTE','image-cleanup':'NETTOYER IMAGE','create-zip':'CRÉER ZIP','extract-zip':'OUVRIR ZIP','word-to-basic-pdf':'WORD → PDF SIMPLE'},
  en:{'pdf-to-word-text':'PDF → WORD TEXT','compress-pdf-lossless':'OPTIMIZE PDF','ocr-pdf-searchable':'SEARCHABLE PDF','word-to-basic-pdf':'WORD → BASIC PDF'}
 };
 
+const categoryExplanations:Record<Locale,Record<Section,string>>={
+ es:{pdf:'Documentos que quieres unir, dividir, comprimir o modificar.',images:'Fotos e imágenes para convertir, juntar o reducir.',office:'Archivos Word y documentos de trabajo.',data:'Tablas de Excel y datos para otros programas.',ocr:'Convierte texto de una foto o PDF escaneado en texto que puedes buscar o copiar.',archives:'Archivos ZIP para comprimir, abrir o agrupar documentos.'},
+ en:{pdf:'Documents you want to merge, split, compress or edit.',images:'Photos and images to convert, combine or reduce.',office:'Word files and office documents.',data:'Excel spreadsheets and data for other programs.',ocr:'Make text in a photo or scanned PDF searchable or copyable.',archives:'ZIP archives to bundle, unpack or organize files.'},
+ pt:{pdf:'Documentos para juntar, dividir, compactar ou editar.',images:'Fotos e imagens para converter, juntar ou reduzir.',office:'Documentos Word e arquivos de escritório.',data:'Planilhas Excel e dados para outros programas.',ocr:'Transforme texto de uma imagem ou PDF digitalizado em texto pesquisável ou copiável.',archives:'Arquivos ZIP para compactar, abrir ou agrupar documentos.'},
+ fr:{pdf:'Documents à fusionner, séparer, compresser ou modifier.',images:'Photos et images à convertir, réunir ou réduire.',office:'Fichiers Word et documents de bureau.',data:'Tableurs Excel et données pour d’autres logiciels.',ocr:'Rendez le texte d’une image ou d’un PDF numérisé recherchable et copiable.',archives:'Archives ZIP à compresser, ouvrir ou regrouper.'}
+};
+const previewWords={es:{will:'Esto hará',out:'Resultado',go:'Abrir esta herramienta'},en:{will:'What it does',out:'Result',go:'Open this tool'},pt:{will:'O que faz',out:'Resultado',go:'Abrir ferramenta'},fr:{will:'Ce que fait cet outil',out:'Résultat',go:'Ouvrir cet outil'}} as const;
 const symbols={cut:Scissors,merge:Merge,layers:Layers2,shrink:Minimize2,rotate:RotateCw,file:FileDown,scan:Search} as const;
 
 export default function RadialStudio({locale}:{locale:Locale}){
@@ -39,12 +47,14 @@ export default function RadialStudio({locale}:{locale:Locale}){
  const [showHelp,setShowHelp]=useState(false);
  const [hovered,setHovered]=useState<string|null>(null);
  const t=words[locale];
+ const preview=previewWords[locale];
  const ring=actions[selected];
  const fallback=ring.find(a=>a.slug===hovered)??ring[0];
  return <section className="radial-studio" aria-label={t.intro}>
   <div className="radial-top"><div><span className="radial-kicker">FILEMAGIK · QUICK STUDIO</span><h2>{t.intro}</h2><p>{t.hint}</p></div><Link href={`/${locale}/tools`} className="radial-all-link">{t.explore}<ArrowUpRight size={16}/></Link></div>
   <div className="radial-guide" aria-label={t.help}>{t.steps.map((step,i)=><div className={'radial-guide-step '+(i===0&&!hasChosen?'guide-current':i===1&&hasChosen?'guide-current':'')} key={step}><strong>{i+1}</strong><span>{step}</span></div>)}<button type="button" className="radial-help-button" aria-expanded={showHelp} onClick={()=>setShowHelp(v=>!v)}>{t.help}</button></div>
   {showHelp&&<p role="status" className="radial-help-text">{t.hint}</p>}
+  <p className="radial-category-explanation" aria-live="polite">{categoryExplanations[locale][selected]}</p>
   <div className="radial-wheels">
    <div className={'radial-column '+(!hasChosen?'radial-start-column':'')}><h3><span className="radial-step">01</span>{t.title}<small className="radial-hint-label">{hasChosen?`${t.active}: ${t[selected]}`:t.start}</small></h3>
     <div className="radial-wheel radial-category-wheel" role="group" aria-label={t.title}>
@@ -64,6 +74,14 @@ export default function RadialStudio({locale}:{locale:Locale}){
      <Link href={`/${locale}/${fallback.slug}`} className="wheel-center wheel-action-center" aria-label={actionNames[locale][fallback.slug]??fallback.label}><ArrowUpRight size={19}/><span>{actionNames[locale][fallback.slug]??fallback.label}</span></Link>
     </div>
    </div>
+  </div>
+  <div className="radial-action-explainer" aria-live="polite">
+   <div><span className="radial-explainer-kicker">{preview.will}</span>
+    <strong>{actionNames[locale][fallback.slug]??fallback.label}</strong>
+    <p>{getConversionBenefit(fallback.slug as ToolSlug,locale)}</p>
+    <small>{preview.out}: {getTool(fallback.slug)?.to??fallback.label}</small>
+   </div>
+   <Link className="btn btn-primary" href={`/${locale}/${fallback.slug}`}>{preview.go}<ArrowUpRight size={17}/></Link>
   </div>
   <div className="radial-shortcuts"><span>{t.featured}</span><Link href={`/${locale}/split-pdf-by-count`}><Scissors size={17}/>{t.split}</Link><Link href={`/${locale}/merge-pdf`}><Merge size={17}/>{t.merge}</Link><Link href={`/${locale}/image-cleanup`}><ImageIcon size={17}/>{t.remove}</Link></div>
  </section>;

@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import AdSlot from '@/components/advertising/ad-slot';
+import {getConversionBenefit} from '@/lib/conversion-benefits';
 import {useEffect,useMemo,useState} from 'react';
 import {ArrowUpRight,FileText,FileSpreadsheet,Files,ImageIcon,ScanText,Search,X} from 'lucide-react';
 import type {Locale} from '@/config/site';
@@ -33,7 +34,7 @@ export default function ToolExplorer({locale,initialCategory='all'}:{locale:Loca
    const Icon=tool.category==='images'?ImageIcon:tool.category==='data'?FileSpreadsheet:tool.category==='ocr'?ScanText:tool.category==='office'?FileText:Files;
    return <Link className="tool-card" href={`/${locale}/${tool.slug}`} key={tool.slug}>
     <span className="tool-icon"><Icon size={23} aria-hidden="true"/></span>
-    <div><h3>{tool.from} → {tool.to}</h3><p>{labels[tool.category]}</p></div>
+    <div><h3>{tool.from} → {tool.to}</h3><p>{getConversionBenefit(tool.slug,locale)}</p><small className="tool-card-category">{labels[tool.category]}</small></div>
     <ArrowUpRight className="tool-arrow" size={19} aria-hidden="true"/>
    </Link>})}</div>:<p role="status" className="tool-explorer-empty">{language.empty}</p>}
  </div>
