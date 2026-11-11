@@ -79,7 +79,7 @@ export async function POST(request:NextRequest){
  const total=files.reduce((sum,file)=>sum+file.size,0);
  if(total>op.max||files.some(file=>file.size<1||file.size>(multi?3*MiB:op.max)))
   return json('File size exceeds secure limits',413);
- if(files.some(file=>!op.extension.includes(file.name.toLowerCase().match(/\\.[a-z0-9]+$/)?.[0]||'')))
+ if(files.some(file=>!op.extension.includes(file.name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0]||'')))
   return json('Invalid file extension',415);
  const timeStart=request.nextUrl.searchParams.get('start');
  const timeEnd=request.nextUrl.searchParams.get('end');
