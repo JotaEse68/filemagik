@@ -74,6 +74,9 @@ export async function epubToText(file:File):Promise<OutputFile>{
   const body=chapter.getElementsByTagNameNS('*','body')[0];
   if(!body)throw new Error('EPUB chapter has no readable body');
   const blocks=Array.from(body.querySelectorAll('h1,h2,h3,h4,p,li,blockquote,pre'))
+   // A list item or blockquote can contain paragraphs: extract each visible
+   // paragraph once rather than repeating its text through the parent.
+   .filter(node=>!node.parentElement?.closest('li,blockquote,pre'))
    .map(node=>cleanText(node.textContent||'')).filter(Boolean);
   const text=blocks.length?blocks.join('\n\n'):cleanText(body.textContent||'');
   characterCount+=text.length;
