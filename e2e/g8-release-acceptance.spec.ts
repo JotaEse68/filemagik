@@ -35,7 +35,7 @@ test('G8: reject previous selection after oversized replacement; never convert a
  await upload.setInputFiles({name:'recording.wav',mimeType:'audio/wav',buffer:Buffer.from('RIFFdemo file')});
  await expect(page.getByRole('button',{name:/convertir ahora/i})).toBeVisible();
  await upload.setInputFiles({name:'oversize.wav',mimeType:'audio/wav',buffer:Buffer.alloc(3*1024*1024+1)});
- await expect(page.getByRole('alert')).toContainText('File too large');
+ await expect(page.locator('p.error[role="alert"]')).toContainText('File too large');
  await expect(page.getByRole('button',{name:/convertir ahora/i})).toHaveCount(0);
  await expect(page.locator('input[type=file]')).toHaveValue('');
  await expect(page.locator('a[download]')).toHaveCount(0);
