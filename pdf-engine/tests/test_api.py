@@ -374,3 +374,69 @@ def test_smart_ocr_returns_digital_only_pdf_byte_identical(monkeypatch):
       files={"file":("digital.pdf",original,"application/pdf")})
     assert result.status_code==200
     assert result.content==original
+
+
+def _embedded_unicode_pdf():
+    """A genuine embedded TrueType subset with Greek, accents and Latin."""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    from reportlab.pdfgen import canvas
+    fontpath="/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    assert os.path.isfile(fontpath),"CI requires fonts-dejavu-core"
+    if "FileMagikEmbedded" not in pdfmetrics.getRegisteredFontNames():
+        pdfmetrics.registerFont(TTFont("FileMagikEmbedded",fontpath))
+    pdf=io.BytesIO()
+    page=canvas.Canvas(pdf)
+    page.setFont("FileMagikEmbedded",16)
+    page.drawString(50,720,"Καλημέρα")
+    page.drawString(50,680,"Γεια σου")
+    page.drawString(50,640,"niñez")
+    page.drawString(50,600,"niña")
+    page.showPage()
+    page.drawString(50,750,"Second page unchanged")
+    page.save()
+    return pdf.getvalue()
+
+def test_embedded_unicode_greek_font_replacement_preserves_original_font(monkeypatch):
+    from pypdf import PdfReader
+    secret="g"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    data=_embedded_unicode_pdf()
+    headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR}
+    result=client.post("/v1/jobs?operation=replace-pdf-text",headers=headers,
+        files={"file":("embedded.pdf",data,"application/pdf")},
+        data={"page":"1","source_text":"Καλημέρα","new_text":"Γεια"})
+    assert result.status_code==200,result.text[:250] if result.status_code!=200 else ""
+    original=PdfReader(io.BytesIO(data))
+    edited=PdfReader(io.BytesIO(result.content))
+    assert len(edited.pages)==2
+    assert "Γεια" in edited.pages[0].extract_text()
+    assert "Καλημέρα" not in edited.pages[0].extract_text()
+    assert "Γεια σου" in edited.pages[0].extract_text()
+    assert edited.pages[1].extract_text()==original.pages[1].extract_text()
+    assert list(edited.pages[0]["/Resources"]["/Font"].keys())==list(original.pages[0]["/Resources"]["/Font"].keys())
+
+def test_embedded_unicode_rejects_glyph_not_in_subset_and_complex_shaping(monkeypatch):
+    secret="h"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    headers={"Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR}
+    data=_embedded_unicode_pdf()
+    for replacement in ("日本語","مرحبا"):
+        response=client.post("/v1/jobs?operation=replace-pdf-text",headers=headers,
+            files={"file":("embedded.pdf",data,"application/pdf")},
+            data={"page":"1","source_text":"Καλημέρα","new_text":replacement})
+        assert response.status_code==422
+
+def test_embedded_unicode_latin_shorter_replacement(monkeypatch):
+    from pypdf import PdfReader
+    secret="i"*40
+    monkeypatch.setenv("PDF_ENGINE_SECRET",secret)
+    data=_embedded_unicode_pdf()
+    response=client.post("/v1/jobs?operation=replace-pdf-text",headers={
+        "Authorization":"Bearer "+secret,"X-Filemagik-Visitor":VISITOR},
+        files={"file":("embedded.pdf",data,"application/pdf")},
+        data={"page":"1","source_text":"niñez","new_text":"niña"})
+    assert response.status_code==200,response.text[:200] if response.status_code!=200 else ""
+    text=PdfReader(io.BytesIO(response.content)).pages[0].extract_text()
+    assert "niñez" not in text
+    assert text.count("niña")==2
