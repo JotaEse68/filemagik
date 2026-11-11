@@ -65,3 +65,30 @@ test('desktop rail shows two direct banners but only one when a Google sticky is
  data.placements.desktop.adSlotId='1234567890';
  assert.equal(publicAds(validateAds(data)).banners.filter(x=>x.slot==='desktop'||x.slot==='desktopLower').length,1);
 });
+
+test('G18 provisionally fills empty enabled slots with existing URL campaigns',()=>{
+ const data=emptyAds();
+ data.campaigns=[
+  campaign({id:'banner-a',src:'https://example.com/a.jpg',href:'https://example.com/a'}),
+  campaign({id:'banner-b',src:'https://example.com/b.jpg',href:'https://example.com/b'})
+ ];
+ data.placements.desktop.campaignIds=['banner-a'];
+ const published=publicAds(validateAds(data));
+ for(const slot of ['desktopLower','home','toolHorizontal','incontent']){
+  assert.equal(published.rotation[slot]?.banners.length,2);
+  assert.ok(published.banners.find(item=>item.slot===slot)?.src.startsWith('https://example.com/'));
+ }
+ assert.equal(published.banners.find(x=>x.slot==='desktop')?.src,'https://example.com/a.jpg');
+ assert.notEqual(published.banners.find(x=>x.slot==='desktopLower')?.src,published.banners.find(x=>x.slot==='home')?.src);
+});
+
+test('G18 never overrides disabled placements or scheduled and disabled campaigns',()=>{
+ const data=emptyAds();
+ data.campaigns=[campaign(),campaign({id:'not-ready',enabled:false,src:'https://example.com/disabled.jpg'})];
+ data.placements.desktopLower.enabled=false;
+ const published=publicAds(validateAds(data));
+ assert.equal(published.banners.some(x=>x.slot==='desktopLower'),false);
+ assert.deepEqual(published.rotation.home.banners.map(x=>x.src),['https://example.com/banner.jpg']);
+ data.campaigns[0].startsAt='2099-01-01';
+ assert.equal(publicAds(validateAds(data)).banners.some(x=>x.slot==='home'),false);
+});
