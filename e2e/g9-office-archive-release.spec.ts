@@ -2,7 +2,6 @@ import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 import JSZip from 'jszip';
 import ExcelJS from 'exceljs';
-import {Document,Packer,Paragraph} from 'docx';
 
 async function getDownload(page:import('@playwright/test').Page){
  await page.getByRole('button',{name:/convertir ahora/i}).click();
