@@ -2,7 +2,7 @@ import {createCipheriv,createDecipheriv,createHash,randomBytes,randomUUID,scrypt
 import {list,put} from '@vercel/blob';
 
 const prefix='filemagik/admin/secure/credential-';
-type Credential={version:string;passSalt:string;passHash:string;recoverSalt:string;recoverHash:string};
+type Credential={version:string;passSalt:string;passHash:string;recoverSalt:string;recoverHash:string;resetEnvFingerprint?:string};
 function key(){const secret=process.env.FILEMAGIK_ADMIN_SESSION_SECRET;if(!secret||secret.length<32)throw new Error('Secreto de administrador no configurado');return createHash('sha256').update('FileMagik Owner Encrypted Credential v1').update(secret).digest();}
 function hash(value:string,salt:string){return scryptSync(value,Buffer.from(salt,'hex'),64).toString('hex');}
 function same(a:string,b:string){return /^[a-f0-9]{128}$/.test(a)&&/^[a-f0-9]{128}$/.test(b)&&timingSafeEqual(Buffer.from(a,'hex'),Buffer.from(b,'hex'));}
@@ -25,10 +25,14 @@ export async function readCredential():Promise<Credential|null>{
 export async function verifyPassword(password:string):Promise<boolean>{
  if(!password||password.length>256)return false;
  const stored=await readCredential();
- if(stored)return same(hash(password,stored.passSalt),stored.passHash);
+ if(stored&&same(hash(password,stored.passSalt),stored.passHash))return true;
+ // Emergency owner recovery: the Vercel project owner can rotate the password
+ // hash without knowing a lost recovery code. Once a new password is saved
+ // from the authenticated panel, this exact override is permanently consumed.
  const expected=process.env.FILEMAGIK_ADMIN_PASSWORD_SHA256||'';
  const actual=createHash('sha256').update(password).digest('hex');
- return /^[a-f0-9]{64}$/.test(expected)&&timingSafeEqual(Buffer.from(expected,'hex'),Buffer.from(actual,'hex'));
+ if(!/^[a-f0-9]{64}$/.test(expected)||!timingSafeEqual(Buffer.from(expected,'hex'),Buffer.from(actual,'hex')))return false;
+ return !stored||stored.resetEnvFingerprint!==expected;
 }
 export async function verifyRecovery(code:string):Promise<boolean>{
  const c=await readCredential();
@@ -36,9 +40,9 @@ export async function verifyRecovery(code:string):Promise<boolean>{
 }
 export async function credentialVersion():Promise<string>{return (await readCredential())?.version||'initial';}
 export async function updateCredential(password:string):Promise<{recoveryCode:string;version:string}>{
- if(password.length<14||password.length>128||!/[A-Z]/.test(password)||!/[a-z]/.test(password)||!/[0-9]/.test(password))throw new Error('La contraseña debe tener 14–128 caracteres, mayúsculas, minúsculas y números');
+ if(password.length<10||password.length>128||!/[A-Z]/.test(password)||!/[a-z]/.test(password)||!/[0-9]/.test(password))throw new Error('La contraseña debe tener 10–128 caracteres, mayúsculas, minúsculas y números');
  const recoveryCode=randomBytes(25).toString('base64url');
- const c:Credential={version:randomUUID(),passSalt:randomBytes(16).toString('hex'),passHash:'',recoverSalt:randomBytes(16).toString('hex'),recoverHash:''};
+ const c:Credential={version:randomUUID(),passSalt:randomBytes(16).toString('hex'),passHash:'',recoverSalt:randomBytes(16).toString('hex'),recoverHash:'',resetEnvFingerprint:process.env.FILEMAGIK_ADMIN_PASSWORD_SHA256||undefined};
  c.passHash=hash(password,c.passSalt);c.recoverHash=hash(recoveryCode,c.recoverSalt);
  const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key(),iv);
  const encrypted=Buffer.concat([cipher.update(JSON.stringify(c)),cipher.final()]);
