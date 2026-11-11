@@ -55,6 +55,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [audioStartSeconds,setAudioStartSeconds]=useState(0),[audioEndSeconds,setAudioEndSeconds]=useState<number|undefined>();
  const [batchPreset,setBatchPreset]=useState<'web-friendly'|'extract'>('web-friendly');
  const [batchRecovery,setBatchRecovery]=useState(false);
+ const [batchReport,setBatchReport]=useState<{total:number;success:number;failed:number;rows:Array<{name:string;status:string;output?:string}>}|null>(null);
  const [replacementFile,setReplacementFile]=useState<File|null>(null),[pdfImagePage,setPdfImagePage]=useState(1),[pdfImageIndex,setPdfImageIndex]=useState(1);
  const [pdfNativeOriginal,setPdfNativeOriginal]=useState(''),[pdfNativeReplacement,setPdfNativeReplacement]=useState('');
  const [firstFrame,setFirstFrame]=useState(1),[lastFrame,setLastFrame]=useState<number|undefined>(),[gifSpeed,setGifSpeed]=useState(1);
@@ -62,7 +63,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  const [pages,setPages]=useState('1-2'),[groupSize,setGroupSize]=useState(2),[watermark,setWatermark]=useState('CONFIDENTIAL'),[opacity,setOpacity]=useState(25);
  const labels={"en":["Pages (e.g. 1,3,5-8)","Pages per file","Watermark text","Opacity","Visible signature","Lossy conversion: pages become images. Text, links and forms will no longer be searchable.","OCR language"],"es":["Páginas (ej. 1,3,5-8)","Páginas por archivo","Texto de marca","Opacidad","Firma visible","Compresión con pérdida: las páginas pasan a ser imágenes. Texto, enlaces y formularios dejan de ser buscables.","Idioma del OCR"],"pt":["Páginas (ex. 1,3,5-8)","Páginas por arquivo","Texto da marca","Opacidade","Assinatura visível","Compressão com perda: páginas viram imagens; textos, links e formulários deixam de ser pesquisáveis.","Idioma do OCR"],"fr":["Pages (ex. 1,3,5-8)","Pages par fichier","Texte du filigrane","Opacité","Signature visible","Compression avec perte : les pages deviennent des images et le texte, les liens et les formulaires ne seront plus recherchables.","Langue de l’OCR"]}[locale];
  useEffect(()=>()=>{if(result)URL.revokeObjectURL(result.url)},[result]);
- const choose=(incoming:File[])=>{if(busy)return;try{validateFiles(slug,incoming);setResult(null);setDownloadStarted(false);setError('');setFiles(incoming)}catch(e){setFiles([]);setResult(null);setDownloadStarted(false);if(input.current)input.current.value='';setError(e instanceof Error?e.message:d.error);}};
+ const choose=(incoming:File[])=>{if(busy)return;try{validateFiles(slug,incoming);setResult(null);setBatchReport(null);setDownloadStarted(false);setError('');setFiles(incoming)}catch(e){setFiles([]);setResult(null);setBatchReport(null);setDownloadStarted(false);if(input.current)input.current.value='';setError(e instanceof Error?e.message:d.error);}};
  const run=async()=>{if(!files.length)return;
  if(['server-join-audio','server-join-video'].includes(slug)&&files.length<2){setError('Selecciona al menos dos archivos para unir.');return;}
  if(['server-trim-audio','server-trim-video'].includes(slug)&&(audioEndSeconds===undefined||audioEndSeconds<=audioStartSeconds)){setError('El final del recorte debe ser mayor que el inicio.');return;}abortController.current=new AbortController();setBusy(true);setDownloadStarted(false);setError('');setOcrProgress('');try{
@@ -80,7 +81,10 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  professional&&engineReady&&isProfessionalSlug(slug)?await runProfessionalConversion(slug,files[0],challengeToken,slug==='compress-pdf-raster'?compressionMode:'lossless',{replacement:replacementFile||undefined,page:pdfImagePage,imageIndex:pdfImageIndex,sourceText:pdfNativeOriginal,newText:pdfNativeReplacement,password:pdfPassword}):
  await convertFiles(slug,files,quality/100,{pages,groupSize,watermark,opacity:opacity/100,ocrLang,signature,formValues,prefix,width,cropPercent,rotation,format,subtitleOffsetMs,annotationText,annotationPages,annotationPlacement,audioStartSeconds,audioEndSeconds,pdfPassword,signal:abortController.current.signal,onProgress:(done,total)=>setOcrProgress(`${done}/${total}`)});if(!output.blob.size)throw new Error('El archivo generado está vacío. Prueba otro archivo.');
  if(slug==='server-mixed-batch'){
-  try{const m=await import('@/lib/batch-recovery');await m.saveBatchResult(output.blob,output.name);}catch{/* File is still available for immediate download */}
+  const {inspectMixedBatch}=await import('@/lib/batch-manifest');
+  const report=await inspectMixedBatch(output.blob,files.length);
+  setBatchReport(report);
+  try{const m=await import('@/lib/batch-recovery');await m.saveBatchResult(output.blob,output.name);}catch{/* Valid result remains available for download */}
  }
  setResult({name:output.name,url:URL.createObjectURL(output.blob)});
  }catch(e){setError(e instanceof Error?(e.name==='AbortError'?'Conversión cancelada':e.message):d.error)}finally{abortController.current=null;setBusy(false);if(serverOnlyWorker){setWorkerToken('');setWorkerVersion(v=>v+1);}if(professional){setChallengeToken('');setChallengeVersion(v=>v+1);}}};
@@ -89,14 +93,18 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
    if(!draft){setBatchRecovery(false);setError('No hay ningún lote guardado en este navegador.');return;}
    validateFiles(slug,draft.files);setFiles(draft.files);setBatchPreset(draft.preset);
    setDownloadStarted(false);setError('');
-   if(draft.result&&draft.resultName){setResult({name:draft.resultName,url:URL.createObjectURL(draft.result)});}
-   else{setResult(null);setError('Archivos restaurados. Completa una nueva verificación para reintentar. Un procesamiento anterior puede haber consumido cuota.');}
+   if(draft.result&&draft.resultName){
+    const {inspectMixedBatch}=await import('@/lib/batch-manifest');
+    setBatchReport(await inspectMixedBatch(draft.result,draft.files.length));
+    setResult({name:draft.resultName,url:URL.createObjectURL(draft.result)});
+   }
+   else{setBatchReport(null);setResult(null);setError('Archivos restaurados. Completa una nueva verificación para reintentar. Un procesamiento anterior puede haber consumido cuota.');}
   }catch(e){setError(e instanceof Error?e.message:'No se pudo recuperar el lote');}
  };
  const forgetBatch=async()=>{try{const m=await import('@/lib/batch-recovery');await m.clearBatch();setBatchRecovery(false);}
   catch(e){setError(e instanceof Error?e.message:'No se pudo borrar el lote local');}};
  const moveFile=(index:number,direction:number)=>setFiles(current=>{const target=index+direction;if(target<0||target>=current.length)return current;const next=[...current];[next[index],next[target]]=[next[target],next[index]];return next;});
- const reset=()=>{setResult(null);setDownloadStarted(false);setFiles([]);setError('');if(input.current)input.current.value=''};
+ const reset=()=>{setResult(null);setBatchReport(null);setDownloadStarted(false);setFiles([]);setError('');if(input.current)input.current.value=''};
  const messages=({
   es:{why:'¿Por qué hacer esta conversión?',finished:'¡Conversión completada!',ready:'El archivo está listo. Descárgalo cuando quieras.',file:'Archivo generado',downloadStarted:'Descarga solicitada. Consulta las descargas de tu navegador.',start:'Descargar archivo'},
   en:{why:'Why make this conversion?',finished:'Conversion complete!',ready:'Your file is ready. Download it whenever you like.',file:'Generated file',downloadStarted:'Download requested. Check your browser downloads.',start:'Download file'},
@@ -209,7 +217,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  </div>}
  {files.length>0&&!result&&serverOnlyWorker&&<div className="fm-pro-engine-panel"><strong>Motor profesional privado</strong>
   {!workerReady?<p role="status">Servicio privado no habilitado. No se subirá ningún archivo.</p>:
-   <><p>Máximo 3 MB. Se envía temporalmente al servidor para convertirlo. Se aplican cuotas y verificación.</p>
+   <><p>{slug==='server-mixed-batch'?'Hasta 6 archivos de 3 MB cada uno y 12 MB en total. Se envían temporalmente al servidor.':'Máximo 3 MB. Se envía temporalmente al servidor para convertirlo.'} Se aplican cuotas y verificación.</p>
     <ProfessionalPdfOption key={workerVersion} siteKey={workerSiteKey} ready={workerReady} action="filemagik_worker" onToken={setWorkerToken} onReset={()=>setWorkerToken('')}/></>}
  </div>}
  {files.length>0&&!result&&serverOnlyOffice&&!engineReady&&<p role="status">Esta conversión necesita el motor Office profesional; no hay conversión local compatible.</p>}
@@ -217,6 +225,12 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  {busy&&serverOnlyWorker&&<p className="pdf-conversion-note">{({es:'Detener la espera no garantiza cancelar el procesamiento iniciado en el servidor.',en:'Stopping the wait does not guarantee that processing already started on the server will stop.',pt:'Parar de esperar não garante cancelar o processamento já iniciado no servidor.',fr:'Arrêter l’attente ne garantit pas l’annulation du traitement déjà commencé sur le serveur.'} as const)[locale]}</p>}
  {result&&<div className="conversion-complete" role="status" aria-live="polite" data-testid="conversion-success">
    <div className="conversion-complete-heading"><CheckCircle2 size={25} aria-hidden="true"/><div><h3>{messages.finished}</h3><p>{messages.ready}</p></div></div>
+   {slug==='server-mixed-batch'&&batchReport&&<div className="pdf-option-panel" data-testid="mixed-batch-report">
+     <p><strong>{({es:'Archivos convertidos',en:'Converted files',pt:'Ficheiros convertidos',fr:'Fichiers convertis'} as const)[locale]}: {batchReport.success}/{batchReport.total}</strong>
+     {batchReport.failed>0&&` · ${batchReport.failed} ${({es:'sin convertir',en:'not converted',pt:'não convertidos',fr:'non convertis'} as const)[locale]}`}</p>
+     <ul>{batchReport.rows.map((row,i)=><li key={i}>{row.name}: {row.status==='ok'?'✓':row.status==='unsupported'?'Formato no compatible':row.status==='too_large_or_empty'?'Tamaño no válido':'No se pudo convertir'}</li>)}</ul>
+     <p>{({es:'El ZIP incluye manifest.json con el detalle de cada archivo.',en:'ZIP includes manifest.json with per-file details.',pt:'O ZIP inclui manifest.json com detalhes por ficheiro.',fr:'Le ZIP contient manifest.json avec les détails de chaque fichier.'} as const)[locale]}</p>
+    </div>}
    <p className="conversion-complete-file"><strong>{messages.file}:</strong> <span>{result.name}</span></p>
    {downloadStarted&&<p className="conversion-download-notice" data-testid="download-notice"><Check size={17} aria-hidden="true"/>{messages.downloadStarted}</p>}
   </div>}
