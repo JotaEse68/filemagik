@@ -82,10 +82,11 @@ test('G18 provisionally fills empty enabled slots with existing URL campaigns',(
  assert.notEqual(published.banners.find(x=>x.slot==='desktopLower')?.src,published.banners.find(x=>x.slot==='home')?.src);
 });
 
-test('G18 never overrides disabled placements or scheduled and disabled campaigns',()=>{
+test('G18 does not show disabled assigned placements or inactive campaigns',()=>{
  const data=emptyAds();
  data.campaigns=[campaign(),campaign({id:'not-ready',enabled:false,src:'https://example.com/disabled.jpg'})];
  data.placements.desktopLower.enabled=false;
+ data.placements.desktopLower.campaignIds=['test-banner-001'];
  const published=publicAds(validateAds(data));
  assert.equal(published.banners.some(x=>x.slot==='desktopLower'),false);
  assert.deepEqual(published.rotation.home.banners.map(x=>x.src),['https://example.com/banner.jpg']);
