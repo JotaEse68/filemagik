@@ -27,7 +27,7 @@ export async function inspectMixedBatch(blob:Blob,expectedFiles:number):Promise<
    if(!file)throw new Error('Falta un archivo convertido en el ZIP.');
    const bytes=await file.async('uint8array');
    if(bytes.length!==item.bytes)throw new Error('El archivo convertido está incompleto.');
-   const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+   const hash=new Uint8Array(await crypto.subtle.digest('SHA-256',Uint8Array.from(bytes).buffer));
    const actual=Array.from(hash,b=>b.toString(16).padStart(2,'0')).join('');
    if(actual!==item.sha256)throw new Error('Un archivo convertido no supera la comprobación de integridad.');
    success++;
