@@ -96,12 +96,23 @@ export function publicAds(state:AdsSettings):PublicAds&{rotation:Partial<Record<
  const googleRail=(['desktop','desktopLower'] as const).find(slot=>state.placements[slot].enabled&&state.placements[slot].provider==='adsense');
  for(const slot of adSlots){
   if(googleRail&&(slot==='desktop'||slot==='desktopLower')&&slot!==googleRail)continue;
-  const p=state.placements[slot];if(!p.enabled)continue;
+  const p=state.placements[slot];
+  const provisionalSlots:AdSlot[]=['desktopLower','home','toolHorizontal','incontent'];
+  const canFill=p.provider==='own'&&p.campaignIds.length===0&&provisionalSlots.includes(slot);
+  if(!p.enabled&&!canFill)continue;
   if(p.provider==='adsense'){
    banners.push({slot,provider:'adsense',enabled:true,src:'',href:'',alt:'Publicidad',publisherId:p.publisherId,adSlotId:p.adSlotId});continue;
   }
   const today=new Date().toISOString().slice(0,10);
-  const group=p.campaignIds.map(id=>state.campaigns.find(c=>c.id===id)).filter((c):c is Campaign=>Boolean(c&&c.enabled&&c.src&&(!c.startsAt||c.startsAt<=today)&&(!c.endsAt||c.endsAt>=today)));
+  const eligible=(campaigns:Campaign[])=>campaigns.filter(c=>c.enabled&&c.src&&(!c.startsAt||c.startsAt<=today)&&(!c.endsAt||c.endsAt>=today));
+  const assigned=eligible(p.campaignIds.map(id=>state.campaigns.find(c=>c.id===id)).filter((c):c is Campaign=>Boolean(c)));
+  // G18 provisional coverage: reuse existing, currently active campaigns in
+  // empty owned placements, without inventing images or destination URLs.
+  // Never override an explicitly disabled placement or an AdSense placement.
+  const available=eligible(state.campaigns);
+  const provisional=assigned.length===0&&canFill&&available.length>0;
+  const offset=provisionalSlots.indexOf(slot);
+  const group=provisional?available.slice(offset%available.length).concat(available.slice(0,offset%available.length)):assigned;
   const items=group.map(c=>({slot,provider:p.provider,enabled:true,src:c.src,href:c.href,alt:c.alt||c.name,newTab:c.newTab!==false} as Banner));
   if(items.length){banners.push(items[0]);rotation[slot]={seconds:p.rotationSeconds,banners:items};}
  }

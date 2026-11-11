@@ -389,3 +389,94 @@ body:has(.fm-site-frame){padding-right:0!important}
  .fm-site-primary .section-heading h2{font-size:clamp(24px,7vw,34px);overflow-wrap:anywhere}
 }
 @media(prefers-reduced-motion:reduce){.fm-site-primary .radial-section *{scroll-behavior:auto}}
+
+
+/* G18 — Edge-to-edge advertising creative across every placement.
+   The creative itself is the ad surface: no decorative card chrome. */
+.first-party-ad:has(> a > img),
+.first-party-ad:has(> img){
+  position:relative;
+  display:block;
+  padding:0!important;
+  border:0!important;
+  border-radius:12px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  overflow:hidden;
+}
+.first-party-ad:has(> a > img)>.first-party-ad-label,
+.first-party-ad:has(> img)>.first-party-ad-label{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip-path:inset(50%)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+.first-party-ad:has(> a > img)>a,
+.first-party-ad:has(> img)>img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:none!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  overflow:hidden;
+}
+.first-party-ad:has(> a > img)>a>img,
+.first-party-ad:has(> img)>img{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  object-fit:cover!important;
+  object-position:center;
+}
+.fm-site-rail .first-party-ad:has(img){
+  aspect-ratio:3/4;
+  height:auto!important;
+  max-height:none!important;
+}
+.fm-site-rail .first-party-ad:has(img)>a{max-height:none!important; height:100%!important;}
+.fm-site-primary .ad-placement .first-party-ad:has(img),
+.fm-site-primary .fm-tool-horizontal-ad .first-party-ad:has(img),
+.fm-site-primary .fm-home-horizontal-ad .first-party-ad:has(img){
+  aspect-ratio:970/160;
+  max-width:100%;
+}
+.first-party-ad:has(img)>.fm-ad-rotation{
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  z-index:1;
+  margin:0!important;
+  padding:4px 7px;
+  border-radius:6px;
+  background:rgba(0,0,0,.55);
+  color:#fff;
+  font-size:10px;
+}
+@media(max-width:800px){
+  .fm-global-mobile-ad .first-party-ad:has(img){
+    width:min(100%,470px);
+    height:88px!important;
+    max-height:88px!important;
+    border-radius:12px 12px 0 0!important;
+  }
+  .fm-global-mobile-ad .first-party-ad:has(img)>a,
+  .fm-global-mobile-ad .first-party-ad:has(img)>a>img{
+    height:88px!important;
+    max-height:none!important;
+  }
+  .fm-global-mobile-ad .fm-mobile-ad-close{z-index:3;background:rgba(10,21,40,.85)}
+}
