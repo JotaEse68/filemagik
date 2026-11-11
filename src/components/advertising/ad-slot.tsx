@@ -5,14 +5,30 @@ import type {AdSlot as Slot,Banner,PublicAds} from '@/lib/advertising/config';
 import AdsenseSlot from './adsense-slot';
 type AdsResponse=PublicAds&{rotation?:Partial<Record<Slot,{seconds:number;banners:Banner[]}>>;configured?:boolean};
 const initial:AdsResponse={enabled:false,banners:[],configured:false};
+// The same page can mount ten placements. Fetch a single sanitized public
+// configuration per short TTL, coalescing simultaneous mounts.
+let cachedAds:{value:AdsResponse;expires:number}|null=null;
+let pendingAds:Promise<AdsResponse>|null=null;
+function getPublicAds():Promise<AdsResponse>{
+ if(cachedAds&&Date.now()<cachedAds.expires)return Promise.resolve(cachedAds.value);
+ if(!pendingAds)pendingAds=fetch('/api/advertising',{cache:'no-store'})
+  .then(async response=>{
+   if(!response.ok)throw new Error('Publicidad temporalmente no disponible');
+   const data=await response.json() as AdsResponse;
+   if(typeof data.enabled!=='boolean'||!Array.isArray(data.banners))throw new Error('Publicidad inválida');
+   cachedAds={value:data,expires:Date.now()+15000};
+   return data;
+  }).finally(()=>{pendingAds=null;});
+ return pendingAds;
+}
 export default function AdSlot({slot,label}:{slot:Slot;label:string}){
  const pathname=usePathname();
  const [ads,setAds]=useState<AdsResponse>(initial),[loaded,setLoaded]=useState(false),[index,setIndex]=useState(0),[dismissed,setDismissed]=useState(false);
  useEffect(()=>{if(slot==='mobile')setDismissed(sessionStorage.getItem('filemagik-mobile-ad-closed')==='1');},[slot]);
  useEffect(()=>{
   let active=true;
-  fetch('/api/advertising',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject())
-   .then((config:AdsResponse)=>{if(active&&typeof config.enabled==='boolean'&&Array.isArray(config.banners))setAds(config);})
+  getPublicAds()
+   .then(config=>{if(active)setAds(config);})
    .catch(()=>{}).finally(()=>{if(active)setLoaded(true);});
   return()=>{active=false};
  },[]);
