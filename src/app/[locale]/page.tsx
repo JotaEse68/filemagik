@@ -10,6 +10,7 @@ export default async function HomeLocale({params}:{params:Promise<{locale:string
 
 <section className="section tools-home-section" id="tools"><div className="container"><div className="section-heading"><div><span className="eyebrow-line">FILEMAGIK TOOLBOX</span><h2>{d.popular}</h2></div><p>{d.heroSub}</p></div><ToolExplorer locale={locale}/></div></section>
 
+<div className="container fm-tool-horizontal-ad fm-home-lower-ad"><AdSlot slot="incontent" label="Publicidad inferior" /></div>
 <section className="section" id="why" style={{background:'#0d1325'}}><div className="container"><div className="section-heading"><div><span className="eyebrow-line">WHY FILEMAGIK</span><h2>{d.featuresTitle}</h2></div></div><div className="feature-row"><div className="feature-card"><LockKeyhole size={27}/><h3>{d.privacy}</h3><p>{d.features[0]}</p></div><div className="feature-card"><Zap size={27}/><h3>{d.fast}</h3><p>{d.features[1]}</p></div><div className="feature-card"><Sparkles size={27}/><h3>{d.free}</h3><p>{d.features[2]}</p></div></div></div></section>
 <section className="section" id="how"><div className="container"><div className="section-heading"><div><span className="eyebrow-line">SIMPLE BY DESIGN</span><h2>{d.howTitle}</h2></div></div><div className="steps">{d.howSteps.map((s,i)=><div className="step" key={s}><strong>0{i+1}</strong><h3>{s}</h3></div>)}</div></div></section>
 </>}
