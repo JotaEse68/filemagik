@@ -242,12 +242,6 @@ def replace_pdf_text(data:bytes,page_index:int,original:str,replacement:str)->by
         raise HTTPException(400,"Text must be changed and may not contain controls")
     if unicodedata.normalize("NFC",original)!=original or unicodedata.normalize("NFC",replacement)!=replacement:
         raise HTTPException(400,"Use normalized characters rather than combining marks")
-    try:
-        # WinAnsi Type1 font encodes accented Latin characters in Windows-1252.
-        replacement_bytes=replacement.encode("cp1252",errors="strict")
-        original.encode("cp1252",errors="strict")
-    except UnicodeEncodeError:
-        raise HTTPException(422,"PDF standard fonts cannot encode the requested characters")
     reader=inspect_pdf(data)
     if b"/ByteRange" in data or reader.get_fields() or any("/Annots" in p for p in reader.pages):
         raise HTTPException(422,"Signed documents, PDF forms and annotations require a separate editor")
