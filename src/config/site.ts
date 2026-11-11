@@ -1,7 +1,7 @@
 export const locales=['en','es','pt','fr'] as const;
 export type Locale=typeof locales[number];
 export const defaultLocale:Locale='en';
-export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://filemagik.vercel.app').replace(/\/$/,'');
+export const siteUrl=(process.env.NEXT_PUBLIC_SITE_URL??'https://www.filemagik.com').replace(/\/$/,'');
 export const isLocale=(s:string):s is Locale=>locales.includes(s as Locale);
 export const tools=[
  {slug:'server-heic-to-png',from:'HEIC/HEIF',to:'Server PNG',kind:'image',accept:'.heic,.heif,image/heic,image/heif'},
