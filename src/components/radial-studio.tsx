@@ -3,7 +3,8 @@ import Link from 'next/link';
 import {useState} from 'react';
 import type {CSSProperties} from 'react';
 import {FileText,Image as ImageIcon,FileSpreadsheet,ScanText,FolderArchive,Files,ArrowUpRight,Layers2,Scissors,Merge,RotateCw,FileDown,Stamp,Minimize2,BookOpen,Search} from 'lucide-react';
-import type {Locale} from '@/config/site';
+import type {Locale,ToolSlug} from '@/config/site';
+import {getConversionBenefit} from '@/lib/conversion-benefits';
 
 const sections=['pdf','images','office','data','ocr','archives'] as const;
 type Section=typeof sections[number];
@@ -31,6 +32,13 @@ const actionNames:Record<Locale,Partial<Record<string,string>>>={
  en:{'pdf-to-word-text':'PDF → WORD TEXT','compress-pdf-lossless':'OPTIMIZE PDF','ocr-pdf-searchable':'SEARCHABLE PDF','word-to-basic-pdf':'WORD → BASIC PDF'}
 };
 
+const categoryExplanations:Record<Locale,Record<Section,string>>={
+ es:{pdf:'Documentos que quieres unir, dividir, comprimir o modificar.',images:'Fotos e imágenes para convertir, juntar o reducir.',office:'Archivos Word y documentos de trabajo.',data:'Tablas de Excel y datos para otros programas.',ocr:'Convierte texto de una foto o PDF escaneado en texto que puedes buscar o copiar.',archives:'Archivos ZIP para comprimir, abrir o agrupar documentos.'},
+ en:{pdf:'Documents you want to merge, split, compress or edit.',images:'Photos and images to convert, combine or reduce.',office:'Word files and office documents.',data:'Excel spreadsheets and data for other programs.',ocr:'Make text in a photo or scanned PDF searchable or copyable.',archives:'ZIP archives to bundle, unpack or organize files.'},
+ pt:{pdf:'Documentos para juntar, dividir, compactar ou editar.',images:'Fotos e imagens para converter, juntar ou reduzir.',office:'Documentos Word e arquivos de escritório.',data:'Planilhas Excel e dados para outros programas.',ocr:'Transforme texto de uma imagem ou PDF digitalizado em texto pesquisável ou copiável.',archives:'Arquivos ZIP para compactar, abrir ou agrupar documentos.'},
+ fr:{pdf:'Documents à fusionner, séparer, compresser ou modifier.',images:'Photos et images à convertir, réunir ou réduire.',office:'Fichiers Word et documents de bureau.',data:'Tableurs Excel et données pour d’autres logiciels.',ocr:'Rendez le texte d’une image ou d’un PDF numérisé recherchable et copiable.',archives:'Archives ZIP à compresser, ouvrir ou regrouper.'}
+};
+const previewWords={es:{will:'Esto hará',out:'Resultado',go:'Abrir esta herramienta'},en:{will:'What it does',out:'Result',go:'Open this tool'},pt:{will:'O que faz',out:'Resultado',go:'Abrir ferramenta'},fr:{will:'Ce que fait cet outil',out:'Résultat',go:'Ouvrir cet outil'}} as const;
 const symbols={cut:Scissors,merge:Merge,layers:Layers2,shrink:Minimize2,rotate:RotateCw,file:FileDown,scan:Search} as const;
 
 export default function RadialStudio({locale}:{locale:Locale}){
@@ -39,12 +47,14 @@ export default function RadialStudio({locale}:{locale:Locale}){
  const [showHelp,setShowHelp]=useState(false);
  const [hovered,setHovered]=useState<string|null>(null);
  const t=words[locale];
+ const preview=previewWords[locale];
  const ring=actions[selected];
  const fallback=ring.find(a=>a.slug===hovered)??ring[0];
  return <section className="radial-studio" aria-label={t.intro}>
   <div className="radial-top"><div><span className="radial-kicker">FILEMAGIK · QUICK STUDIO</span><h2>{t.intro}</h2><p>{t.hint}</p></div><Link href={`/${locale}/tools`} className="radial-all-link">{t.explore}<ArrowUpRight size={16}/></Link></div>
   <div className="radial-guide" aria-label={t.help}>{t.steps.map((step,i)=><div className={'radial-guide-step '+(i===0&&!hasChosen?'guide-current':i===1&&hasChosen?'guide-current':'')} key={step}><strong>{i+1}</strong><span>{step}</span></div>)}<button type="button" className="radial-help-button" aria-expanded={showHelp} onClick={()=>setShowHelp(v=>!v)}>{t.help}</button></div>
   {showHelp&&<p role="status" className="radial-help-text">{t.hint}</p>}
+  <p className="radial-category-explanation" aria-live="polite">{categoryExplanations[locale][selected]}</p>
   <div className="radial-wheels">
    <div className={'radial-column '+(!hasChosen?'radial-start-column':'')}><h3><span className="radial-step">01</span>{t.title}<small className="radial-hint-label">{hasChosen?`${t.active}: ${t[selected]}`:t.start}</small></h3>
     <div className="radial-wheel radial-category-wheel" role="group" aria-label={t.title}>
@@ -64,6 +74,14 @@ export default function RadialStudio({locale}:{locale:Locale}){
      <Link href={`/${locale}/${fallback.slug}`} className="wheel-center wheel-action-center" aria-label={actionNames[locale][fallback.slug]??fallback.label}><ArrowUpRight size={19}/><span>{actionNames[locale][fallback.slug]??fallback.label}</span></Link>
     </div>
    </div>
+  </div>
+  <div className="radial-action-explainer" aria-live="polite">
+   <div><span className="radial-explainer-kicker">{preview.will}</span>
+    <strong>{actionNames[locale][fallback.slug]??fallback.label}</strong>
+    <p>{getConversionBenefit(fallback.slug as ToolSlug,locale)}</p>
+    <small>{preview.out}: {fallback.slug.replaceAll('-',' ')}</small>
+   </div>
+   <Link className="btn btn-primary" href={`/${locale}/${fallback.slug}`}>{preview.go}<ArrowUpRight size={17}/></Link>
   </div>
   <div className="radial-shortcuts"><span>{t.featured}</span><Link href={`/${locale}/split-pdf-by-count`}><Scissors size={17}/>{t.split}</Link><Link href={`/${locale}/merge-pdf`}><Merge size={17}/>{t.merge}</Link><Link href={`/${locale}/image-cleanup`}><ImageIcon size={17}/>{t.remove}</Link></div>
  </section>;
