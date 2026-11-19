@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {createHmac} from 'node:crypto';
+import {MAX_PROFESSIONAL_PDF_UPLOAD_BYTES} from '@/lib/pdf-engine-limits';
 
 export const runtime='nodejs';
 const supported:Record<string,readonly string[]>={
@@ -7,7 +8,7 @@ const supported:Record<string,readonly string[]>={
  'office-to-pdf':['.docx','.xlsx','.pptx','.odt','.ods','.odp'],
  'optimize-pdf':['.pdf'],'redact-pdf':['.pdf'],'ocr-pdf':['.pdf'],'replace-pdf-image':['.pdf'],'replace-pdf-text':['.pdf'],'unlock-pdf':['.pdf'],
 };
-const maxBytes=3*1024*1024;
+const maxBytes=MAX_PROFESSIONAL_PDF_UPLOAD_BYTES;
 const maxResponseBytes=22*1024*1024;
 const safeExt=(name:string)=>name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0]||'';
 const allowedMime:Record<string,string>={

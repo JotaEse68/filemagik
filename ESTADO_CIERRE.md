@@ -14,7 +14,7 @@ Objetivo: aplicación gratuita con anuncios propios; anuncios de pago al final.
 | Bloque | Estado | Condición de cierre |
 | --- | --- | --- |
 | FM-01 Impacto y fiabilidad del release | ◐ EN DESARROLLO | Mapa, CI, dependencias fijas, Playwright, política no-merge e inspección del SHA publicados |
-| FM-02 PDF Studio y Gotenberg | ◇ IMPLEMENTADO | Matriz PDF/Office real, OCR, cifrado, formularios, fidelidad y descargas |
+| FM-02 PDF Studio y Gotenberg | ◐ EN DESARROLLO | Corregir disponibilidad y límite remoto en editor; validar fidelidad PDF/Office, OCR, formularios y descargas |
 | FM-03 Límites y protección | ◇ IMPLEMENTADO | Códigos 401/403/413/422/429/503, límites de carga, cuota tras reinicios |
 | FM-04 Administración y publicidad propia | ◇ IMPLEMENTADO | Login/recovery real, Blob, campañas/rotación/ubicaciones móvil y PC |
 | FM-05 AdSense/recompensados | ☐ PENDIENTE | Postergado hasta completar toda la app; CMP, SSV y aprobación |
@@ -36,3 +36,9 @@ Antes de tocar un módulo modificar `docs/IMPACTO_CAMBIOS.md`, citar consumidore
 - Sobre `a79823890`: Quality y Playwright SUCCESS; job de bloqueo de dependencias generado y ejecutado correctamente; lockfile incorporado en `64a10916f`.
 - Ahora Quality y Browser usan `npm ci` con lockfile y caché npm; workflow temporal de creación de lockfile retirado. **No marcar FM-01 cerrado** hasta nueva CI del HEAD final y comprobación que no se publicó a Vercel.
 - No mezclar el cierre de ingeniería de CI con certificación de Railway / producción: estos siguen dentro de FM-02 a FM-06.
+
+## FM-02 — Corrección de editor (19/11/2026)
+- GET de capacidad profesional en editor corregido para pedir `operation=redact-pdf` (antes consultaba ruta sin operación y quedaba bloqueado).
+- Límite de PDF remoto compartido con proxy: 3 MiB. Archivo local mayor conserva anotaciones; redacción/sustitución remota bloqueadas con explicación.
+- Tests Playwright añadidos y mocks existentes actualizados al contrato con query string.
+- **No cerrado** hasta CI verde en el HEAD final y certificación POST con Turnstile/Gotenberg y descarga real después de la publicación agrupada.

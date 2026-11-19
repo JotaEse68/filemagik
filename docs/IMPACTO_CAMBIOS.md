@@ -18,3 +18,11 @@ Fecha 2026-11-19 · Base `main@c751546e98787e4ddfb5112e81bb33092598d1cd`.
 
 ### Política de cambios
 Cada PR con cambios de lógica debe actualizar esta matriz con rutas, componentes y servicio afectado, enumerar la prueba automatizada añadida, documentar rollback y solo entonces proponer el merge. Bloquear publicación si falla un test crítico.
+
+## FM-02 — editor PDF y motor profesional (19/11/2026)
+- Incidencia verificada: el editor consultaba `GET /api/pdf-engine` sin el parámetro `operation`, por lo que la API respondía `available:false`. La operación correcta es `redact-pdf`.
+- Archivos consumidores: `src/components/pdf-visual-editor.tsx`, `src/app/api/pdf-engine/route.ts`, `src/lib/pdf-engine-limits.ts`, y `e2e/pdf-g1.spec.ts`.
+- Servicios dependientes: la API Railway `/v1/jobs?operation=redact-pdf`, Gotenberg privado y cuotas persistentes. No se han modificado estos servicios.
+- Riesgo: el editor local admite archivos hasta 60 MB, pero el proxy profesional acepta 3 MiB; bloquear solo acciones remotas por tamaño, preservar edición local y mostrar aviso claro.
+- Tests: Playwright comprueba petición GET con operación, editor real en Chrome desktop/móvil, límites y pruebas existentes para 429, undo, redo y export. Docker PDF Engine sigue cubriendo el procesamiento real de Office/Redactar.
+- Rollback: revertir el commit en la rama. No publicar Railway ni habilitar anuncios de pago.

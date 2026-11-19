@@ -17,7 +17,7 @@ test('professional PDF status fails closed without explicit release flag',async(
 });
 
 test('visual PDF editor can select original text and offer a tracked replacement',async({page})=>{
- await page.route('**/api/pdf-engine',route=>route.fulfill({
+ await page.route('**/api/pdf-engine**',route=>route.fulfill({
   status:200,contentType:'application/json',
   body:JSON.stringify({available:true,challengeRequired:false,siteKey:null}),
  }));
@@ -39,7 +39,7 @@ test('visual PDF editor can select original text and offer a tracked replacement
 });
 
 test('undo removes both original-text redaction and replacement, redo restores them',async({page})=>{
- await page.route('**/api/pdf-engine',route=>route.fulfill({
+ await page.route('**/api/pdf-engine**',route=>route.fulfill({
   status:200,contentType:'application/json',
   body:JSON.stringify({available:true,challengeRequired:false,siteKey:null}),
  }));
@@ -82,4 +82,42 @@ test('rejected professional redaction does not download a visually faked PDF',as
  await expect(page.locator('.fm-pdf-visual p.error[role="alert"]')).toContainText('quota exceeded');
  expect(requested).toBe(true);
  expect(downloaded).toBe(false);
+});
+
+test('FM-02: editor solicita operación de redacción explícita al consultar disponibilidad',async({page})=>{
+ const operations:string[]=[];
+ await page.route('**/api/pdf-engine**',route=>{
+  const op=new URL(route.request().url()).searchParams.get('operation')||'';
+  operations.push(op);
+  return route.fulfill({status:200,contentType:'application/json',
+   body:JSON.stringify({available:op==='redact-pdf',challengeRequired:false,siteKey:null})});
+ });
+ await page.goto('/es/edit-pdf-visual');
+ await page.locator('input[type=file]').setInputFiles({
+  name:'source.pdf',mimeType:'application/pdf',buffer:await documentFixture(),
+ });
+ await expect(page.getByRole('button',{name:'Borrar contenido real'})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'Sustituir texto original'})).toBeEnabled();
+ expect(operations).toContain('redact-pdf');
+ expect(operations).not.toContain('');
+});
+
+test('FM-02: PDF grande mantiene anotaciones locales y bloquea borrado remoto',async({page})=>{
+ await page.route('**/api/pdf-engine**',route=>route.fulfill({
+  status:200,contentType:'application/json',
+  body:JSON.stringify({available:true,challengeRequired:false,siteKey:null}),
+ }));
+ const pdf=await PDFDocument.create();
+ pdf.addPage([595,842]);
+ pdf.setSubject('A'.repeat(3*1024*1024+8192));
+ const oversized=Buffer.from(await pdf.save({useObjectStreams:false}));
+ expect(oversized.length).toBeGreaterThan(3*1024*1024);
+ await page.goto('/es/edit-pdf-visual');
+ await page.locator('input[type=file]').setInputFiles({
+  name:'large.pdf',mimeType:'application/pdf',buffer:oversized,
+ });
+ await expect(page.getByRole('button',{name:'Borrar contenido real'})).toBeDisabled({timeout:30000});
+ await expect(page.getByRole('button',{name:'Sustituir texto original'})).toBeDisabled();
+ await expect(page.getByRole('button',{name:'Texto',exact:true})).toBeEnabled();
+ await expect(page.getByText(/motor profesional acepta PDF de hasta 3 MB/)).toBeVisible();
 });
