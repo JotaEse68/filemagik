@@ -18,7 +18,7 @@ Objetivo: aplicación gratuita con anuncios propios; anuncios de pago al final.
 | FM-03 Límites y protección | ◐ EN DESARROLLO | Probar cuotas persistentes, recuperación tras caídas, validación de configuración y respuestas limitadas, y certificar Railway real |
 | FM-04 Administración y publicidad propia | ◐ EN DESARROLLO | Corregir espacios desactivados, campañas solo URL, posiciones publicitarias y resultado; certificar login/recovery y guardado Blob real |
 | FM-05 AdSense/recompensados | ☐ PENDIENTE | Postergado hasta completar toda la app; CMP, SSV y aprobación |
-| FM-06 QA y cierre final | ☐ PENDIENTE | Responsive, legal/cookies, post-deploy, métricas y cierre |
+| FM-06 QA y cierre final | ◐ PREPARACIÓN | Preflight, QA última rama, estrategia Railway/Vercel, postdeploy con Turnstile, métricas, rollback y cierre |
 
 ## Hallazgos y bloqueos
 - `package-lock.json` v3 ya está versionado en la rama FM-01, generado en GitHub Actions con Node 22. El cierre exige que `npm ci`, lint, tipos, tests, build y Playwright estén verdes sobre el mismo HEAD y que el lock alcance main solo al fusionar la PR.
@@ -29,7 +29,7 @@ Objetivo: aplicación gratuita con anuncios propios; anuncios de pago al final.
 ## Regla permanente
 Antes de tocar un módulo modificar `docs/IMPACTO_CAMBIOS.md`, citar consumidores/rutas/servicios y pruebas. Probar con Node 22, Docker de Railway, Playwright UI real, descargar y abrir resultados. No fusionar con fallos críticos. Un único deploy agrupado tras QA, confirmar SHA de producción y smoke post-deploy, registrar fecha, commit, PR y evidencias; reabrir regresiones. Nunca marcar CERRADO sin ejecutar todas las pruebas.
 
-**Siguiente bloque:** terminar FM-01, después FM-02. No tocar anuncios de pago.
+**Siguiente bloque:** FM-06 release gate y publicación agrupada tras verificar bloques críticos. FM-05 queda para el final.
 
 ## QA FM-01 (actualizado 2026-11-19)
 - Sobre `0f2f5f5a2`: siete workflows SUCCESS, incluidos Quality, Playwright completo con tests de login real en localhost y motores PDF, imagen, media, archivos y seguridad F1. Las dos fallas iniciales del fixture de Playwright quedaron resueltas.
@@ -64,3 +64,10 @@ Antes de tocar un módulo modificar `docs/IMPACTO_CAMBIOS.md`, citar consumidore
 - Ampliación de QA FM-04: flujo de acceso real con credenciales sintéticas, publicación de campaña URL-only sobre API Blob simulada y logout; límite de 2 KiB en login. Guardado persistente real se certificará postdeploy.
 
 - Incidencia detectada en Playwright móvil: la lista de ubicaciones interceptaba el selector «Campaña activada». Reordenado el formulario para permitir activación táctil. Repetir QA antes de certificar.
+
+## FM-06 — Preparación real de release (19/11/2026)
+- PR #61 integra FM-01…FM-04 sin merge. SHA anterior QA de producto `899d18b1e5fa1c08af16db505954d91df30c8319`: Quality SUCCESS, F1 SUCCESS, PDF Docker/Gotenberg SUCCESS (107 pytest pasadas/1 omitida), Playwright SUCCESS (177 pasadas/1 omitida). Verificar CI del nuevo HEAD FM-06 antes de proceder.
+- Real: Vercel main/publicación `c751546e9`; Railway filemagik-pdf-api `b5f5b3a9`, Gotenberg online. Railway volumen `filemagik-quota-ledger` montado /data; patch staged con volúmenes adicionales pendiente, NO APLICAR.
+- Añadido `docs/FM06_RELEASE_PLAN.md` con puertas A/B/C y smoke de lectura pública `scripts/fm06-production-smoke.mjs` más tests unitarios. No se simula Turnstile ni operaciones reales de administración.
+- Optimizado `pdf-engine.yml`: una única compilación Docker de producción en el job que también ejecuta pytest y Gotenberg; job Docker duplicado eliminado, concurrencia con cancelación de ejecuciones obsoletas. No se eliminan tests críticos.
+- **Sin cerrar:** versión Railway en ejecución anterior a FM-03, comprobar que despliegue del release no acepta patch staged; E2E humano real con Turnstile/descargas; guardado Blob real y recuperación/carga; publicación única Vercel y comprobación de SHA.

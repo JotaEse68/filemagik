@@ -19,3 +19,10 @@ Fecha: 2026-11-19. Solo nombres de variables, nunca secretos. Planes y costes: n
 | [CDN de creativo](https://grabaliadl.b-cdn.net/) | Archivo de anuncio GrabaliA | Imagen usada en cinco ubicaciones | URL pública comprobada; titularidad y coste no revisados | No verificado | No modificar otra aplicación |
 
 Actualizar tras cada bloque: dominio, proyecto, plan/coste real, variables por nombre, estado, conexiones, log y URL de administración. No crear servicios Railway nuevos.
+
+## Verificación FM-06 (19/11/2026)
+- Vercel `filemagik`: último deployment production READY con `main=c751546e9`, Next.js Node 22; `get_project` no demuestra el estado de los disparadores automáticos de Git, comprobarlo antes de fusionar.
+- Railway servicio PDF: source repo `JotaEse68/filemagik`, rama main, root `/pdf-engine`, Dockerfile, predeploy `python /app/predeploy_smoke.py`, healthcheck `/readyz`, 1 réplica `iad`, commit vivo `b5f5b3a9` (11/11/2026). No incorpora todavía FM-03.
+- Railway cambios pendientes: patch `afebc1c1-2a88-42ff-a905-5546829efffb` STAGED con 4 modificaciones. El servicio PDF es LIVE sin cambios directos staged; no confirmar el patch del entorno, conservar volumen único de 450 MB en /data.
+- Métrica Railway PDF API últimas 24h (son **mediciones en reposo, no estrés**): CPU media 0,0042 vCPU, memoria media aprox. 165 MB, disco 30 MB. El máximo de memoria bajo carga y el costo real aún no certificados.
+- Verificador read-only reutilizable: `node scripts/fm06-production-smoke.mjs https://www.filemagik.com https://filemagik-pdf-api-production.up.railway.app`; nunca envía archivos ni credenciales.

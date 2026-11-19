@@ -48,3 +48,8 @@ Cada PR con cambios de lógica debe actualizar esta matriz con rutas, componente
 - **Acceso propietario:** `src/app/api/admin/local-login/route.ts` exige JSON y tamaño máximo 2 KiB antes de verificar la contraseña. `e2e/fm04-ads-release.spec.ts` autentica al propietario con contraseña CI sintética y comprueba UI de campaña URL-only, PUT de configuración simulado y cierre de sesión. Persistencia Vercel Blob real queda pendiente del release.
 
 - **QA móvil real:** Playwright detectó que el listado de ubicaciones interceptaba el toque de la casilla «Campaña activada» en el superadmin móvil. Se adelanta la fila de acciones antes del listado largo y se separa mediante grid/espaciado y controles táctiles de 45 px. Mantener prueba funcional móvil sin `force:true`.
+
+## FM-06 — Gate y optimización CI (19/11/2026)
+- Módulos: `scripts/fm06-production-smoke.mjs` solo lectura GET pública y admin anónimo (401); prueba simulada `tests/fm06-production-smoke.test.mjs`. No cambia rutas de la aplicación ni APIs privadas.
+- Impacto de CI: `.github/workflows/pdf-engine.yml` elimina trabajo Docker build duplicado pero **mantiene** Docker producción, Python pytest, smoke de Gotenberg y predeploy con el mismo contenedor. Añade cancelación de ejecuciones obsoletas y tope 25 min. Repetir workflow real antes de cerrar.
+- Documentación: `docs/FM06_RELEASE_PLAN.md` (gates A/B/C), `ESTADO_CIERRE.md`, `INFRAESTRUCTURA_SERVICIOS.md` y rollback. Riesgo productivo: ninguno hasta el merge; el script no sube archivos ni activa anuncios.
