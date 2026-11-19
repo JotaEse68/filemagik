@@ -121,3 +121,21 @@ test('FM-02: PDF grande mantiene anotaciones locales y bloquea borrado remoto',a
  await expect(page.getByRole('button',{name:'Texto',exact:true})).toBeEnabled();
  await expect(page.getByText(/motor profesional acepta PDF de hasta 3 MB/)).toBeVisible();
 });
+
+test('FM-02: procesamiento profesional no envía archivos que exceden 3 MiB',async({page})=>{
+ let posts=0;
+ await page.route('**/api/pdf-engine**',route=>{
+  if(route.request().method()==='POST'){posts++;return route.fulfill({status:200,body:'not-used'});}
+  return route.fulfill({status:200,contentType:'application/json',
+   body:JSON.stringify({available:true,challengeRequired:false,siteKey:null})});
+ });
+ await page.goto('/es/word-to-layout-pdf');
+ await page.locator('input[type=file]').first().setInputFiles({
+  name:'oversize.docx',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  buffer:Buffer.alloc(3*1024*1024+1),
+ });
+ await expect(page.getByText(/supera los 3 MB permitidos/)).toBeVisible();
+ await page.getByRole('button',{name:/convertir ahora/i}).click();
+ await expect(page.locator('p.error[role="alert"]')).toContainText('3 MB');
+ expect(posts).toBe(0);
+});

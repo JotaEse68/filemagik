@@ -26,3 +26,5 @@ Cada PR con cambios de lógica debe actualizar esta matriz con rutas, componente
 - Riesgo: el editor local admite archivos hasta 60 MB, pero el proxy profesional acepta 3 MiB; bloquear solo acciones remotas por tamaño, preservar edición local y mostrar aviso claro.
 - Tests: Playwright comprueba petición GET con operación, editor real en Chrome desktop/móvil, límites y pruebas existentes para 429, undo, redo y export. Docker PDF Engine sigue cubriendo el procesamiento real de Office/Redactar.
 - Rollback: revertir el commit en la rama. No publicar Railway ni habilitar anuncios de pago.
+
+- **Límite profesional transversal:** `src/components/converter.tsx` y `src/components/professional-pdf-option.tsx` comparten la constante de 3 MiB para rechazar archivos e imágenes de sustitución sobredimensionados **antes** del POST remoto. Conversión local disponible cuando la herramienta lo admite. Prueba Playwright de formulario y de ausencia de solicitud a Railway.

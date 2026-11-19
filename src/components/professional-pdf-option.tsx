@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
+import {MAX_PROFESSIONAL_PDF_UPLOAD_BYTES} from '@/lib/pdf-engine-limits';
 
 declare global {
  interface Window { turnstile?:{
@@ -23,6 +24,8 @@ export function isProfessionalSlug(slug:string):slug is ProfessionalSlug{
 export async function runProfessionalConversion(slug:ProfessionalSlug,file:File,token:string,
  quality:'lossless'|'balanced'|'maximum'='lossless',
  options:{replacement?:File;page?:number;imageIndex?:number;sourceText?:string;newText?:string;password?:string}={}){
+ if(file.size>MAX_PROFESSIONAL_PDF_UPLOAD_BYTES)throw new Error('El motor profesional admite archivos de hasta 3 MB. Selecciona procesamiento local si está disponible.');
+ if(options.replacement&&options.replacement.size>MAX_PROFESSIONAL_PDF_UPLOAD_BYTES)throw new Error('La imagen de sustitución supera el límite de 3 MB.');
  const form=new FormData();
  form.set('file',file,file.name);form.set('turnstile',token);
  if(slug==='unlock-pdf-professional')form.set('pdf_password',options.password||'');

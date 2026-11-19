@@ -42,3 +42,5 @@ Antes de tocar un módulo modificar `docs/IMPACTO_CAMBIOS.md`, citar consumidore
 - Límite de PDF remoto compartido con proxy: 3 MiB. Archivo local mayor conserva anotaciones; redacción/sustitución remota bloqueadas con explicación.
 - Tests Playwright añadidos y mocks existentes actualizados al contrato con query string.
 - **No cerrado** hasta CI verde en el HEAD final y certificación POST con Turnstile/Gotenberg y descarga real después de la publicación agrupada.
+
+- Conversores profesionales: validación previa de archivos >3 MiB, aviso en el formulario y ausencia de llamadas remotas innecesarias, con prueba `e2e/pdf-g1.spec.ts`.
