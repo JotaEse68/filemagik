@@ -1,4 +1,7 @@
 name: F1 production security smoke
+concurrency:
+  group: f1-production-security-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 on:
   pull_request:
     branches: [main]
