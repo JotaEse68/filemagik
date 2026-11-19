@@ -71,3 +71,19 @@ test('FM-06 refuses insecure/public URLs before probing',async()=>{
  await assert.rejects(runProductionSmoke({site:'http://filemagik.example',fetcher:fakeFetch}),/HTTPS/);
  await assert.rejects(runProductionSmoke({site:'https://user:pass@filemagik.example/',fetcher:fakeFetch}),/HTTPS/);
 });
+
+test('FM-06 cancels unconsumed HTML and Railway response bodies',async()=>{
+ let cancelled=0;
+ const {fakeFetch}=simulated();
+ const withBody=async(url,options)=>{
+  const path=new URL(url).pathname;
+  if(path==='/es'||path==='/readyz'){
+   const body=new ReadableStream({start(controller){controller.enqueue(new Uint8Array([1]));},cancel(){cancelled++;}});
+   return new Response(body,{headers:{'content-type':path==='/es'?'text/html':'application/json'}});
+  }
+  return fakeFetch(url,options);
+ };
+ const result=await runProductionSmoke({site:base,railway:'https://railway.example',fetcher:withBody});
+ assert.equal(result.ok,true,JSON.stringify(result.checks));
+ assert.equal(cancelled,2);
+});

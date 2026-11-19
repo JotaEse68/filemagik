@@ -53,3 +53,5 @@ Cada PR con cambios de lógica debe actualizar esta matriz con rutas, componente
 - Módulos: `scripts/fm06-production-smoke.mjs` solo lectura GET pública y admin anónimo (401); prueba simulada `tests/fm06-production-smoke.test.mjs`. No cambia rutas de la aplicación ni APIs privadas.
 - Impacto de CI: `.github/workflows/pdf-engine.yml` elimina trabajo Docker build duplicado pero **mantiene** Docker producción, Python pytest, smoke de Gotenberg y predeploy con el mismo contenedor. Añade cancelación de ejecuciones obsoletas y tope 25 min. Repetir workflow real antes de cerrar.
 - Documentación: `docs/FM06_RELEASE_PLAN.md` (gates A/B/C), `ESTADO_CIERRE.md`, `INFRAESTRUCTURA_SERVICIOS.md` y rollback. Riesgo productivo: ninguno hasta el merge; el script no sube archivos ni activa anuncios.
+
+- FM-06 verificador: las respuestas HTML y health HTTP se cancelan sin descargarlas completas tras leer cabeceras, para no dejar conexiones colgadas ni consumir ancho de banda; prueba de cancelación sobre streams simulado.

@@ -46,7 +46,9 @@ export async function runProductionSmoke({site,railway=null,fetcher=fetch}){
   await check('HTML '+route,async()=>{
    const response=await get(root,route);
    if(response.status!==200)throw Error('HTTP '+response.status);
-   if(!(response.headers.get('content-type')||'').includes('text/html'))throw Error('Respuesta no HTML');
+   try{
+    if(!(response.headers.get('content-type')||'').includes('text/html'))throw Error('Respuesta no HTML');
+   }finally{await response.body?.cancel().catch(()=>{});}
   });
  }
  await check('Admin campaigns fail closed (401)',async()=>{
@@ -86,7 +88,9 @@ export async function runProductionSmoke({site,railway=null,fetcher=fetch}){
  });
  if(backend)await check('Railway PDF API /readyz',async()=>{
   const response=await get(backend,'/readyz');
-  if(response.status!==200)throw Error('Railway API/Gotenberg no READY: HTTP '+response.status);
+  try{
+   if(response.status!==200)throw Error('Railway API/Gotenberg no READY: HTTP '+response.status);
+  }finally{await response.body?.cancel().catch(()=>{});}
  });
  return {ok:checks.every(c=>c.ok),checks};
 }
