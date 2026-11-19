@@ -16,7 +16,7 @@ Objetivo: aplicación gratuita con anuncios propios; anuncios de pago al final.
 | FM-01 Impacto y fiabilidad del release | ◐ EN DESARROLLO | Mapa, CI, dependencias fijas, Playwright, política no-merge e inspección del SHA publicados |
 | FM-02 PDF Studio y Gotenberg | ◐ EN DESARROLLO | Corregir disponibilidad y límite remoto en editor; validar fidelidad PDF/Office, OCR, formularios y descargas |
 | FM-03 Límites y protección | ◐ EN DESARROLLO | Probar cuotas persistentes, recuperación tras caídas, validación de configuración y respuestas limitadas, y certificar Railway real |
-| FM-04 Administración y publicidad propia | ◇ IMPLEMENTADO | Login/recovery real, Blob, campañas/rotación/ubicaciones móvil y PC |
+| FM-04 Administración y publicidad propia | ◐ EN DESARROLLO | Corregir espacios desactivados, campañas solo URL, posiciones publicitarias y resultado; certificar login/recovery y guardado Blob real |
 | FM-05 AdSense/recompensados | ☐ PENDIENTE | Postergado hasta completar toda la app; CMP, SSV y aprobación |
 | FM-06 QA y cierre final | ☐ PENDIENTE | Responsive, legal/cookies, post-deploy, métricas y cierre |
 
@@ -52,3 +52,11 @@ Antes de tocar un módulo modificar `docs/IMPACTO_CAMBIOS.md`, citar consumidore
 - Las rutas Vercel de PDF, worker y heredada consumen respuestas mediante streaming acotado con cancelación al sobrepasar 22/12/4 MiB, en lugar de cargar datos ilimitados antes de validar.
 - Pruebas añadidas: base SQLite corrupta, cuotas por motor y persistencia tras reconexión, reservas huérfanas de 120/180 segundos, parámetros inválidos, salida excesiva, stream roto.
 - **PENDIENTE de cierre:** CI verde del HEAD FM-03, reinicio/stress controlado de Railway y verificación de errores/descargas por el dominio final con Turnstile. No fusionar ni desplegar intermedio.
+
+## FM-04 — Superadmin y anuncios propios
+- Corregido autollenado provisional que ignoraba desactivación explícita de un espacio.
+- Admitidas campañas propias activas de tipo URL HTTPS sin imagen; se muestra tarjeta de texto enlazada con rel patrocinado, sin inventar creatividades.
+- Conectadas las ubicaciones opcionales junto a Smart Drop y junto al conversor, manteniendo dos banners independientes del rail y ocultando el lateral extra en móvil.
+- El anuncio `result` solo se monta tras obtener resultado de conversión, no en la página desde el inicio.
+- Fallback del API público: si Blob está configurado y falla la lectura, no muestra anuncios alternativos inesperados; conserva el modo standalone para instalaciones sin Blob.
+- Pruebas unitarias y Playwright añadidas; **pendientes** CI último HEAD, escritura real Blob en producción, recuperación de propietario y cambios en la web tras publicar. Ads pagados fuera de FM-04.

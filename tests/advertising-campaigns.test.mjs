@@ -93,3 +93,37 @@ test('G18 does not show disabled assigned placements or inactive campaigns',()=>
  data.campaigns[0].startsAt='2099-01-01';
  assert.equal(publicAds(validateAds(data)).banners.some(x=>x.slot==='home'),false);
 });
+
+
+test('FM-04 accepts URL-only campaigns, including scheduled rotation',()=>{
+ const state=emptyAds();
+ state.campaigns=[campaign({id:'link-a',name:'Servicio principal',src:'',href:'https://example.com/servicio',alt:''}),
+  campaign({id:'link-b',name:'Segundo enlace',src:'',href:'https://example.com/otro',alt:''})];
+ state.placements.toolHorizontal.campaignIds=['link-a','link-b'];
+ const view=publicAds(validateAds(state));
+ const selected=view.rotation.toolHorizontal.banners;
+ assert.equal(selected.length,2);
+ assert.equal(selected[0].src,'');
+ assert.equal(selected[0].href,'https://example.com/servicio');
+ assert.equal(selected[0].alt,'Servicio principal');
+});
+test('FM-04 rejects empty enabled campaigns and non HTTPS URLs',()=>{
+ const state=emptyAds();
+ state.campaigns=[campaign({src:'',href:''})];
+ assert.throws(()=>validateAds(state),/imagen o una URL/);
+ state.campaigns[0].href='http://example.com';
+ assert.throws(()=>validateAds(state),/HTTPS/);
+});
+test('FM-04 disabled empty placements remain hidden despite provisional filling',()=>{
+ const state=emptyAds();
+ state.campaigns=[campaign()];
+ for(const slot of ['desktopLower','home','toolHorizontal','incontent']){
+  state.placements[slot].enabled=false;
+  state.placements[slot].campaignIds=[];
+ }
+ const view=publicAds(validateAds(state));
+ for(const slot of ['desktopLower','home','toolHorizontal','incontent']){
+  assert.equal(view.banners.some(a=>a.slot===slot),false);
+  assert.equal(view.rotation[slot],undefined);
+ }
+});
