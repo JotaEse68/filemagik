@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {createHmac} from 'node:crypto';
+import {readLimitedUpstream} from '@/lib/limited-upstream-response';
 
 export const runtime='nodejs';
 type Engine='image'|'media'|'archive'|'batch';
@@ -139,8 +140,8 @@ export async function POST(request:NextRequest){
   const [status,error]=map[response.status]||[502,'Conversion failed'];
   return json(error,status);
  }
- const output=await response.arrayBuffer();
- if(output.byteLength<8||output.byteLength>12*MiB)return json('Output exceeds secure response limits',502);
+ const output=await readLimitedUpstream(response,12*MiB);
+ if(!output||output.byteLength<8)return json('Output exceeds secure response limits',502);
  const header=new Uint8Array(output.slice(0,16));
  const ascii=new TextDecoder().decode(header);
  const valid=op.mime==='application/zip'?ascii.startsWith('PK'):op.mime==='image/png'?header[0]===137&&ascii.slice(1,4)==='PNG':

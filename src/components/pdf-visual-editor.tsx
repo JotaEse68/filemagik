@@ -4,6 +4,7 @@ import {Download,Undo2,Redo2,Trash2,Type,Highlighter,Square,ChevronLeft,ChevronR
 import type {Locale} from '@/config/site';
 import {exportVisualPdf,type VisualAnnotation} from '@/lib/pdf-visual-export';
 import ProfessionalPdfOption from '@/components/professional-pdf-option';
+import {MAX_PROFESSIONAL_PDF_UPLOAD_BYTES} from '@/lib/pdf-engine-limits';
 
 type Tool='text'|'highlight'|'rectangle'|'form-text'|'form-checkbox'|'redact'|'replace';
 type NativeText={id:string;text:string;x:number;y:number;width:number;height:number;page:number;rotated:boolean};
@@ -25,7 +26,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  const [challengeRequired,setChallengeRequired]=useState(false);
  const [challengeToken,setChallengeToken]=useState(''),[challengeVersion,setChallengeVersion]=useState(0);
  useEffect(()=>{let active=true;
-  void fetch('/api/pdf-engine',{cache:'no-store'}).then(r=>r.json()).then((v:{available?:boolean;siteKey?:string|null;challengeRequired?:boolean})=>{
+  void fetch('/api/pdf-engine?operation=redact-pdf',{cache:'no-store'}).then(r=>r.json()).then((v:{available?:boolean;siteKey?:string|null;challengeRequired?:boolean})=>{
    if(active&&v.available===true){setEngineReady(true);setSiteKey(v.siteKey||'');setChallengeRequired(v.challengeRequired===true);}
   }).catch(()=>{});
   return()=>{active=false;};
@@ -33,6 +34,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  const source=history[cursor]??[],items=draft??source;
  const selectedItem=items.find(item=>item.id===selected);
  const hasRedactions=source.some(a=>a.kind==='redact');
+ const exceedsProfessionalLimit=Boolean(file&&file.size>MAX_PROFESSIONAL_PDF_UPLOAD_BYTES);
  function editSelected(changes:Partial<VisualAnnotation>){if(!selected)return;commit(source.map(item=>item.id===selected?{...item,...changes}:item));}
  function duplicateSelected(){if(!selectedItem)return;const clone={...selectedItem,id:crypto.randomUUID(),x:Math.min(.9,selectedItem.x+.04),y:Math.min(.9,selectedItem.y+.04)};commit([...source,clone]);setSelected(clone.id);}
 
@@ -87,7 +89,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  }
  function replaceNative(event:React.MouseEvent<HTMLButtonElement>,original:NativeText){
   event.preventDefault();event.stopPropagation();
-  if(!engineReady){setMessage('El reemplazo requiere el motor profesional.');return;}
+  if(!engineReady||exceedsProfessionalLimit){setMessage(exceedsProfessionalLimit?'El motor profesional acepta PDF de hasta 3 MB; puedes seguir utilizando las anotaciones locales.':'El reemplazo requiere el motor profesional.');return;}
   if(original.rotated){setMessage('Esta página está girada; primero normaliza su rotación antes de sustituir el texto.');return;}
   const width=Math.min(.98-original.x,original.width+.012),height=Math.min(.95-original.y,original.height+.009);
   const redact:VisualAnnotation={id:crypto.randomUUID(),page:original.page,kind:'redact',
@@ -118,6 +120,7 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
   try{
    let input=file;
    if(hasRedactions){
+    if(exceedsProfessionalLimit)throw new Error('El motor profesional acepta PDF de hasta 3 MB. Reduce el tamaño antes de borrar contenido original.');
     if(!engineReady||challengeRequired&&!challengeToken)throw new Error('La eliminación permanente requiere un motor profesional disponible y, cuando está activada, verificación válida.');
     const regions=source.filter(a=>a.kind==='redact').map(a=>({page:a.page,x:a.x,y:a.y,width:a.width,height:a.height}));
     const data=new FormData();data.set('file',file);data.set('turnstile',challengeToken);data.set('regions',JSON.stringify(regions));
@@ -135,12 +138,13 @@ export default function PdfVisualEditor({locale}:{locale:Locale}){
  }
  return <section className="fm-pdf-visual"><h2>{t.title}</h2><p>{t.guide}</p><label className="fm-editor-file">{t.upload}<input type="file" accept=".pdf,application/pdf" onChange={e=>{const selected=e.target.files?.[0];if(selected){if(selected.size>60*1024*1024){setMessage('Maximum 60 MB');return;}setFile(selected)}}}/></label>
  {file&&total>0&&<><div className="fm-editor-toolbar">
- {([['text',Type,t.text],['highlight',Highlighter,t.highlight],['rectangle',Square,t.rectangle],['form-text',FormInput,t.formText],['form-checkbox',ListChecks,t.formCheckbox],['redact',Eraser,t.redact],['replace',Replace,t.replace]] as const).map(([id,Icon,label])=><button key={id} aria-pressed={tool===id} title={id==='redact'&&!engineReady?'Requiere motor profesional':''} disabled={(id==='redact'||id==='replace')&&!engineReady} className={tool===id?'is-active':''} onClick={()=>setTool(id)}><Icon size={17}/>{label}</button>)}
+ {([['text',Type,t.text],['highlight',Highlighter,t.highlight],['rectangle',Square,t.rectangle],['form-text',FormInput,t.formText],['form-checkbox',ListChecks,t.formCheckbox],['redact',Eraser,t.redact],['replace',Replace,t.replace]] as const).map(([id,Icon,label])=><button key={id} aria-pressed={tool===id} title={id==='redact'&&!engineReady?'Requiere motor profesional':''} disabled={(id==='redact'||id==='replace')&&(!engineReady||exceedsProfessionalLimit)} className={tool===id?'is-active':''} onClick={()=>setTool(id)}><Icon size={17}/>{label}</button>)}
  <input aria-label="Color" type="color" value={color} onChange={e=>setColor(e.target.value)}/><label>Zoom <select value={zoom} onChange={e=>setZoom(+e.target.value)}><option value={75}>75%</option><option value={100}>100%</option><option value={125}>125%</option><option value={150}>150%</option></select></label>
  <button disabled={cursor===0} onClick={()=>{setCursor(c=>c-1);setDraft(null)}}><Undo2 size={17}/>{t.undo}</button>
  <button disabled={cursor>=history.length-1} onClick={()=>{setCursor(c=>c+1);setDraft(null)}}><Redo2 size={17}/>{t.redo}</button>
  <button disabled={!selected} onClick={()=>{commit(source.filter(a=>a.id!==selected));setSelected(null)}}><Trash2 size={17}/>{t.del}</button>
  </div>
+ {engineReady&&exceedsProfessionalLimit&&<p role="status" className="fm-editor-note">El motor profesional acepta PDF de hasta 3 MB para borrar contenido original o sustituir texto. La edición local sigue disponible.</p>}
  {(tool==='text'||tool==='form-text')&&<label className="fm-editor-text">{t.text}<input value={content} maxLength={180} placeholder={t.placeholder} onChange={e=>setContent(e.target.value)}/></label>}
  {selectedItem&&<div className="fm-editor-selection"><strong>Editar objeto seleccionado</strong>
  {(selectedItem.kind==='text'||selectedItem.kind==='form-text')&&<label>Texto <input value={selectedItem.text} maxLength={180} onChange={e=>editSelected({text:e.target.value})}/></label>}

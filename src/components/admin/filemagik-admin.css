@@ -27,3 +27,10 @@
 .fm-admin-campaign{align-items:start}
 .fm-admin-campaign .fm-admin-fields{min-width:0}
 @media(max-width:720px){.fm-admin-simple-create{padding:15px;align-items:stretch}.fm-admin-simple-create>label:first-child,.fm-admin-import{max-width:none;width:100%;flex:1 1 100%}.fm-admin-simple-create>.fm-admin-primary{width:100%}.fm-admin-direct-slots>div{grid-template-columns:1fr}.fm-admin-slot-choice{min-height:52px}}
+
+.fm-admin-text-preview{display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;padding:10px 12px;overflow-wrap:anywhere;color:#e8f4ff;text-align:center}
+.fm-admin-text-preview span{display:block;padding:6px 10px;border-radius:8px;background:#aac8ff;color:#0b1731;font-size:11px;font-weight:800}
+
+.fm-admin-fields .fm-admin-campaign-footer{grid-column:1/-1;position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:14px 0 6px;padding:18px 0;border-top:1px solid #536c94;border-bottom:1px solid #536c94}
+.fm-admin-fields .fm-admin-direct-slots{grid-column:1/-1;position:relative;min-width:0;z-index:0}
+@media(max-width:640px){.fm-admin-fields .fm-admin-campaign-footer{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch;gap:12px}.fm-admin-campaign-footer .fm-admin-toggle{min-height:45px;width:100%;justify-content:flex-start}.fm-admin-campaign-footer button{min-height:45px}}

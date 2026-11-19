@@ -7,8 +7,10 @@ import {isWorkerSlug,runWorkerConversion} from '@/lib/worker-conversion';
 import {validateFiles,sizeLimitLabel} from '@/lib/file-limits';
 import {getTool,type ToolSlug,type Locale} from '@/config/site';
 import PdfPreview from '@/components/pdf-preview';
+import AdSlot from '@/components/advertising/ad-slot';
 import PdfFormEditor from '@/components/pdf-form-editor';
 import ProfessionalPdfOption,{isProfessionalSlug,professionalOperations,runProfessionalConversion} from '@/components/professional-pdf-option';
+import {MAX_PROFESSIONAL_PDF_UPLOAD_BYTES} from '@/lib/pdf-engine-limits';
 import type {Dictionary} from '@/lib/i18n';
 export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictionary;locale?:Locale}){
  const abortController=useRef<AbortController|null>(null);
@@ -191,6 +193,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
  <label><input type="radio" name="filemagik-pdf-engine" checked={professional} onChange={()=>setProfessional(true)}/> Mayor fidelidad (procesamiento seguro en servidor)</label>
  {!serverOnlyOffice&&<label><input type="radio" name="filemagik-pdf-engine" checked={!professional} onChange={()=>setProfessional(false)}/> Procesamiento local (archivo permanece en el navegador)</label>}
  {professional&&<><p>El archivo se transmite temporalmente al servidor para procesarlo. Máximo 3 MB por operación. No se conserva después de generar el resultado.</p>
+ {files.some(file=>file.size>MAX_PROFESSIONAL_PDF_UPLOAD_BYTES)&&<p role="status">Este archivo supera los 3 MB permitidos por el motor profesional. Reduce su tamaño{!serverOnlyOffice?', o selecciona procesamiento local':''}.</p>}
  {slug==='compress-pdf-raster'&&<label>Compresión <select value={compressionMode} onChange={e=>setCompressionMode(e.target.value as 'lossless'|'balanced'|'maximum')}><option value="lossless">Sin pérdida</option><option value="balanced">Equilibrada</option><option value="maximum">Máxima reducción</option></select></label>}
  {challengeRequired&&<ProfessionalPdfOption key={challengeVersion} siteKey={siteKey} ready={professional} onToken={setChallengeToken} onReset={()=>setChallengeToken('')}/>}</>}
  </div>}
@@ -235,6 +238,7 @@ export default function Converter({slug,d,locale='en'}:{slug:ToolSlug;d:Dictiona
    {downloadStarted&&<p className="conversion-download-notice" data-testid="download-notice"><Check size={17} aria-hidden="true"/>{messages.downloadStarted}</p>}
   </div>}
  {result&&<div className="actions"><a className="btn btn-primary" href={result.url} download={result.name} onClick={()=>setDownloadStarted(true)}><Download size={18}/>{messages.start}</a><button type="button" className="btn btn-ghost" disabled={busy} onClick={reset}><RotateCcw size={17}/>{d.reset}</button></div>}
+ {result&&<div className="ad-placement ad-placement-result"><AdSlot slot="result" label="Publicidad tras la conversión"/></div>}
  <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">{status}</p>
  {error&&<p role="alert" className="error">{error}</p>}
  </div></section>;

@@ -1,6 +1,6 @@
 import {NextResponse} from 'next/server';
 import {readStoredAds,publicAds} from '@/lib/advertising/blob-settings';
-import {adSlots,parseAds,type Banner,type PublicAds} from '@/lib/advertising/config';
+import {adSlots,defaultAds,parseAds,type Banner,type PublicAds} from '@/lib/advertising/config';
 export const dynamic='force-dynamic';
 export const runtime='nodejs';
 const headers={'Cache-Control':'public, max-age=0, s-maxage=15'};
@@ -14,10 +14,11 @@ function environmentFallback():PublicAds {
  catch{return {enabled:true,banners:[]};}
 }
 export async function GET(){
+ if(!process.env.BLOB_READ_WRITE_TOKEN)return NextResponse.json({...environmentFallback(),configured:false,standalone:true},{headers});
  try{
   const {settings,revision}=await readStoredAds();
   return NextResponse.json({...publicAds(settings),configured:Boolean(revision),standalone:false},{headers});
  }catch{
-  return NextResponse.json({...environmentFallback(),configured:false,standalone:true},{headers});
+  return NextResponse.json({...defaultAds,rotation:{},configured:false,standalone:false},{headers:{'Cache-Control':'no-store'}});
  }
 }

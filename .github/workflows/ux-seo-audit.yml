@@ -1,4 +1,7 @@
 name: UX and SEO browser audit
+concurrency:
+  group: browser-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 on:
   pull_request:
     branches: [main]
@@ -8,17 +11,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
-      NEXT_PUBLIC_SITE_URL: https://filemagik.vercel.app
+      NEXT_PUBLIC_SITE_URL: https://www.filemagik.com
       CI: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+          cache: npm
+      - name: Install dependencies from committed lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Generar credenciales de prueba aisladas
+        run: |
+          owner_pass=$(node -e "process.stdout.write(require('node:crypto').randomBytes(16).toString('hex'))")
+          owner_hash=$(printf %s "$owner_pass" | sha256sum | cut -d' ' -f1)
+          session_secret=$(node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('hex'))")
+          printf 'FILEMAGIK_E2E_OWNER_PASSWORD=%s\n' "$owner_pass" >> "$GITHUB_ENV"
+          printf 'FILEMAGIK_ADMIN_PASSWORD_SHA256=%s\n' "$owner_hash" >> "$GITHUB_ENV"
+          printf 'FILEMAGIK_ADMIN_SESSION_SECRET=%s\n' "$session_secret" >> "$GITHUB_ENV"
       - name: Build production
         run: npm run build
       - name: Install Chromium for browser tests

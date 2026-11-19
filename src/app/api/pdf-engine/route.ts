@@ -1,5 +1,7 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {createHmac} from 'node:crypto';
+import {readLimitedUpstream} from '@/lib/limited-upstream-response';
+import {MAX_PROFESSIONAL_PDF_UPLOAD_BYTES} from '@/lib/pdf-engine-limits';
 
 export const runtime='nodejs';
 const supported:Record<string,readonly string[]>={
@@ -7,7 +9,7 @@ const supported:Record<string,readonly string[]>={
  'office-to-pdf':['.docx','.xlsx','.pptx','.odt','.ods','.odp'],
  'optimize-pdf':['.pdf'],'redact-pdf':['.pdf'],'ocr-pdf':['.pdf'],'replace-pdf-image':['.pdf'],'replace-pdf-text':['.pdf'],'unlock-pdf':['.pdf'],
 };
-const maxBytes=3*1024*1024;
+const maxBytes=MAX_PROFESSIONAL_PDF_UPLOAD_BYTES;
 const maxResponseBytes=22*1024*1024;
 const safeExt=(name:string)=>name.toLowerCase().match(/\.[a-z0-9]+$/)?.[0]||'';
 const allowedMime:Record<string,string>={
@@ -129,8 +131,8 @@ export async function POST(request:NextRequest){
    headers['Retry-After']=retryAfter;
   return NextResponse.json({error:failure.error},{status:failure.status,headers});
  }
- const bytes=await answer.arrayBuffer();
- if(bytes.byteLength===0||bytes.byteLength>maxResponseBytes)
+ const bytes=await readLimitedUpstream(answer,maxResponseBytes);
+ if(!bytes)
   return NextResponse.json({error:'Engine returned a file outside allowed limits'},{status:502});
  const targetMime=allowedMime[operation];
  const magic=new Uint8Array(bytes).slice(0,5);

@@ -30,7 +30,7 @@ export function validateAds(input:unknown):AdsSettings {
   names.add(id);
   if(src&&!validImage(src))throw new Error('La imagen debe tener una URL HTTPS válida o una ruta /ads/');
   if(href&&!httpsUrl(href))throw new Error('El destino debe ser HTTPS');
-  if(enabled&&!src)throw new Error('Para activar una campaña necesitas una imagen subida o una URL de imagen HTTPS');
+  if(enabled&&!src&&!href)throw new Error('Para activar una campaña necesitas una imagen o una URL de destino HTTPS');
   const startsAt=typeof b.startsAt==='string'?b.startsAt.trim():'';
   const endsAt=typeof b.endsAt==='string'?b.endsAt.trim():'';
   const validDate=(value:string)=>/^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
@@ -98,13 +98,13 @@ export function publicAds(state:AdsSettings):PublicAds&{rotation:Partial<Record<
   if(googleRail&&(slot==='desktop'||slot==='desktopLower')&&slot!==googleRail)continue;
   const p=state.placements[slot];
   const provisionalSlots:AdSlot[]=['desktopLower','home','toolHorizontal','incontent'];
+  if(!p.enabled)continue;
   const canFill=p.provider==='own'&&p.campaignIds.length===0&&provisionalSlots.includes(slot);
-  if(!p.enabled&&!canFill)continue;
   if(p.provider==='adsense'){
    banners.push({slot,provider:'adsense',enabled:true,src:'',href:'',alt:'Publicidad',publisherId:p.publisherId,adSlotId:p.adSlotId});continue;
   }
   const today=new Date().toISOString().slice(0,10);
-  const eligible=(campaigns:Campaign[])=>campaigns.filter(c=>c.enabled&&c.src&&(!c.startsAt||c.startsAt<=today)&&(!c.endsAt||c.endsAt>=today));
+  const eligible=(campaigns:Campaign[])=>campaigns.filter(c=>c.enabled&&(c.src||c.href)&&(!c.startsAt||c.startsAt<=today)&&(!c.endsAt||c.endsAt>=today));
   const assigned=eligible(p.campaignIds.map(id=>state.campaigns.find(c=>c.id===id)).filter((c):c is Campaign=>Boolean(c)));
   // G18 provisional coverage: reuse existing, currently active campaigns in
   // empty owned placements, without inventing images or destination URLs.
