@@ -85,7 +85,7 @@ test('FM-04 propietario autentica sesión y configura una campaña HTTPS sin ima
  await page.getByRole('button',{name:'Guardar y publicar'}).click();
  await expect(page.getByText('Cambios guardados de forma permanente en Vercel Blob. Ya están publicados.')).toBeVisible();
  expect(persisted).not.toBeNull();
- const saved=persisted as unknown as typeof initial;
+ const saved=persisted as unknown as {campaigns:Array<{src:string;href:string;enabled:boolean}>;placements:Record<string,{campaignIds:string[]}>};
  expect(saved.campaigns[0].src).toBe('');
  expect(saved.campaigns[0].href).toBe('https://example.org/producto');
  expect(saved.campaigns[0].enabled).toBe(true);
