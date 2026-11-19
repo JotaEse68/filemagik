@@ -20,8 +20,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+          cache: npm
+      - name: Install dependencies from committed lockfile
+        run: npm ci --no-audit --no-fund
       - name: Generar credenciales de prueba aisladas
         run: |
           owner_pass=$(node -e "process.stdout.write(require('node:crypto').randomBytes(16).toString('hex'))")

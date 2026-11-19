@@ -21,7 +21,7 @@ Objetivo: aplicación gratuita con anuncios propios; anuncios de pago al final.
 | FM-06 QA y cierre final | ☐ PENDIENTE | Responsive, legal/cookies, post-deploy, métricas y cierre |
 
 ## Hallazgos y bloqueos
-- No existe `package-lock.json` en main: falta fijar dependencias transitorias para un QA reproducible.
+- `package-lock.json` v3 ya está versionado en la rama FM-01, generado en GitHub Actions con Node 22. El cierre exige que `npm ci`, lint, tipos, tests, build y Playwright estén verdes sobre el mismo HEAD y que el lock alcance main solo al fusionar la PR.
 - En Railway hay dos volúmenes staged innecesarios `filemagik-image-quota` y `filemagik-media-quota`: NO APLICAR; ya existe volumen activo `filemagik-quota-ledger` montado en `/data`.
 - No afirmar que `READY` o `available:true` acrediten una conversión de archivo.
 - La API pública de anuncios devuelve banners reales configurados; Google AdSense y SSV no certificados.
@@ -31,7 +31,8 @@ Antes de tocar un módulo modificar `docs/IMPACTO_CAMBIOS.md`, citar consumidore
 
 **Siguiente bloque:** terminar FM-01, después FM-02. No tocar anuncios de pago.
 
-## QA de la PR #61 (c919251)
-- Quality, PDF Engine, Image Engine, Media Engine, Archive Engine y F1 security: SUCCESS.
-- Playwright full: **159 passed / 2 failed**. Ambos fallos pertenecen a login con cookie Secure en loopback 127.0.0.1. Queda **abierto** hasta confirmar la causa con la prueba actualizada en localhost y el POST real. 
-- No fusionar ni desplegar mientras esta regresión no esté corregida y se confirme un lockfile reproducible.
+## QA FM-01 (actualizado 2026-11-19)
+- Sobre `0f2f5f5a2`: siete workflows SUCCESS, incluidos Quality, Playwright completo con tests de login real en localhost y motores PDF, imagen, media, archivos y seguridad F1. Las dos fallas iniciales del fixture de Playwright quedaron resueltas.
+- Sobre `a79823890`: Quality y Playwright SUCCESS; job de bloqueo de dependencias generado y ejecutado correctamente; lockfile incorporado en `64a10916f`.
+- Ahora Quality y Browser usan `npm ci` con lockfile y caché npm; workflow temporal de creación de lockfile retirado. **No marcar FM-01 cerrado** hasta nueva CI del HEAD final y comprobación que no se publicó a Vercel.
+- No mezclar el cierre de ingeniería de CI con certificación de Railway / producción: estos siguen dentro de FM-02 a FM-06.
