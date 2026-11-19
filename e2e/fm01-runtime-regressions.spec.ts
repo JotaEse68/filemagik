@@ -14,9 +14,13 @@ test('FM-01: runtime JavaScript íntegro en las rutas principales',async({page})
 test('FM-01: propietario inicia sesión real con credenciales sintéticas del CI',async({page})=>{
  const password=process.env.FILEMAGIK_E2E_OWNER_PASSWORD;
  test.skip(!password,'Solo se ejecuta cuando el runner genera credenciales aisladas');
- await page.goto('/admin/login');
+ // Chromium acepta cookies secure en localhost; 127.0.0.1 no reproduce esta excepción.
+ await page.goto('http://localhost:3100/admin/login');
  await page.getByLabel('Contraseña del propietario').fill(password!);
+ const loginResponse=page.waitForResponse(response=>response.url().includes('/api/admin/local-login')&&response.request().method()==='POST');
  await page.getByRole('button',{name:'Entrar al panel'}).click();
+ const response=await loginResponse;
+ expect(response.status(),await response.text()).toBe(200);
  await expect(page).toHaveURL(/\/admin\/?$/);
  await expect(page.locator('.fm-admin-content h1')).toContainText('Biblioteca de banners');
 });
