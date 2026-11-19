@@ -20,7 +20,7 @@ test('FM-01: propietario inicia sesión real con credenciales sintéticas del CI
  const loginResponse=page.waitForResponse(response=>response.url().includes('/api/admin/local-login')&&response.request().method()==='POST');
  await page.getByRole('button',{name:'Entrar al panel'}).click();
  const response=await loginResponse;
- expect(response.status(),await response.text()).toBe(200);
+ expect(response.status(),'POST /api/admin/local-login debe autenticar la sesión').toBe(200);
  await expect(page).toHaveURL(/\/admin\/?$/);
  await expect(page.locator('.fm-admin-content h1')).toContainText('Biblioteca de banners');
 });
