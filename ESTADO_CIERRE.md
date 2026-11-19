@@ -62,3 +62,5 @@ Antes de tocar un módulo modificar `docs/IMPACTO_CAMBIOS.md`, citar consumidore
 - Pruebas unitarias y Playwright añadidas; **pendientes** CI último HEAD, escritura real Blob en producción, recuperación de propietario y cambios en la web tras publicar. Ads pagados fuera de FM-04.
 
 - Ampliación de QA FM-04: flujo de acceso real con credenciales sintéticas, publicación de campaña URL-only sobre API Blob simulada y logout; límite de 2 KiB en login. Guardado persistente real se certificará postdeploy.
+
+- Incidencia detectada en Playwright móvil: la lista de ubicaciones interceptaba el selector «Campaña activada». Reordenado el formulario para permitir activación táctil. Repetir QA antes de certificar.

@@ -46,3 +46,5 @@ Cada PR con cambios de lógica debe actualizar esta matriz con rutas, componente
 - **Pruebas:** `tests/advertising-campaigns.test.mjs` (URL-only, HTTPS, desactivados), `e2e/fm04-ads-release.spec.ts` (OCR, rotación, nuevos espacios, móvil, no mostrar resultado antes de convertir), suite QA completa de administración y banners. Rollback: revertir este commit en la rama, sin cambios de proveedores ni datos en producción.
 
 - **Acceso propietario:** `src/app/api/admin/local-login/route.ts` exige JSON y tamaño máximo 2 KiB antes de verificar la contraseña. `e2e/fm04-ads-release.spec.ts` autentica al propietario con contraseña CI sintética y comprueba UI de campaña URL-only, PUT de configuración simulado y cierre de sesión. Persistencia Vercel Blob real queda pendiente del release.
+
+- **QA móvil real:** Playwright detectó que el listado de ubicaciones interceptaba el toque de la casilla «Campaña activada» en el superadmin móvil. Se adelanta la fila de acciones antes del listado largo y se separa mediante grid/espaciado y controles táctiles de 45 px. Mantener prueba funcional móvil sin `force:true`.
