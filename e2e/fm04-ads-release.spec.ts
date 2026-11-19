@@ -55,3 +55,47 @@ test('FM-04 postconversion space does not appear before finishing a job',async({
  await page.goto('/es/csv-to-json');
  await expect(page.locator('.ad-placement-result .first-party-ad')).toHaveCount(0);
 });
+
+test('FM-04 propietario autentica sesión y configura una campaña HTTPS sin imagen',async({page})=>{
+ const password=process.env.FILEMAGIK_E2E_OWNER_PASSWORD;
+ test.skip(!password,'Requiere credenciales sintéticas del runner');
+ const slots=['desktop','desktopLower','homeHeroSide','popularTop','toolSide','toolHorizontal','mobile','result','home','incontent'];
+ const placements=Object.fromEntries(slots.map(slot=>[slot,{enabled:true,provider:'own',campaignIds:[],rotationSeconds:60,publisherId:'',adSlotId:''}]));
+ const initial={enabled:true,campaigns:[],placements,
+  rewarded:{enabled:false,provider:'admanager',adUnitPath:'',paidFallbackUrl:'',operations:{video:true,aiExport:true,credit:true}}};
+ let persisted:typeof initial|null=null;
+ await page.route('**/api/admin/advertising',async route=>{
+  if(route.request().method()==='PUT'){
+   const input=route.request().postDataJSON() as {revision:string;settings:typeof initial};
+   persisted=input.settings;
+   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({settings:persisted,revision:'revision-2'})});
+  }
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({settings:initial,revision:'revision-1'})});
+ });
+ await page.goto('http://localhost:3100/admin/login');
+ await page.getByLabel('Contraseña del propietario').fill(password!);
+ await page.getByRole('button',{name:'Entrar al panel'}).click();
+ await expect(page).toHaveURL(/\/admin\/?$/);
+ await expect(page.locator('.fm-admin-campaign')).toHaveCount(0);
+ await page.getByRole('button',{name:'\+ Añadir banner'}).click();
+ const campaign=page.locator('.fm-admin-campaign').first();
+ await expect(campaign).toBeVisible();
+ await campaign.getByLabel('Enlace de destino (opcional)').fill('https://example.org/producto');
+ await campaign.getByLabel('Campaña activada').check();
+ await page.getByRole('button',{name:'Guardar y publicar'}).click();
+ await expect(page.getByText('Cambios guardados de forma permanente en Vercel Blob. Ya están publicados.')).toBeVisible();
+ expect(persisted?.campaigns[0].src).toBe('');
+ expect(persisted?.campaigns[0].href).toBe('https://example.org/producto');
+ expect(persisted?.campaigns[0].enabled).toBe(true);
+ expect(persisted?.placements.desktop.campaignIds).toHaveLength(1);
+ await page.getByRole('button',{name:'Cerrar sesión'}).click();
+ await expect(page).toHaveURL(/\/admin\/login/);
+});
+
+test('FM-04 login rechaza carga excesiva sin procesar contraseña',async({request})=>{
+ const response=await request.post('http://localhost:3100/api/admin/local-login',{
+  headers:{origin:'http://localhost:3100','content-type':'application/json'},
+  data:{password:'x'.repeat(2400)},
+ });
+ expect(response.status()).toBe(413);
+});

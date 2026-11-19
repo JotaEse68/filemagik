@@ -60,3 +60,5 @@ Antes de tocar un módulo modificar `docs/IMPACTO_CAMBIOS.md`, citar consumidore
 - El anuncio `result` solo se monta tras obtener resultado de conversión, no en la página desde el inicio.
 - Fallback del API público: si Blob está configurado y falla la lectura, no muestra anuncios alternativos inesperados; conserva el modo standalone para instalaciones sin Blob.
 - Pruebas unitarias y Playwright añadidas; **pendientes** CI último HEAD, escritura real Blob en producción, recuperación de propietario y cambios en la web tras publicar. Ads pagados fuera de FM-04.
+
+- Ampliación de QA FM-04: flujo de acceso real con credenciales sintéticas, publicación de campaña URL-only sobre API Blob simulada y logout; límite de 2 KiB en login. Guardado persistente real se certificará postdeploy.
