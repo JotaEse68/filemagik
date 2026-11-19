@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {createHmac} from 'node:crypto';
+import {readLimitedUpstream} from '@/lib/limited-upstream-response';
 import {MAX_PROFESSIONAL_PDF_UPLOAD_BYTES} from '@/lib/pdf-engine-limits';
 
 export const runtime='nodejs';
@@ -130,8 +131,8 @@ export async function POST(request:NextRequest){
    headers['Retry-After']=retryAfter;
   return NextResponse.json({error:failure.error},{status:failure.status,headers});
  }
- const bytes=await answer.arrayBuffer();
- if(bytes.byteLength===0||bytes.byteLength>maxResponseBytes)
+ const bytes=await readLimitedUpstream(answer,maxResponseBytes);
+ if(!bytes)
   return NextResponse.json({error:'Engine returned a file outside allowed limits'},{status:502});
  const targetMime=allowedMime[operation];
  const magic=new Uint8Array(bytes).slice(0,5);

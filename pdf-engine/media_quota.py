@@ -18,7 +18,13 @@ from fastapi import HTTPException
 
 VISITOR_RE = re.compile(r"^[a-f0-9]{64}$")
 def _limit(env, fallback):
-    return max(1, min(100000, int(os.getenv(env, str(fallback)))))
+    try:
+        configured = int(os.getenv(env, str(fallback)))
+    except (TypeError, ValueError):
+        raise HTTPException(503, "Invalid conversion quota configuration")
+    if configured < 1 or configured > 100000:
+        raise HTTPException(503, "Conversion quota outside supported range")
+    return configured
 
 def _connect():
     path = Path(os.getenv("FILEMAGIK_MEDIA_QUOTA_DB", "/data/filemagik-media-quota.sqlite3"))

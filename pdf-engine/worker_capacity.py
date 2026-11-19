@@ -14,12 +14,18 @@ from fastapi import HTTPException
 
 def memory_headroom():
     """Check Railway cgroup-v2 memory budget without collecting user data."""
+    try:
+        configured=int(os.getenv("FILEMAGIK_UNIFIED_MIN_FREE_MB","384"))
+    except (ValueError,TypeError):
+        raise HTTPException(503,"Invalid worker memory limit")
+    if configured<64 or configured>65536:
+        raise HTTPException(503,"Worker memory limit outside supported range")
+    minimum=configured*1024*1024
     root=Path("/sys/fs/cgroup")
     try:
         limit=(root/"memory.max").read_text().strip()
         if limit=="max":return
         available=int(limit)-int((root/"memory.current").read_text().strip())
-        minimum=int(os.getenv("FILEMAGIK_UNIFIED_MIN_FREE_MB","384"))*1024*1024
         if available<minimum:
             raise HTTPException(503,"Insufficient memory headroom for conversion")
     except (FileNotFoundError,ValueError,OSError):

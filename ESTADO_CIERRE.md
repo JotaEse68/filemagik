@@ -15,7 +15,7 @@ Objetivo: aplicación gratuita con anuncios propios; anuncios de pago al final.
 | --- | --- | --- |
 | FM-01 Impacto y fiabilidad del release | ◐ EN DESARROLLO | Mapa, CI, dependencias fijas, Playwright, política no-merge e inspección del SHA publicados |
 | FM-02 PDF Studio y Gotenberg | ◐ EN DESARROLLO | Corregir disponibilidad y límite remoto en editor; validar fidelidad PDF/Office, OCR, formularios y descargas |
-| FM-03 Límites y protección | ◇ IMPLEMENTADO | Códigos 401/403/413/422/429/503, límites de carga, cuota tras reinicios |
+| FM-03 Límites y protección | ◐ EN DESARROLLO | Probar cuotas persistentes, recuperación tras caídas, validación de configuración y respuestas limitadas, y certificar Railway real |
 | FM-04 Administración y publicidad propia | ◇ IMPLEMENTADO | Login/recovery real, Blob, campañas/rotación/ubicaciones móvil y PC |
 | FM-05 AdSense/recompensados | ☐ PENDIENTE | Postergado hasta completar toda la app; CMP, SSV y aprobación |
 | FM-06 QA y cierre final | ☐ PENDIENTE | Responsive, legal/cookies, post-deploy, métricas y cierre |
@@ -44,3 +44,11 @@ Antes de tocar un módulo modificar `docs/IMPACTO_CAMBIOS.md`, citar consumidore
 - **No cerrado** hasta CI verde en el HEAD final y certificación POST con Turnstile/Gotenberg y descarga real después de la publicación agrupada.
 
 - Conversores profesionales: validación previa de archivos >3 MiB, aviso en el formulario y ausencia de llamadas remotas innecesarias, con prueba `e2e/pdf-g1.spec.ts`.
+
+## FM-03 — Endurecimiento de cuotas, RAM y recuperación
+- Se preserva SQLite de cuotas persistentes por motor en el volumen Railway `/data`, sin volúmenes nuevos.
+- Cuatro módulos de cuota rechazan configuraciones de presupuesto erróneas con HTTP 503; las reservas no saltan el guardarraíl.
+- Puerta de capacidad bloquea configuración inválida de memoria con HTTP 503, también si el cgroup no tiene límite explícito.
+- Las rutas Vercel de PDF, worker y heredada consumen respuestas mediante streaming acotado con cancelación al sobrepasar 22/12/4 MiB, en lugar de cargar datos ilimitados antes de validar.
+- Pruebas añadidas: base SQLite corrupta, cuotas por motor y persistencia tras reconexión, reservas huérfanas de 120/180 segundos, parámetros inválidos, salida excesiva, stream roto.
+- **PENDIENTE de cierre:** CI verde del HEAD FM-03, reinicio/stress controlado de Railway y verificación de errores/descargas por el dominio final con Turnstile. No fusionar ni desplegar intermedio.

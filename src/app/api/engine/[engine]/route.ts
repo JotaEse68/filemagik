@@ -1,4 +1,5 @@
 import {NextRequest,NextResponse} from 'next/server';
+import {readLimitedUpstream} from '@/lib/limited-upstream-response';
 
 export const runtime='nodejs';
 type Engine='image'|'media'|'archive';
@@ -92,9 +93,10 @@ export async function POST(request:NextRequest,{params}:Ctx){
   return NextResponse.json({error:code===429?'Private engine busy':'Conversion could not be completed'},
    {status:code,headers:{'Cache-Control':'no-store'}});
  }
- const bytes=new Uint8Array(await response.arrayBuffer());
- // Vercel runtime has tight response limits: reject non-streaming large files.
- if(!bytes.length||bytes.byteLength>4*1024*1024||!validMagic(bytes,config.magic))
+ const bounded=await readLimitedUpstream(response,4*1024*1024);
+ const bytes=bounded?new Uint8Array(bounded):null;
+ // The legacy route stays disabled by default and must never buffer unlimited results.
+ if(!bytes||!validMagic(bytes,config.magic))
   return NextResponse.json({error:'Output exceeds inline response limits or is invalid'},{status:502});
  return new NextResponse(bytes,{headers:{'Content-Type':config.mime,'Cache-Control':'private, no-store',
   'X-Content-Type-Options':'nosniff','Content-Disposition':'attachment; filename="filemagik-result"'}});
